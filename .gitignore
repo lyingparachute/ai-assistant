@@ -1,0 +1,16 @@
+target/
+.mvn/wrapper/dists/
+
+.idea/
+.claude/
+
+.env
+.env.*
+!.env.example
+
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+.DS_Store
