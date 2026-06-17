@@ -143,7 +143,51 @@ Finished at: 2026-06-15T22:31:51+02:00
 
 ## Follow-up for other plans
 
-- Phase 5: wire `RagKnowledgePort` into deterministic source routing and `LlmPort` synthesis; return explicit insufficient-product-knowledge when retrieval is `NoRelevantKnowledge`.
-- Phase 5: `ResponseComposer` and chat inbound adapter.
-- Phase 7: capture demo answers for CDQ product questions from a running assistant after orchestration lands.
+- Phase 5 M1 (landed): `question` domain types, `LlmPort` + `OllamaLlmAdapter`, `AssistantLlmProperties` (`assistant.llm.*`, default `qwen3:4b`). `ChatModel` built inside `LlmPort` bean only (not exposed). `UserQuestion` always trims on construction. See M2+ for routing and orchestration.
+
+---
+
+# Phase 5 Implementation Notes (in progress)
+
+## M1 decisions
+
+- `AnswerSource` uses sealed variants with static factories (`used`, `unavailable`, `insufficient` for RAG only).
+- `ModelSynthesis.used()` carries no text — synthesis text lives in `AssistantAnswer.answerText`; source marks contribution only.
+- `OllamaLlmAdapter` prompt: instructions → optional grounded facts bullets → user question.
+- Test profile excludes Ollama chat beans; orchestration tests will use `StubLlmPort`.
+
+## M1 verification
+
+```text
+./mvnw -pl assistant-app test
+Tests run: 120, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+## M2 decisions
+
+- `RoutedQuestion` carries route-specific data via `Optional` fields validated in compact constructor.
+- Place name extraction strips trailing sentence punctuation (`?`, `.`, `!`) for clean `CountriesPort` lookup.
+
+## M3–M4 decisions
+
+- `AnswerQuestionUseCase` returns `ConversationTurn` (request-local audit per ADR 0006).
+- `ResponseComposer` keeps synthesis text in `AssistantAnswer.answerText`; `ModelSynthesis` source marks contribution only.
+- `AssistantRequestTrace` logs via SLF4J with correlation UUID; tests use controlled ports, not log assertions.
+- `OrchestrationConfiguration` wires `AnswerQuestionUseCase` only when all four ports are present (`@ConditionalOnBean`).
+- Source-unavailable user messages use labels: Countries MCP, Weather MCP, RAG knowledge, Ollama chat.
+
+## M3–M5 verification
+
+```text
+./mvnw -pl assistant-app test
+Tests run: 153, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+Finished at: 2026-06-16T13:10:xx+02:00
+```
+
+## Follow-up for other plans
+
+- Phase 6: HTTP chat inbound adapter + simple Chat Interface (see `docs/plans/phase-6-chat-interface.md`).
+- Phase 7: demo answer capture including CDQ product showcase question.
 

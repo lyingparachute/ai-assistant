@@ -6,7 +6,7 @@ This repository contains a recruitment-task implementation of a local AI Assista
 
 The implementation is intentionally local-first. Required runtime dependencies are expected to run on the developer machine, including Ollama with the assignment model, PostgreSQL with pgvector, the custom REST Countries MCP server, and the local weather MCP server.
 
-Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`. Phase 4 added CDQ Fraud Guard RAG ingestion and retrieval over pgvector behind `RagKnowledgePort`, with a documented local ingestion entry point.
+Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`. Phase 4 added CDQ Fraud Guard RAG ingestion and retrieval over pgvector behind `RagKnowledgePort`, with a documented local ingestion entry point. Phase 5 added deterministic source routing and `AnswerQuestionUseCase` orchestration behind `LlmPort`, composing grounded answers with explicit source labeling.
 
 ## Architecture
 
@@ -156,6 +156,28 @@ Ingestion fetches the configured CDQ Fraud Guard source URL (`assistant.rag.sour
 
 RAG integration tests use Testcontainers (`pgvector/pgvector:pg17`) and a deterministic test embedding adapter; they do not call the live CDQ website or Ollama during `./mvnw test`.
 
+## Ollama chat model (assistant synthesis)
+
+Pull the assignment chat model (ADR `0002`):
+
+```bash
+ollama pull qwen3:4b
+```
+
+Ollama must be running at the configured base URL (`assistant.llm.ollama-base-url`, default `http://localhost:11434`). Chat completion is wired behind `LlmPort` in `OllamaLlmAdapter`; orchestration calls it only when synthesis is required (for example Berlin place questions or CDQ product answers after RAG retrieval).
+
+Configuration in `assistant-app/src/main/resources/application.yml`:
+
+```yaml
+assistant:
+  llm:
+    ollama-base-url: http://localhost:11434
+    model-name: qwen3:4b
+    timeout-seconds: 120
+```
+
+Orchestration tests use `StubLlmPort` and do not call live Ollama during `./mvnw test`.
+
 ## Local Setup
 
 Current repository state:
@@ -172,7 +194,7 @@ Current repository state:
 
 The repository contains these modules:
 
-- `assistant-app`: Spring Boot application with countries and weather MCP client adapters behind application ports, plus RAG ingestion and retrieval over pgvector.
+- `assistant-app`: Spring Boot application with countries and weather MCP client adapters, RAG ingestion and retrieval over pgvector, and Phase 5 orchestration (`AnswerQuestionUseCase`) behind application ports.
 - `countries-mcp-server`: custom MCP server exposing the `country_lookup` tool over REST Countries v3.1.
 - `e2e-tests`: placeholder black-box test module for later demo-path verification.
 
@@ -180,9 +202,9 @@ The repository contains these modules:
 
 ## Running the Assistant
 
-Runtime behavior for the assistant is pending later implementation phases. The countries MCP server is runnable locally; the assistant application supports RAG ingestion via `--ingest-rag` but does not yet expose a chat interface, call Ollama for answers, or produce assistant responses.
+Phase 5 orchestration is implemented in application code (`AnswerQuestionUseCase`) but there is no HTTP chat interface yet (Phase 6). The countries MCP server is runnable locally; the assistant application supports RAG ingestion via `--ingest-rag`. Answering demo questions through a chat UI requires Phase 6.
 
-The final service must start locally and expose a chat interface that can answer the required demo questions using the correct source:
+When a chat interface is available, the assistant will route required demo questions using deterministic source routing and compose answers from:
 
 - country facts through the REST Countries MCP server;
 - weather facts through the local weather MCP server;
@@ -203,7 +225,7 @@ Run the current build verification:
 ./mvnw verify
 ```
 
-Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, Phase 3 assistant MCP adapter contract and integration tests, and Phase 4 RAG domain, pgvector, ingestion, and retrieval tests. Later phases must add focused automated tests for orchestration, error handling in chat paths, and demo-question end-to-end verification.
+Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, Phase 3 assistant MCP adapter contract and integration tests, Phase 4 RAG domain, pgvector, ingestion, and retrieval tests, and Phase 5 orchestration tests with controlled ports. Later phases must add HTTP chat-path integration tests and demo-question end-to-end verification.
 
 ## Demo Questions
 
@@ -226,5 +248,6 @@ AI assistance is allowed by the assignment. AI-assisted work is documented under
 - The assistant must not fabricate unavailable tool or RAG results.
 - Runtime answers are not included yet because the assistant has not been implemented.
 - Phase 3 delivers countries and weather MCP client adapters in `assistant-app`; assistant orchestration and chat remain in later phases.
-- Phase 4 delivers RAG ingestion and retrieval over pgvector; demo answers and chat routing remain in later phases.
+- Phase 4 delivers RAG ingestion and retrieval over pgvector; demo answers and chat UI remain in later phases.
+- Phase 5 delivers deterministic orchestration and `ResponseComposer` source labeling; chat inbound adapter and demo capture remain in Phases 6–7.
 - `.mcp.json` launches the countries MCP server over documented stdio transport; weather requires local `mcp-weather` installation and API configuration.

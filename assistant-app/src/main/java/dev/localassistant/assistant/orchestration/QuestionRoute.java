@@ -1,0 +1,10 @@
+package dev.localassistant.assistant.orchestration;
+
+public enum QuestionRoute {
+    COUNTRY_CAPITAL,
+    WEATHER_LOCATION,
+    COUNTRY_THEN_WEATHER,
+    PLACE_SYNTHESIS,
+    CDQ_PRODUCT,
+    UNSUPPORTED
+}

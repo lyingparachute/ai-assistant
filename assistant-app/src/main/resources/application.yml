@@ -46,3 +46,7 @@ assistant:
     model-name: nomic-embed-text
     document-prefix: "search_document:"
     query-prefix: "search_query:"
+  llm:
+    ollama-base-url: http://localhost:11434
+    model-name: qwen3:4b
+    timeout-seconds: 120
