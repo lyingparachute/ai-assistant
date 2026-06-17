@@ -1,6 +1,11 @@
 spring:
   application:
     name: assistant-app-test
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
 
 assistant:
   mcp:
@@ -22,3 +27,10 @@ assistant:
       transport: stdio
       timeout-seconds: 5
       tool-name: get-weather
+  rag:
+    jdbc-url: jdbc:postgresql://localhost:5432/assistant_rag_test
+    username: assistant
+    password: assistant
+    top-k: 5
+    relevance-threshold: 0.5
+    source-url: https://www.cdq.com/products/cdq-fraud-guard

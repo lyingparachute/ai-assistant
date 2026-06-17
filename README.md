@@ -6,7 +6,7 @@ This repository contains a recruitment-task implementation of a local AI Assista
 
 The implementation is intentionally local-first. Required runtime dependencies are expected to run on the developer machine, including Ollama with the assignment model, PostgreSQL with pgvector, the custom REST Countries MCP server, and the local weather MCP server.
 
-Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`.
+Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`. Phase 4 added CDQ Fraud Guard RAG ingestion and retrieval over pgvector behind `RagKnowledgePort`, with a documented local ingestion entry point.
 
 ## Architecture
 
@@ -103,6 +103,59 @@ Manual smoke check (optional, requires live weather API configuration):
 
 Automated tests stub MCP responses and do not call the live weather API.
 
+## RAG over pgvector (CDQ Fraud Guard)
+
+Phase 4 ingests CDQ Fraud Guard product-page content into PostgreSQL with pgvector and retrieves `KnowledgeSnippet` values behind `RagKnowledgePort`. Chat orchestration that answers product questions is still in a later phase; ingestion and retrieval are runnable and tested now.
+
+### PostgreSQL with pgvector
+
+Start a local database matching `assistant.rag.*` defaults in `assistant-app/src/main/resources/application.yml`:
+
+```bash
+docker run -d --name assistant-pgvector \
+  -e POSTGRES_DB=assistant_rag \
+  -e POSTGRES_USER=assistant \
+  -e POSTGRES_PASSWORD=assistant \
+  -p 5432:5432 \
+  pgvector/pgvector:pg17
+```
+
+Defaults: JDBC URL `jdbc:postgresql://localhost:5432/assistant_rag`, user `assistant`, password `assistant`.
+
+### Ollama embedding model
+
+Pull the assignment embedding model (dimension 768, ADR `0007`):
+
+```bash
+ollama pull nomic-embed-text
+```
+
+Ollama must be running at the configured base URL (`assistant.embedding.ollama-base-url`, default `http://localhost:11434`).
+
+### Ingest product knowledge
+
+From the repository root, with pgvector and Ollama available:
+
+```bash
+./mvnw -pl assistant-app spring-boot:run -- --ingest-rag
+```
+
+Or:
+
+```bash
+ASSISTANT_INGEST_RAG=true ./mvnw -pl assistant-app spring-boot:run
+```
+
+Ingestion fetches the configured CDQ Fraud Guard source URL (`assistant.rag.source-url`), extracts plain text, chunks it deterministically, embeds with `nomic-embed-text`, and stores rows in `rag_chunks`. Re-running replaces changed content or skips unchanged content by content hash.
+
+### RAG-focused tests
+
+```bash
+./mvnw -pl assistant-app test
+```
+
+RAG integration tests use Testcontainers (`pgvector/pgvector:pg17`) and a deterministic test embedding adapter; they do not call the live CDQ website or Ollama during `./mvnw test`.
+
 ## Local Setup
 
 Current repository state:
@@ -119,7 +172,7 @@ Current repository state:
 
 The repository contains these modules:
 
-- `assistant-app`: Spring Boot application with countries and weather MCP client adapters behind application ports.
+- `assistant-app`: Spring Boot application with countries and weather MCP client adapters behind application ports, plus RAG ingestion and retrieval over pgvector.
 - `countries-mcp-server`: custom MCP server exposing the `country_lookup` tool over REST Countries v3.1.
 - `e2e-tests`: placeholder black-box test module for later demo-path verification.
 
@@ -127,7 +180,7 @@ The repository contains these modules:
 
 ## Running the Assistant
 
-Runtime behavior for the assistant is pending later implementation phases. The countries MCP server is runnable locally; the assistant application entry point compiles but does not expose a chat interface, call Ollama, query pgvector, or produce assistant answers yet.
+Runtime behavior for the assistant is pending later implementation phases. The countries MCP server is runnable locally; the assistant application supports RAG ingestion via `--ingest-rag` but does not yet expose a chat interface, call Ollama for answers, or produce assistant responses.
 
 The final service must start locally and expose a chat interface that can answer the required demo questions using the correct source:
 
@@ -150,7 +203,7 @@ Run the current build verification:
 ./mvnw verify
 ```
 
-Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, and Phase 3 assistant MCP adapter contract and integration tests. Later phases must add focused automated tests for orchestration, RAG ingestion and retrieval, error handling, and demo-question paths.
+Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, Phase 3 assistant MCP adapter contract and integration tests, and Phase 4 RAG domain, pgvector, ingestion, and retrieval tests. Later phases must add focused automated tests for orchestration, error handling in chat paths, and demo-question end-to-end verification.
 
 ## Demo Questions
 
@@ -173,4 +226,5 @@ AI assistance is allowed by the assignment. AI-assisted work is documented under
 - The assistant must not fabricate unavailable tool or RAG results.
 - Runtime answers are not included yet because the assistant has not been implemented.
 - Phase 3 delivers countries and weather MCP client adapters in `assistant-app`; assistant orchestration and chat remain in later phases.
+- Phase 4 delivers RAG ingestion and retrieval over pgvector; demo answers and chat routing remain in later phases.
 - `.mcp.json` launches the countries MCP server over documented stdio transport; weather requires local `mcp-weather` installation and API configuration.

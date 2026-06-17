@@ -1,6 +1,11 @@
 spring:
   application:
     name: assistant-app
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
 
 assistant:
   mcp:
@@ -26,3 +31,18 @@ assistant:
       transport: stdio
       timeout-seconds: 60
       tool-name: get-weather
+  rag:
+    jdbc-url: jdbc:postgresql://localhost:5432/assistant_rag
+    username: assistant
+    password: assistant
+    top-k: 5
+    relevance-threshold: 0.5
+    source-url: https://www.cdq.com/products/cdq-fraud-guard
+    chunk-max-size: 1000
+    chunk-overlap: 200
+    fetch-timeout-seconds: 30
+  embedding:
+    ollama-base-url: http://localhost:11434
+    model-name: nomic-embed-text
+    document-prefix: "search_document:"
+    query-prefix: "search_query:"

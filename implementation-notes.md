@@ -99,3 +99,51 @@ BUILD SUCCESS
 - Phase 5: wire `CountriesPort` and `WeatherPort` into deterministic source routing.
 - Optional: lazy MCP client pool or shared transport if startup cost becomes an issue.
 
+---
+
+# Phase 4 Implementation Notes
+
+## Verification
+
+```text
+./mvnw -pl assistant-app test
+Tests run: 83, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+Total time:  26.539 s
+Finished at: 2026-06-15T22:31:51+02:00
+```
+
+## Decisions not explicit in the implementation plan
+
+### Product knowledge port
+
+- `ProductKnowledgePort` separates CDQ fetch/extract from `RagKnowledgePort` storage/retrieval. `CdqProductKnowledgeAdapter` maps fetch/extraction failures to `ProductPageResult.SourceUnavailable` without inventing page text.
+
+### Test embedding adapter
+
+- `DeterministicTestEmbeddingAdapter` implements `EmbeddingPort` in tests with `search_document:` / `search_query:` prefix signals and token-hash vectors (dimension 768). Testcontainers RAG tests avoid live Ollama and live CDQ HTTP.
+
+### Fixture-based ingestion tests
+
+- `FixtureProductKnowledgePort` + `RagIngestionTestConfiguration` feed `fixtures/rag/cdq-fraud-guard-sample.html` through the real `ProductPageTextExtractor` while stubbing network fetch.
+
+### Ingestion entry point
+
+- `RagIngestionCommand` is an `ApplicationRunner` gated by `--ingest-rag` or `ASSISTANT_INGEST_RAG=true`; exits with code `1` on `RagIngestionResult.SourceUnavailable`.
+
+### Schema ownership
+
+- Custom `rag_chunks` table with `vector(768)` and JDBC repository; Spring AI supplies only the Ollama embedding client in the outbound adapter (ADR `0001`, `0007`).
+
+## Tradeoffs
+
+- Deterministic test embeddings reward token overlap; fixture retrieval integration uses the configured `0.5` relevance threshold and a product question aligned with fixture phrases. Adapter-level pgvector tests still use `0.3` where the goal is repository similarity mechanics, not production threshold policy.
+- Live CDQ page fetch and live Ollama embedding are manual/runtime paths only; automated tests use fixtures and deterministic embeddings.
+- `spring.datasource` auto-configuration stays excluded; RAG uses a dedicated Hikari pool bound from `assistant.rag.jdbc-url`.
+
+## Follow-up for other plans
+
+- Phase 5: wire `RagKnowledgePort` into deterministic source routing and `LlmPort` synthesis; return explicit insufficient-product-knowledge when retrieval is `NoRelevantKnowledge`.
+- Phase 5: `ResponseComposer` and chat inbound adapter.
+- Phase 7: capture demo answers for CDQ product questions from a running assistant after orchestration lands.
+
