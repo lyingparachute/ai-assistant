@@ -60,21 +60,71 @@ Live state verified against the running stack (port 8080):
 - v3.1 permanently dead. v5 verified: base `https://api.restcountries.com/countries/v5`,
   name lookup `/names.common/{value}`, capital `/capitals/{value}`, requires
   `Authorization: Bearer`, free tier 500 req/month.
-- **Blocker found by critic + verified independently**: v5 marks `population` as
-  "dynamic, no read, no search" — unfetchable. `CountryFacts` requires population, so
-  v5 forces a domain decision (drop population vs switch provider). Population is woven
-  across both modules, the MCP output, the HTTP response, and the answer text
-  (`AnswerQuestionUseCase.java:272`). Decision raised to user. ADR `0008` + plan
-  `docs/plans/fix-countries-rest-v5-migration.md` capture options; recommend dropping
-  population for a recruitment-scope demo.
+- **Population — docs wrong, live contract authoritative (decision reversed).** The
+  v5 field-reference docs say `population` is "dynamic, no read, no search". The
+  critic flagged this and I initially planned to drop population (user chose that).
+  Then the user asked to double-verify the contract with the real key. A live
+  authenticated call returned `"population":83497147` — population IS readable via
+  `response_fields`. So population is **retained**; no domain change. This is exactly
+  why we verify live instead of trusting docs (`CLAUDE.md`: verify before acting).
+- **Verified live v5 contract (2026-06-17, real key, Germany + France):**
+  base `https://api.restcountries.com/countries/v5`; name lookup
+  `/names.common/{value}`, capital `/capitals/{value}`, with
+  `response_fields=names.common,capitals,region,population`; `Authorization: Bearer`;
+  nested body `data.objects[].{names.common, region, population, capitals[].name +
+  capitals[].attributes.primary}`; not-found = HTTP 200 with empty `data.objects`;
+  no auth = HTTP 401. Migration is now adapter + config only.
+- Env var name: user chose `REST_COUNTRIES_API_KEY` (shorter than the MCP-prefixed
+  form). Stored in `.env`.
+- Plan critic review (fresh subagent) also caught: wrong v5 endpoint paths, a false
+  "mirror weather passthrough" claim (passthrough is weather-only/hardcoded), and an
+  `@NotBlank`-vs-graceful-failure contradiction. All corrected in plan/ADR.
 - Plan critic review (fresh subagent) caught: wrong v5 endpoint paths, an
   unverified "confirmed" success-body claim, a false "mirror weather passthrough"
   claim (passthrough is weather-only/hardcoded), and an `@NotBlank`-vs-graceful-
   failure contradiction. All corrected in the plan/ADR before commit.
 
-#### Still blocked / pending
+#### Countries v5 migration — implemented and live-verified (2026-06-17)
 
-- Country-fact demos: pending the population decision, then v5 implementation
-  (needs a REST Countries v5 key).
-- Full live demo capture: pending countries fix + a stack restart with `.env` loaded
-  (current 8080 process started without the weather key).
+- countries-mcp-server adapter + config migrated to v5; assistant-app env passthrough
+  generalized to a config-driven per-server `env-passthrough` list (removed the
+  weather-only hardcoding). Subagent-driven: implement → critic + clean-code review →
+  fix → re-review, all green (countries 30 tests, assistant-app 223 tests).
+
+#### Three latent bugs found ONLY via live end-to-end verification
+
+Unit tests (219) all passed but the app could not actually serve requests. Live runs
+surfaced three pre-existing/integration bugs:
+
+1. **Startup failure (pre-existing on `main` `96edca4`).** `StdioMcpToolInvoker` is a
+   `@Component` with two unannotated constructors → Spring fell back to a no-arg
+   constructor → `BeanInstantiationException` at boot. The bean is `@Profile("!test")`
+   so no test instantiated it via Spring. Fix: `@Autowired` on the production
+   constructor + a regression test driving `AutowiredAnnotationBeanPostProcessor`.
+2. **`isError` NPE (pre-existing).** `StdioMcpToolInvoker.invoke` did
+   `new McpToolResponse(text, result.isError())`; the MCP SDK's `isError()` is a boxed
+   `Boolean` that is null when a server omits the field. The semdin weather server
+   omits it, so EVERY successful weather call NPE'd and was reported as
+   "MCP tool call failed" — a real 23°C reading turned into source-unavailable. Fix:
+   `Boolean.TRUE.equals(result.isError())` (MCP spec: absent = not error). Also added
+   the previously-missing `log.warn` of the cause, which had hidden this bug.
+3. (diagnostic) The weather failure was opaque because MCP failures were never logged;
+   adding that logging is a kept observability improvement.
+
+#### Live verification results (2026-06-17, real keys, fresh stack)
+
+All six demo questions exercised against the running stack:
+- Germany capital → "Berlin" (countries_facts USED, v5: region Europe, pop 83,497,147)
+- Munich weather → 23.2°C (weather_observation USED, live, timestamped)
+- Capital-of-Germany weather → Berlin 19.1°C (countries + weather USED)
+- Berlin → country fact + model_synthesis USED
+- CDQ Fraud Guard → grounded RAG answer, 5 snippets (rag_knowledge USED)
+- Atlantis → honest "no matching source route" (honesty guard; no fabrication)
+
+#### Agent-improvement research
+
+Consulted the `nlm` AI_DEVS notebook for best practices on a bounded agentic
+tool-calling loop (Agent Harness, max 5–15 iterations, per-tool timeouts +
+cancellation, typed `{result, recovery_hints, diagnostics}`, reasoning-first schemas,
+deterministic gating for irreversible actions, when to keep deterministic routing).
+Captured in the improvement plan `docs/plans/improve-agentic-tool-orchestration.md`.

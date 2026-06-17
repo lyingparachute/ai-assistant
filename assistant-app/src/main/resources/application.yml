@@ -23,16 +23,20 @@ assistant:
         - -jar
         - ${COUNTRIES_MCP_JAR:../countries-mcp-server/target/countries-mcp-server-0.1.0-SNAPSHOT.jar}
       env:
-        COUNTRIES_MCP_REST_COUNTRIES_BASE_URL: https://restcountries.com/v3.1
+        COUNTRIES_MCP_REST_COUNTRIES_BASE_URL: https://api.restcountries.com/countries/v5
         COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS: "10"
+      env-passthrough:
+        - REST_COUNTRIES_API_KEY
       transport: stdio
       timeout-seconds: 60
       tool-name: country_lookup
     weather:
       command: ../scripts/mcp-weather
       args: []
-      # Host WEATHER_API_KEY / WEATHER_API_URL are forwarded when unset here
       env: {}
+      env-passthrough:
+        - WEATHER_API_KEY
+        - WEATHER_API_URL
       transport: stdio
       timeout-seconds: 60
       tool-name: get-weather

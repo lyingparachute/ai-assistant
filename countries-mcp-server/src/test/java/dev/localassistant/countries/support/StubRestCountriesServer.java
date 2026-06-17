@@ -11,11 +11,18 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class StubRestCountriesServer implements AutoCloseable {
 
+    public static final String EMPTY_BODY = "{\"data\":{\"objects\":[]}}";
+
+    private static final String NAME_ENDPOINT = "names.common";
+    private static final String CAPITAL_ENDPOINT = "capitals";
+
     private final HttpServer httpServer;
     private final Map<String, StubResponse> routes = new ConcurrentHashMap<>();
+    private final AtomicInteger requestCount = new AtomicInteger();
 
     public StubRestCountriesServer() throws IOException {
         httpServer = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -27,16 +34,20 @@ public final class StubRestCountriesServer implements AutoCloseable {
         return "http://localhost:" + httpServer.getAddress().getPort();
     }
 
+    public int requestCount() {
+        return requestCount.get();
+    }
+
     public void stubNameLookup(String name, int statusCode, String body) {
-        routes.put(routePath("name", name), new StubResponse(statusCode, body));
+        routes.put(routePath(NAME_ENDPOINT, name), new StubResponse(statusCode, body));
     }
 
     public void stubNameLookup(String name, int statusCode, String body, long delayMillis) {
-        routes.put(routePath("name", name), new StubResponse(statusCode, body, delayMillis));
+        routes.put(routePath(NAME_ENDPOINT, name), new StubResponse(statusCode, body, delayMillis));
     }
 
     public void stubCapitalLookup(String capital, int statusCode, String body) {
-        routes.put(routePath("capital", capital), new StubResponse(statusCode, body));
+        routes.put(routePath(CAPITAL_ENDPOINT, capital), new StubResponse(statusCode, body));
     }
 
     private static String routePath(String endpoint, String value) {
@@ -58,11 +69,12 @@ public final class StubRestCountriesServer implements AutoCloseable {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            requestCount.incrementAndGet();
             String path = exchange.getRequestURI().getPath();
             String lookupPath = path.contains("?") ? path.substring(0, path.indexOf('?')) : path;
             StubResponse response = routes.get(lookupPath);
             if (response == null) {
-                writeResponse(exchange, 404, "[]");
+                writeResponse(exchange, 200, EMPTY_BODY);
                 return;
             }
             if (response.delayMillis() > 0) {

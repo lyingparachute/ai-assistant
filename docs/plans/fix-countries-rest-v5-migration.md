@@ -1,9 +1,9 @@
 # ExecPlan — countries-mcp-server REST Countries v5 migration
 
-Status: proposed — blocked on the population sub-decision (no code until approved)
+Status: landed — 2026-06-17 (adapter + config only, population retained; live-verified end-to-end)
 Owner: TBD
 Source: ADR `0008`, demo blocker recorded in `docs/demo/demo-run-log.md`
-Scope module: `countries-mcp-server` primarily; `assistant-app` if option A (drop population) is chosen.
+Scope module: `countries-mcp-server` only.
 
 ## Why now
 
@@ -15,131 +15,117 @@ capital of Germany, the combined question, and Berlin place-synthesis. Phase 7
 cannot reach Done until country lookups return real data. This is a vendor-caused
 regression in landed Phase 2 code, not new feature work.
 
-## Decision required before implementation
+## Verified v5 contract (live, with a real key, 2026-06-17)
 
-v5 cannot return `population` (field reference: "dynamic, no read, no search",
-confirmed 2026-06-17). `CountryFacts` currently requires population, so a v5
-migration forces one of:
+The live authenticated response is authoritative over the public docs (the docs'
+field reference wrongly claims `population` is "no read"; the live API returns it):
 
-- **A (recommended): drop `population`.** Remove it from `CountryFacts`
-  (`countries-mcp-server/.../model/CountryFacts.java`), the MCP output
-  (`.../tools/CountryToolResult.java`), the assistant-side `CountryInfo`
-  (`assistant-app/.../tools/CountryInfo.java`), `CountryInfoResponse`,
-  `ChatHttpMapper`, the `CountriesMcpResponseMapper` parse
-  (`assistant-app/.../adapters/outbound/mcp/CountriesMcpResponseMapper.java:80,91,100`),
-  and the "Population: ..." line (`AnswerQuestionUseCase.java:272`). Cross-module
-  domain change + MCP output-envelope change + test updates.
-- **B: switch countries provider** to one returning population without a key.
-  Revisits ADR `0004`; larger, riskier; out of this plan as written.
+- Base: `https://api.restcountries.com/countries/v5`
+- Name lookup: `GET /names.common/{value}?response_fields=names.common,capitals,region,population`
+- Capital lookup: `GET /capitals/{value}?response_fields=names.common,capitals,region,population`
+- Auth: `Authorization: Bearer {key}`; missing/invalid → HTTP 401
+- Success body (nested):
+  `data.objects[].names.common`, `data.objects[].region`,
+  `data.objects[].population` (number), `data.objects[].capitals[]` = objects with
+  `name` and `attributes.primary`
+- Not found → HTTP **200** with `data.objects: []`
 
-This plan assumes **A** below. If B is chosen, this plan is replaced.
+All four `CountryFacts` fields are available, so the domain model is unchanged.
 
-## Target state (option A)
+## Target state
 
-`countries-mcp-server` resolves country facts through REST Countries **v5**:
-
-- Outbound adapter targets `https://api.restcountries.com/countries/v5`, sends
-  `Authorization: Bearer {API_KEY}`, parses the v5 JSON:API body into a
-  population-free `CountryFacts` (name, capital, region).
-- `country_lookup` tool name and input schema unchanged; output envelope drops the
-  `population` key (the one intentional contract change, per ADR `0008`).
-- Base URL and API key come from typed `countries.mcp` config backed by env vars.
+`countries-mcp-server` resolves country facts through REST Countries **v5** with
+`CountryFacts` (name, capital, region, population) unchanged. Outbound-adapter and
+configuration change only; the `RestCountriesPort`, domain model, MCP tool name,
+input schema, and output JSON envelope are untouched. `assistant-app` needs no change.
 
 ## Scope
 
 - `RestCountriesHttpAdapter`
   (`countries-mcp-server/.../restcountries/RestCountriesHttpAdapter.java`):
-  - `findByName` → `/names.common/{value}?response_fields=...`;
-    `findByCapital` → `/capitals/{value}?response_fields=...` (current code uses
-    `/name/` and `/capital/` at lines 42/47; `FIELDS_QUERY` at line 24 changes to
-    the v5 `response_fields` form).
-  - `Authorization: Bearer` header on every request.
+  - `findByName` → `/names.common/{value}`; `findByCapital` → `/capitals/{value}`
+    (current code uses `/name/` and `/capital/` at lines 42/47). `FIELDS_QUERY`
+    (line 24) becomes
+    `response_fields=names.common,capitals,region,population`.
+  - Add `Authorization: Bearer` header (key from config) on every request.
   - Replace v3.1 array parsing (`mapResponse`/`mapCountry`, lines 67-106) with v5
-    `data.objects[]` parsing. Read capital from `capitals[]` objects
-    (prefer `attributes.primary`, else first), not string index 0 (current line
-    98-100 reads strings). Map into population-free `CountryFacts`.
-  - Outcomes: keep `Success`/`NotFound`/`SourceUnavailable`. Parse the v5 error
-    envelope `{"errors":[{"message":...}]}`; 401/403 → `SourceUnavailable` with an
-    auth hint; other non-2xx and parse failures → `SourceUnavailable`; 404/empty
-    `data.objects` → `NotFound`.
+    nested parsing: read `names.common`, `region`, `population` from
+    `data.objects[]`, and the capital from `capitals[]` objects (prefer
+    `attributes.primary`, else first) — current line 98-100 reads capital as a
+    string array and must change.
+  - Outcomes unchanged set: empty `data.objects` → `NotFound` (v5 returns HTTP 200,
+    not 404, so the current 404 check is replaced by an empty-result check);
+    401/403 → `SourceUnavailable` with an auth hint; other non-2xx and parse
+    failures → `SourceUnavailable`. Parse the v5 error envelope
+    `{"errors":[{"message":...}]}` distinctly from the success body.
+  - `CountryFacts` still requires all four fields; a v5 object missing any →
+    `SourceUnavailable("missing required country fields")`, as today.
 - `CountriesMcpConfiguration`
   (`countries-mcp-server/.../config/CountriesMcpConfiguration.java`): change the
-  `restCountriesBaseUrl` default to v5; add an **optional** API-key property (no
-  `@NotBlank` — a blank key must not fail startup; it surfaces as
+  `restCountriesBaseUrl` default to the v5 URL; add an **optional** API-key property
+  (no `@NotBlank` — a blank key must not fail startup; it surfaces as
   `SourceUnavailable` at request time).
-- `application.yml` (countries-mcp-server): bind v5 base URL and the API key from
-  `COUNTRIES_MCP_REST_COUNTRIES_API_KEY`.
-- `assistant-app` MCP wiring: the host key must reach the countries subprocess.
-  `StdioMcpToolInvoker` currently hardcodes passthrough to the **weather** tool only
-  (`WEATHER_ENV_PASSTHROUGH` at line 31, gated on tool name `get-weather`). There is
-  **no generic passthrough** to mirror. Choose one and state it in the PR:
-  generalize the passthrough to a per-tool configured env-key list, OR add an
-  explicit countries passthrough entry. Putting the literal key in
-  `assistant-app/application.yml` is rejected (secret-in-repo risk).
-- Domain/contract changes for option A: drop `population` across the files listed in
-  "Decision required".
-- Tests: adapter tests for v5 success, not-found, unauthorized (401 envelope), and
-  source-unavailable against a controlled HTTP stub; update countries + assistant
-  tests that assert population.
+- `application.yml` (countries-mcp-server): bind the v5 base URL and the API key from
+  env `REST_COUNTRIES_API_KEY`.
+- `assistant-app` `application.yml`: update the countries subprocess env
+  `COUNTRIES_MCP_REST_COUNTRIES_BASE_URL` to the v5 base URL and forward the host
+  `REST_COUNTRIES_API_KEY` to the countries subprocess. `StdioMcpToolInvoker`
+  currently hardcodes env passthrough to the **weather** tool only
+  (`WEATHER_ENV_PASSTHROUGH`, line 31, gated on tool name `get-weather`); there is no
+  generic mechanism. Either generalize the passthrough to a per-tool configured
+  env-key list, or add an explicit countries passthrough entry. Putting the literal
+  key in `assistant-app/application.yml` is rejected (secret-in-repo risk). State the
+  chosen approach in the PR. (This is the only `assistant-app` touch — wiring, not
+  domain/orchestration.)
+- Tests: adapter tests for v5 success, not-found (empty objects), unauthorized (401
+  envelope), and source-unavailable against a controlled HTTP stub.
 - Docs: README prerequisites, `.env.example`, and `docs/demo/demo-run-log.md` note
   the new key.
 
 ## Out of scope
 
-- Provider switch (option B) — separate decision/plan.
-- Any change to the MCP tool **name** or **input schema**.
-- `assistant-app` orchestration/routing/domain changes beyond removing population
-  and the subprocess env wiring.
+- Provider switch (v5 supports the full model — no reason to revisit ADR `0004`).
+- Any change to `CountryFacts`, the MCP tool name, input schema, or output envelope.
+- Any `assistant-app` orchestration/routing/domain change beyond the subprocess env
+  wiring above.
 - Phase 7 demo capture itself (separate plan).
 
 ## Invariants
 
-- Hexagonal boundary: HTTP/v5 details stay in the outbound adapter and config; the
-  `RestCountriesPort` interface is unchanged. (Note: option A intentionally changes
-  the `CountryFacts` shape — a domain change, not a boundary leak.)
+- Hexagonal boundary: v5/HTTP details stay in the outbound adapter and config;
+  `RestCountriesPort`, `CountryFacts`, and the inbound MCP adapter are unchanged.
 - No `null` returns; outcomes stay the sealed `RestCountriesQueryResult`.
 - No fabricated facts: missing key, auth failure, or any non-2xx → `SourceUnavailable`.
 - Secrets: the API key is never committed, logged, or defaulted to a literal.
 - The server starts whether or not the key is set.
 
-## Risks and open questions
+## Risks
 
-- **OPEN: v5 success-body nesting.** The 401 blocks reading a success body without a
-  key. Capture a real authenticated response (M1) before locking the field mapping.
-  Do not guess the JSON shape.
-- **Secret + rate limit:** implementation/live verification need a v5 key (free, 500
-  req/month). Keep live calls minimal; rely on stubbed adapter tests.
-- **Blast radius (option A):** population removal touches both modules, the MCP
-  output envelope, the HTTP response, and tests. Confirm every consumer listed in
-  "Decision required" is updated.
+- **Secret + rate limit:** live verification needs a v5 key (free, 500 req/month).
+  Keep live calls minimal; rely on stubbed adapter tests.
+- **Shape coupling:** mapping depends on the v5 nested shape and the empty-result
+  not-found signal; both are covered by stub tests using the verified live body.
 
-## Definition of Done (option A)
+## Definition of Done
 
-- [ ] Adapter targets v5 base URL, uses `/names.common/{value}` and `/capitals/{value}`,
-      sends `Authorization: Bearer`; base URL and key from typed config/env, no
-      literals (grep clean).
-- [ ] With a valid key, `country_lookup` for Germany returns capital `Berlin` with
-      region populated (paste live tool output).
-- [ ] With the key unset or invalid, the server still starts and the tool returns
+- [x] Adapter targets v5 base URL, uses `/names.common/{value}` and
+      `/capitals/{value}` with the four-field `response_fields`, sends
+      `Authorization: Bearer`; base URL and key from typed config/env, no literals
+      (grep clean).
+- [x] With a valid key, `country_lookup` for Germany returns capital `Berlin`,
+      region `Europe`, and a population (paste live tool output).
+- [x] With the key unset or invalid, the server still starts and the tool returns
       `SourceUnavailable` with an auth hint, no fabricated fact (paste output).
-- [ ] Unknown country (Atlantis) returns `NotFound` (paste output).
-- [ ] `population` removed from all consumers listed above; no compile/test
-      reference remains (grep clean).
-- [ ] `./mvnw -pl countries-mcp-server test` and `./mvnw -pl assistant-app test`
-      pass; adapter tests cover v5 success, not-found, unauthorized, source-unavailable
-      against a controlled stub (paste reactor summaries).
-- [ ] `country_lookup` tool name + input schema unchanged (diff shows only the
-      output `population` key removed).
-- [ ] README, `.env.example`, and `docs/demo/demo-run-log.md` document the new key.
-- [ ] Open question (success-body nesting) resolved with evidence from a live v5
-      response.
+- [x] Unknown country (Atlantis) returns `NotFound` (paste output).
+- [x] `./mvnw -pl countries-mcp-server test` passes; adapter tests cover v5 success,
+      not-found, unauthorized, and source-unavailable against a controlled stub
+      (paste reactor summary).
+- [x] `CountryFacts`, `country_lookup` name, input schema, and output envelope
+      unchanged (diff shows adapter + config only, plus assistant-app env wiring).
+- [x] README, `.env.example`, and `docs/demo/demo-run-log.md` document the new key.
 
 ## Milestones
 
-- [ ] M1 — Capture a live authenticated v5 response; confirm success-body nesting;
-      record in implementation-notes.
-- [ ] M2 — Adapter + config migration + population removal (countries-mcp-server)
-      with stubbed adapter tests green.
-- [ ] M3 — `assistant-app` population removal + subprocess env wiring + live
-      `country_lookup` verification.
-- [ ] M4 — README + `.env.example` + demo-run-log doc updates.
+- [x] M1 — Adapter + config migration with stubbed adapter tests green.
+- [x] M2 — `assistant-app` subprocess env wiring + live `country_lookup` verification.
+- [x] M3 — README + `.env.example` + demo-run-log doc updates.
