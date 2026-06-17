@@ -6,7 +6,7 @@ This repository contains a recruitment-task implementation of a local AI Assista
 
 The implementation is intentionally local-first. Required runtime dependencies are expected to run on the developer machine, including Ollama with the assignment model, PostgreSQL with pgvector, the custom REST Countries MCP server, and the local weather MCP server.
 
-Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`. Phase 4 added CDQ Fraud Guard RAG ingestion and retrieval over pgvector behind `RagKnowledgePort`, with a documented local ingestion entry point. Phase 5 added deterministic source routing and `AnswerQuestionUseCase` orchestration behind `LlmPort`, composing grounded answers with explicit source labeling.
+Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`. Phase 4 added CDQ Fraud Guard RAG ingestion and retrieval over pgvector behind `RagKnowledgePort`, with a documented local ingestion entry point. Phase 5 added deterministic source routing and `AnswerQuestionUseCase` orchestration behind `LlmPort`, composing grounded answers with explicit source labeling. Phase 6 added the JSON Assistant API (`POST /api/chat`) and a separate Astro Chat Interface in `chat-ui/`.
 
 ## Architecture
 
@@ -194,7 +194,8 @@ Current repository state:
 
 The repository contains these modules:
 
-- `assistant-app`: Spring Boot application with countries and weather MCP client adapters, RAG ingestion and retrieval over pgvector, and Phase 5 orchestration (`AnswerQuestionUseCase`) behind application ports.
+- `assistant-app`: Spring Boot application with countries and weather MCP client adapters, RAG ingestion and retrieval over pgvector, Phase 5 orchestration, and Phase 6 JSON chat API.
+- `chat-ui`: Astro Chat Interface (separate frontend; calls the Assistant API over HTTP).
 - `countries-mcp-server`: custom MCP server exposing the `country_lookup` tool over REST Countries v3.1.
 - `e2e-tests`: placeholder black-box test module for later demo-path verification.
 
@@ -202,14 +203,50 @@ The repository contains these modules:
 
 ## Running the Assistant
 
-Phase 5 orchestration is implemented in application code (`AnswerQuestionUseCase`) but there is no HTTP chat interface yet (Phase 6). The countries MCP server is runnable locally; the assistant application supports RAG ingestion via `--ingest-rag`. Answering demo questions through a chat UI requires Phase 6.
+The assistant runs as two local processes: the Spring Boot API and the Astro Chat Interface.
 
-When a chat interface is available, the assistant will route required demo questions using deterministic source routing and compose answers from:
+### 1. Start the backend (port 8080)
+
+From the repository root, with local dependencies available (Ollama, pgvector, countries MCP, weather MCP as needed for live answers):
+
+```bash
+./mvnw -pl assistant-app spring-boot:run
+```
+
+The Assistant API listens on `http://localhost:8080` by default (`server.port` in `application.yml`).
+
+### 2. Start the Chat Interface (port 4321)
+
+In a second terminal:
+
+```bash
+cd chat-ui
+npm install
+cp .env.example .env   # optional; default API URL is http://localhost:8080
+npm run dev
+```
+
+Open the Astro dev URL (default `http://localhost:4321`). Each submit sends only the current question to `POST /api/chat` — no chat history.
+
+### Environment variables
+
+| Variable | Module | Default | Purpose |
+| --- | --- | --- | --- |
+| `PUBLIC_ASSISTANT_API_URL` | `chat-ui` | `http://localhost:8080` | Backend base URL for browser `fetch` |
+| `ASSISTANT_CORS_ALLOWED_ORIGINS` | `assistant-app` | `http://localhost:4321` | Comma-separated CORS origins for the Chat Interface |
+
+See `docs/spec/14-assistant-api-contract.md` for the HTTP contract.
+
+### What the assistant does
+
+The assistant routes demo questions using deterministic source routing and composes answers from:
 
 - country facts through the REST Countries MCP server;
 - weather facts through the local weather MCP server;
 - CDQ Fraud Guard product knowledge through RAG over pgvector;
 - general synthesis through the local Ollama model.
+
+Demo answer capture is Phase 7 (`docs/spec/08-demo-plan.md`).
 
 ## Running Tests
 
@@ -225,7 +262,7 @@ Run the current build verification:
 ./mvnw verify
 ```
 
-Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, Phase 3 assistant MCP adapter contract and integration tests, Phase 4 RAG domain, pgvector, ingestion, and retrieval tests, and Phase 5 orchestration tests with controlled ports. Later phases must add HTTP chat-path integration tests and demo-question end-to-end verification.
+Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, Phase 3 assistant MCP adapter contract and integration tests, Phase 4 RAG domain, pgvector, ingestion, and retrieval tests, Phase 5 orchestration tests with controlled ports, and Phase 6 Assistant API contract and HTTP chat-path tests. Phase 7 adds demo-question end-to-end verification.
 
 ## Demo Questions
 
@@ -249,5 +286,6 @@ AI assistance is allowed by the assignment. AI-assisted work is documented under
 - Runtime answers are not included yet because the assistant has not been implemented.
 - Phase 3 delivers countries and weather MCP client adapters in `assistant-app`; assistant orchestration and chat remain in later phases.
 - Phase 4 delivers RAG ingestion and retrieval over pgvector; demo answers and chat UI remain in later phases.
-- Phase 5 delivers deterministic orchestration and `ResponseComposer` source labeling; chat inbound adapter and demo capture remain in Phases 6–7.
+- Phase 5 delivers deterministic orchestration and `ResponseComposer` source labeling; demo capture remains in Phase 7.
+- Phase 6 delivers the JSON Assistant API and Astro Chat Interface; demo answer capture remains in Phase 7.
 - `.mcp.json` launches the countries MCP server over documented stdio transport; weather requires local `mcp-weather` installation and API configuration.

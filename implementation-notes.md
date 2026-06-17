@@ -188,6 +188,69 @@ Finished at: 2026-06-16T13:10:xx+02:00
 
 ## Follow-up for other plans
 
-- Phase 6: HTTP chat inbound adapter + simple Chat Interface (see `docs/plans/phase-6-chat-interface.md`).
+- Phase 6: API-only `assistant-app` (`POST /api/chat` + CORS) + separate **`chat-ui/` Astro frontend** — **no Thymeleaf** (see `docs/plans/phase-6-chat-interface.md`).
 - Phase 7: demo answer capture including CDQ product showcase question.
+
+## Phase 6 UI decision (pre-implementation)
+
+- Thymeleaf / server-rendered Spring pages rejected.
+- Chat Interface = new `chat-ui/` Astro app at repo root; backend stays JSON REST.
+- Local dev: two processes (Spring Boot + `npm run dev` in `chat-ui/`).
+
+---
+
+# Phase 6 Implementation Notes
+
+## M1 decisions
+
+- `docs/spec/14-assistant-api-contract.md` locks `POST /api/chat` JSON shapes before code.
+- `ChatController` and `HttpInboundConfiguration` are `@ConditionalOnBean(AnswerQuestionUseCase.class)` so existing test-profile `@SpringBootTest` contexts without full orchestration wiring still start.
+- `ChatHttpMapper` is package-private, instantiated inside `ChatController` (no Spring bean — mapper is pure translation).
+- Source entries use Jackson `@JsonTypeInfo` discriminator `type` matching contract (`countries_facts`, `weather_observation`, `rag_knowledge`, `model_synthesis`).
+- `assistant.cors.allowed-origins` defaults to `http://localhost:4321`; CORS applies to `/api/**`.
+- Source-unavailable orchestration outcomes return HTTP `200` with structured body per contract.
+
+## M1 verification
+
+```text
+./mvnw -pl assistant-app test
+Tests run: 153, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+## M2 decisions
+
+- Minimal Astro template at `chat-ui/` (single `index.astro`, no router, no islands framework).
+- `PUBLIC_ASSISTANT_API_URL` defaults to `http://localhost:8080`; browser `fetch` targets `/api/chat`.
+- `sourceDisplay.ts` renders API `sources[]` verbatim — no second fact-formatting layer.
+- Weather timestamp label uses API `timestamp.kind` (`observed` → Observed, `retrieved` → Retrieved).
+- No localStorage, no multi-turn scrollback (ADR `0006`).
+
+## M2 verification
+
+```text
+cd chat-ui && npm run build
+BUILD Complete (1 page)
+```
+
+## M3 decisions
+
+- `ChatContractTest` pins Jackson JSON shapes for `ChatRequest`/`ChatResponse` and discriminated `sources[]`.
+- `ChatControllerIntegrationTest` uses standalone `MockMvc` with controlled `AnswerQuestionUseCase` mock (happy `200`, blank `400`, source-unavailable `200`).
+- `ChatController` is `@ConditionalOnBean(AnswerQuestionUseCase.class)` so test-profile `@SpringBootTest` contexts without orchestration still start.
+- README documents two-process startup (backend + `chat-ui`), ports, and `PUBLIC_ASSISTANT_API_URL`.
+
+## M3 verification
+
+```text
+./mvnw -pl assistant-app test
+Tests run: 160, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+Manual smoke (requires live backend + dependencies): start `assistant-app`, start `chat-ui` dev server, submit one question, confirm `answerText` and `sources[]` render in the browser.
+
+## Follow-up for other plans
+
+- Phase 7: demo answer capture including CDQ product showcase question and `e2e-tests/` expansion.
 

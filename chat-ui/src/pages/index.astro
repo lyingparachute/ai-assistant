@@ -1,0 +1,98 @@
+---
+import '../styles/chat.css';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Local AI Assistant</title>
+  </head>
+  <body>
+    <main class="layout">
+      <header class="page-header">
+        <h1>Local AI Assistant</h1>
+        <p>Ask one question at a time. Answers show grounded sources from the Assistant API.</p>
+      </header>
+
+      <form id="chat-form" class="chat-form">
+        <label for="question">Your question</label>
+        <textarea
+          id="question"
+          name="question"
+          rows="3"
+          required
+          placeholder="What is the capital city of Germany?"
+        ></textarea>
+        <button type="submit" id="submit-button">Ask</button>
+      </form>
+
+      <p id="status" class="status" hidden></p>
+
+      <section id="answer-panel" class="answer-panel" hidden>
+        <h2>Answer</h2>
+        <p id="answer-text" class="answer-text"></p>
+        <p id="trace-id" class="trace-id" hidden></p>
+
+        <h2>Sources</h2>
+        <div id="sources" class="sources"></div>
+      </section>
+    </main>
+
+    <script>
+      import { askQuestion } from '../lib/api';
+      import { renderSources } from '../lib/sourceDisplay';
+
+      const form = document.getElementById('chat-form') as HTMLFormElement;
+      const questionInput = document.getElementById('question') as HTMLTextAreaElement;
+      const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+      const status = document.getElementById('status') as HTMLParagraphElement;
+      const answerPanel = document.getElementById('answer-panel') as HTMLElement;
+      const answerText = document.getElementById('answer-text') as HTMLParagraphElement;
+      const traceId = document.getElementById('trace-id') as HTMLParagraphElement;
+      const sources = document.getElementById('sources') as HTMLDivElement;
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const question = questionInput.value.trim();
+        if (!question) {
+          status.hidden = false;
+          status.textContent = 'Enter a question before submitting.';
+          answerPanel.hidden = true;
+          return;
+        }
+
+        submitButton.disabled = true;
+        status.hidden = false;
+        status.textContent = 'Waiting for the assistant…';
+        answerPanel.hidden = true;
+
+        try {
+          const response = await askQuestion(question);
+          answerText.textContent = response.answerText;
+          sources.innerHTML = renderSources(response.sources);
+
+          if (response.traceCorrelationId) {
+            traceId.hidden = false;
+            traceId.textContent = `Trace: ${response.traceCorrelationId}`;
+          } else {
+            traceId.hidden = true;
+            traceId.textContent = '';
+          }
+
+          status.hidden = true;
+          answerPanel.hidden = false;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Request failed.';
+          status.hidden = false;
+          status.textContent = message;
+          answerPanel.hidden = true;
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,3 +1,6 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: assistant-app
@@ -8,6 +11,9 @@ spring:
       - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
 
 assistant:
+  cors:
+    allowed-origins:
+      - http://localhost:4321
   mcp:
     countries:
       command: ./mvnw
