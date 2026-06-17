@@ -1,0 +1,20 @@
+[
+  {
+    "name": {
+      "common": "Georgia",
+      "official": "Georgia"
+    },
+    "capital": ["Tbilisi"],
+    "region": "Asia",
+    "population": 3714000
+  },
+  {
+    "name": {
+      "common": "United States",
+      "official": "United States of America"
+    },
+    "capital": ["Washington, D.C."],
+    "region": "Americas",
+    "population": 329484123
+  }
+]

@@ -3,11 +3,18 @@
     "countries": {
       "command": "./mvnw",
       "args": [
+        "-q",
         "-pl",
         "countries-mcp-server",
         "spring-boot:run"
       ],
-      "env": {}
+      "env": {
+        "COUNTRIES_MCP_REST_COUNTRIES_BASE_URL": "https://restcountries.com/v3.1",
+        "COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS": "10"
+      },
+      "cwd": ".",
+      "transport": "stdio",
+      "timeout": 60000
     },
     "weather": {
       "command": "mcp-weather",

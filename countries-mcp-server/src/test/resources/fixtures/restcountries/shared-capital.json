@@ -1,0 +1,20 @@
+[
+  {
+    "name": {
+      "common": "Country A",
+      "official": "Country A"
+    },
+    "capital": ["Shared City"],
+    "region": "Europe",
+    "population": 1000
+  },
+  {
+    "name": {
+      "common": "Country B",
+      "official": "Country B"
+    },
+    "capital": ["Shared City"],
+    "region": "Africa",
+    "population": 2000
+  }
+]

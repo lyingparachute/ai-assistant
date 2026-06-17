@@ -1,0 +1,17 @@
+countries:
+  mcp:
+    rest-countries-base-url: https://restcountries.com/v3.1
+    rest-countries-timeout-seconds: 10
+    server-name: countries-mcp-server
+    server-version: 0.1.0-SNAPSHOT
+    stdio-enabled: true
+
+spring:
+  main:
+    banner-mode: off
+    web-application-type: none
+
+logging:
+  level:
+    root: WARN
+    dev.localassistant.countries: INFO

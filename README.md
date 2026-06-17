@@ -6,7 +6,7 @@ This repository contains a recruitment-task implementation of a local AI Assista
 
 The implementation is intentionally local-first. Required runtime dependencies are expected to run on the developer machine, including Ollama with the assignment model, PostgreSQL with pgvector, the custom REST Countries MCP server, and the local weather MCP server.
 
-Phase 1 has added the minimal Java/Spring multi-module skeleton. Assistant behavior is not implemented yet.
+Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries.
 
 ## Architecture
 
@@ -50,7 +50,32 @@ Expected local tools for later implementation phases:
 - Network access during setup to retrieve CDQ Fraud Guard source text and REST Countries data.
 - Local MCP weather server installed and runnable.
 
-The build itself does not require Docker, Ollama, REST Countries, pgvector, or weather configuration yet.
+The build itself does not require Docker, Ollama, pgvector, or weather configuration yet. The countries MCP server needs network access only when it calls REST Countries at runtime.
+
+## Countries MCP Server
+
+Run the server from the repository root using the documented `.mcp.json` entry (`transport: stdio`, host `timeout: 60000` ms):
+
+```bash
+./mvnw -q -pl countries-mcp-server spring-boot:run
+```
+
+Configuration is externalized under `countries.mcp.*` (see `docs/spec/11-countries-mcp-tool-contract.md`). Defaults target REST Countries v3.1 at `https://restcountries.com/v3.1`.
+
+Run focused countries MCP tests:
+
+```bash
+./mvnw -pl countries-mcp-server test
+```
+
+Manual smoke check (requires an MCP host or client that speaks stdio JSON-RPC):
+
+1. Start the server with the command above from the repository root.
+2. Call the `country_lookup` tool with `{"name":"Germany"}` and confirm `countryName`, `capital`, `region`, and `population` in the success envelope.
+3. Call with `{"name":"Berlin"}` and confirm the same Germany facts through the capital-city path.
+4. Stop the process with Ctrl+C and confirm it exits without hanging.
+
+Automated tests use a stubbed REST Countries HTTP server and do not call the live API.
 
 ## Local Setup
 
@@ -69,14 +94,14 @@ Current repository state:
 The repository contains these modules:
 
 - `assistant-app`: Spring Boot application shell only.
-- `countries-mcp-server`: Spring Boot application shell only.
+- `countries-mcp-server`: custom MCP server exposing the `country_lookup` tool over REST Countries v3.1.
 - `e2e-tests`: placeholder black-box test module for later demo-path verification.
 
 `shared-kernel` is not present because no concrete cross-module Java type is required yet.
 
 ## Running the Assistant
 
-Runtime behavior is pending later implementation phases. The application entry points compile, but they do not expose a chat interface, implement MCP tools, call Ollama, query pgvector, or produce assistant answers yet.
+Runtime behavior for the assistant is pending later implementation phases. The countries MCP server is runnable locally; the assistant application entry point compiles but does not expose a chat interface, call Ollama, query pgvector, or produce assistant answers yet.
 
 The final service must start locally and expose a chat interface that can answer the required demo questions using the correct source:
 
@@ -99,7 +124,7 @@ Run the current build verification:
 ./mvnw verify
 ```
 
-Current tests are skeleton smoke tests only. Later phases must add focused automated tests for assistant behavior, RAG ingestion and retrieval, MCP integrations, error handling, and demo-question paths.
+Current tests include the Phase 1 skeleton smoke tests plus Phase 2 countries MCP contract and integration tests. Later phases must add focused automated tests for assistant behavior, RAG ingestion and retrieval, weather MCP integration, error handling, and demo-question paths.
 
 ## Demo Questions
 
@@ -121,5 +146,5 @@ AI assistance is allowed by the assignment. AI-assisted work is documented under
 - Long-term and short-term memory are out of scope.
 - The assistant must not fabricate unavailable tool or RAG results.
 - Runtime answers are not included yet because the assistant has not been implemented.
-- The Phase 1 skeleton has no assistant behavior beyond Spring Boot bootstrapping.
-- `.mcp.json` records a local MCP configuration convention only; the countries MCP tool behavior is not implemented yet.
+- Phase 2 delivers the countries MCP server only; assistant orchestration and weather MCP client integration remain in later phases.
+- `.mcp.json` launches the countries MCP server over documented stdio transport; weather remains a placeholder until Phase 3.
