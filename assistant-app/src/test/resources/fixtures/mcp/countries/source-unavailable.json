@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "error": "REST Countries source unavailable",
+  "hint": "The REST Countries service could not be reached. Retry later; do not invent country facts."
+}

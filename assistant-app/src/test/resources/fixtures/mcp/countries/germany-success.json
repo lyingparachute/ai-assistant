@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "data": {
+    "countryName": "Germany",
+    "capital": "Berlin",
+    "region": "Europe",
+    "population": 83240525
+  }
+}

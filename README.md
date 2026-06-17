@@ -6,7 +6,7 @@ This repository contains a recruitment-task implementation of a local AI Assista
 
 The implementation is intentionally local-first. Required runtime dependencies are expected to run on the developer machine, including Ollama with the assignment model, PostgreSQL with pgvector, the custom REST Countries MCP server, and the local weather MCP server.
 
-Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries.
+Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`.
 
 ## Architecture
 
@@ -77,6 +77,32 @@ Manual smoke check (requires an MCP host or client that speaks stdio JSON-RPC):
 
 Automated tests use a stubbed REST Countries HTTP server and do not call the live API.
 
+## Weather MCP Server
+
+The assistant calls the local `semdin/mcp-weather` server through `WeatherMcpClientAdapter` behind `WeatherPort`. See `docs/spec/13-weather-mcp-tool-contract.md` for the tool name, input schema, and text response pattern.
+
+Install and configure the weather server locally:
+
+1. Clone or install [semdin/mcp-weather](https://github.com/semdin/mcp-weather) and ensure `mcp-weather` (or `npx tsx src/index.ts`) is on your PATH.
+2. Set environment variables (do not commit secrets):
+   - `WEATHER_API_KEY` — provider API key.
+   - `WEATHER_API_URL` — provider URL (for example `https://api.weatherapi.com/v1/current.json`).
+3. Use the `.mcp.json` `weather` entry (`transport: stdio`, `timeout: 60000` ms) or `assistant.mcp.weather.*` in `assistant-app/src/main/resources/application.yml`.
+
+Run focused assistant MCP adapter tests:
+
+```bash
+./mvnw -pl assistant-app test
+```
+
+Manual smoke check (optional, requires live weather API configuration):
+
+1. Export `WEATHER_API_KEY` and `WEATHER_API_URL`.
+2. Start `mcp-weather` from your MCP host or call `get-weather` with `{"city":"Munich"}`.
+3. Confirm the text response matches `the weather in Munich is currently: <temperature>`.
+
+Automated tests stub MCP responses and do not call the live weather API.
+
 ## Local Setup
 
 Current repository state:
@@ -93,7 +119,7 @@ Current repository state:
 
 The repository contains these modules:
 
-- `assistant-app`: Spring Boot application shell only.
+- `assistant-app`: Spring Boot application with countries and weather MCP client adapters behind application ports.
 - `countries-mcp-server`: custom MCP server exposing the `country_lookup` tool over REST Countries v3.1.
 - `e2e-tests`: placeholder black-box test module for later demo-path verification.
 
@@ -124,7 +150,7 @@ Run the current build verification:
 ./mvnw verify
 ```
 
-Current tests include the Phase 1 skeleton smoke tests plus Phase 2 countries MCP contract and integration tests. Later phases must add focused automated tests for assistant behavior, RAG ingestion and retrieval, weather MCP integration, error handling, and demo-question paths.
+Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, and Phase 3 assistant MCP adapter contract and integration tests. Later phases must add focused automated tests for orchestration, RAG ingestion and retrieval, error handling, and demo-question paths.
 
 ## Demo Questions
 
@@ -146,5 +172,5 @@ AI assistance is allowed by the assignment. AI-assisted work is documented under
 - Long-term and short-term memory are out of scope.
 - The assistant must not fabricate unavailable tool or RAG results.
 - Runtime answers are not included yet because the assistant has not been implemented.
-- Phase 2 delivers the countries MCP server only; assistant orchestration and weather MCP client integration remain in later phases.
-- `.mcp.json` launches the countries MCP server over documented stdio transport; weather remains a placeholder until Phase 3.
+- Phase 3 delivers countries and weather MCP client adapters in `assistant-app`; assistant orchestration and chat remain in later phases.
+- `.mcp.json` launches the countries MCP server over documented stdio transport; weather requires local `mcp-weather` installation and API configuration.

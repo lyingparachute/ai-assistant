@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: assistant-app
+
+assistant:
+  mcp:
+    countries:
+      command: ./mvnw
+      args:
+        - -q
+        - -pl
+        - countries-mcp-server
+        - spring-boot:run
+      env:
+        COUNTRIES_MCP_REST_COUNTRIES_BASE_URL: https://restcountries.com/v3.1
+        COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS: "10"
+      working-directory: .
+      transport: stdio
+      timeout-seconds: 60
+      tool-name: country_lookup
+    weather:
+      command: mcp-weather
+      args: []
+      env: {}
+      working-directory: .
+      transport: stdio
+      timeout-seconds: 60
+      tool-name: get-weather

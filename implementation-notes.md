@@ -48,3 +48,54 @@
 
 - Phase 3: `CountriesPort`, `CountryInfo`, `CountriesMcpClientAdapter` in `assistant-app`.
 - Optional: separate `mcpRequestTimeoutSeconds` property if hosts need finer control than `2 ×` HTTP timeout.
+
+---
+
+# Phase 3 Implementation Notes
+
+## Verification
+
+```text
+./mvnw -pl assistant-app test
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+## Decisions not explicit in the implementation plan
+
+### MCP client transport
+
+- Uses `io.modelcontextprotocol.sdk` `McpClient.sync` + `StdioClientTransport` + `ServerParameters` (same BOM `1.0.0` as countries server).
+- `StdioMcpToolInvoker` is `@Profile("!test")`; tests inject `StubMcpToolInvoker`.
+- One `McpSyncClient` per configured tool name, initialized at bean creation for non-test profiles.
+
+### Configuration
+
+- `AssistantMcpProperties` under prefix `assistant.mcp.*` with nested `countries` and `weather` server blocks.
+- `working-directory` is documented and bound but not passed to `ServerParameters` (Java MCP SDK 1.0.0 has no cwd builder). Launch from repository root or set command accordingly.
+
+### Port outcomes
+
+- `ToolExecutionResult` sealed hierarchy: `Success`, `ToolError` (tool `ok: false` envelope), `SourceUnavailable` (transport, empty payload, malformed mapping, weather provider error text).
+- `WeatherTimestamp.Retrieved` used for `semdin/mcp-weather` because the server exposes no observed time.
+
+### Package layout
+
+- `McpOutboundConfiguration` lives in `adapters.outbound.mcp` so package-private mappers stay package-local.
+- Response mappers are package-private; adapters are public.
+
+### Weather text parsing
+
+- Regex maps `the weather in <city> is currently: <celsius>` per captured upstream contract.
+- `Location` uses the requested city name, not the parsed segment, so display stays aligned with the user question.
+
+## Tradeoffs
+
+- Eager MCP client initialization on app start may spawn subprocesses early; lazy init deferred until orchestration needs it.
+- Live weather manual smoke not captured; automated stubs cover mapping and failure paths.
+
+## Follow-up for other plans
+
+- Phase 5: wire `CountriesPort` and `WeatherPort` into deterministic source routing.
+- Optional: lazy MCP client pool or shared transport if startup cost becomes an issue.
+

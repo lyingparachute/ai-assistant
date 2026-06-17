@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "error": "country name is not recognized",
+  "hint": "Provide an English country name or capital city such as Germany or Berlin."
+}

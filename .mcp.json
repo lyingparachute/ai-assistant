@@ -20,8 +20,12 @@
       "command": "mcp-weather",
       "args": [],
       "env": {
-        "WEATHER_API_KEY": "${WEATHER_API_KEY}"
-      }
+        "WEATHER_API_KEY": "${WEATHER_API_KEY}",
+        "WEATHER_API_URL": "${WEATHER_API_URL}"
+      },
+      "cwd": ".",
+      "transport": "stdio",
+      "timeout": 60000
     }
   }
 }

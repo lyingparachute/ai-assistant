@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: assistant-app-test
+
+assistant:
+  mcp:
+    countries:
+      command: echo
+      args:
+        - stub-countries
+      env: {}
+      working-directory: .
+      transport: stdio
+      timeout-seconds: 5
+      tool-name: country_lookup
+    weather:
+      command: echo
+      args:
+        - stub-weather
+      env: {}
+      working-directory: .
+      transport: stdio
+      timeout-seconds: 5
+      tool-name: get-weather
