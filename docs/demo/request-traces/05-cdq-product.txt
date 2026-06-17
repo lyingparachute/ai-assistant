@@ -1,0 +1,6 @@
+event=assistant_request_started correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 questionLength=24
+event=assistant_route_selected correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 route=CDQ_PRODUCT
+event=assistant_port_invoked correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 port=RagKnowledgePort invocationOrder=1
+event=assistant_rag_retrieval correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 snippetCount=5
+event=assistant_port_invoked correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 port=LlmPort invocationOrder=2
+event=assistant_request_completed correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 route=CDQ_PRODUCT portsInvoked=[RagKnowledgePort, LlmPort] ragRetrievalCount=5 outcome=cdq_product_answered_sources=2

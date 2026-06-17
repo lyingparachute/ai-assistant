@@ -1,6 +1,4 @@
-correlationId=d48e4298-eff0-45df-bc3b-80b62d815c54
-route=COUNTRY_CAPITAL
-portsInvoked=[CountriesPort]
-ragRetrievalCount=0
-outcome=country_capital_answered_sources=1
-sourceStatus=countries_facts:UNAVAILABLE
+event=assistant_request_started correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 questionLength=36
+event=assistant_route_selected correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 route=COUNTRY_CAPITAL
+event=assistant_port_invoked correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 port=CountriesPort invocationOrder=1
+event=assistant_request_completed correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 route=COUNTRY_CAPITAL portsInvoked=[CountriesPort] ragRetrievalCount=0 outcome=country_capital_answered_sources=1
