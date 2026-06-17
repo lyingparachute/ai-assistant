@@ -16,24 +16,23 @@ assistant:
       - http://localhost:4321
   mcp:
     countries:
-      command: ./mvnw
+      # spring-boot:run launches the JVM with cwd = assistant-app/, so the jar path is relative to
+      # that directory. Subprocess cwd itself is not configurable with MCP SDK 1.0.0 (see docs/spec/12).
+      command: java
       args:
-        - -q
-        - -pl
-        - countries-mcp-server
-        - spring-boot:run
+        - -jar
+        - ${COUNTRIES_MCP_JAR:../countries-mcp-server/target/countries-mcp-server-0.1.0-SNAPSHOT.jar}
       env:
         COUNTRIES_MCP_REST_COUNTRIES_BASE_URL: https://restcountries.com/v3.1
         COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS: "10"
-      working-directory: .
       transport: stdio
       timeout-seconds: 60
       tool-name: country_lookup
     weather:
-      command: mcp-weather
+      command: ../scripts/mcp-weather
       args: []
+      # Host WEATHER_API_KEY / WEATHER_API_URL are forwarded when unset here
       env: {}
-      working-directory: .
       transport: stdio
       timeout-seconds: 60
       tool-name: get-weather
@@ -47,12 +46,14 @@ assistant:
     chunk-max-size: 1000
     chunk-overlap: 200
     fetch-timeout-seconds: 30
+  ollama:
+    base-url: http://localhost:11434
   embedding:
-    ollama-base-url: http://localhost:11434
+    ollama-base-url: ${assistant.ollama.base-url}
     model-name: nomic-embed-text
     document-prefix: "search_document:"
     query-prefix: "search_query:"
   llm:
-    ollama-base-url: http://localhost:11434
+    ollama-base-url: ${assistant.ollama.base-url}
     model-name: qwen3:4b
     timeout-seconds: 120

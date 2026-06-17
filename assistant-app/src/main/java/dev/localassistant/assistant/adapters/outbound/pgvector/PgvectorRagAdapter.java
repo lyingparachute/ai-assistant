@@ -2,21 +2,24 @@ package dev.localassistant.assistant.adapters.outbound.pgvector;
 
 import dev.localassistant.assistant.llm.EmbeddingPort;
 import dev.localassistant.assistant.llm.EmbeddingResult;
+import dev.localassistant.assistant.rag.ChunkStorageOutcome;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.rag.RagChunk;
 import dev.localassistant.assistant.rag.RagIngestionReport;
-import dev.localassistant.assistant.rag.RagIngestionResult;
 import dev.localassistant.assistant.rag.RagKnowledgePort;
 import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.StoredSourceState;
+import dev.localassistant.assistant.tools.SourceUnavailability;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
-public class PgvectorRagAdapter implements RagKnowledgePort {
+public final class PgvectorRagAdapter implements RagKnowledgePort {
 
     private static final String SOURCE_LABEL = "pgvector RAG";
+    private static final String UNAVAILABLE_HINT =
+            "Verify PostgreSQL with pgvector is running and the schema is initialized";
 
     private final PgvectorIngestionRepository repository;
     private final EmbeddingPort embeddingPort;
@@ -36,8 +39,7 @@ public class PgvectorRagAdapter implements RagKnowledgePort {
 
         EmbeddingResult embeddingResult = embeddingPort.embedQuery(questionText);
         if (embeddingResult instanceof EmbeddingResult.SourceUnavailable unavailable) {
-            return new RagRetrievalResult.SourceUnavailable(
-                    unavailable.sourceLabel(), unavailable.message(), unavailable.hint());
+            return new RagRetrievalResult.SourceUnavailable(unavailable.asUnavailability());
         }
 
         float[] queryEmbedding = ((EmbeddingResult.Success) embeddingResult).embedding();
@@ -48,9 +50,7 @@ public class PgvectorRagAdapter implements RagKnowledgePort {
                             queryEmbedding, policy.topK(), policy.relevanceThreshold());
         } catch (RuntimeException exception) {
             return new RagRetrievalResult.SourceUnavailable(
-                    SOURCE_LABEL,
-                    "pgvector similarity search failed",
-                    "Verify PostgreSQL with pgvector is running and the schema is initialized");
+                    SOURCE_LABEL, "pgvector similarity search failed", UNAVAILABLE_HINT);
         }
 
         if (matches.isEmpty()) {
@@ -72,7 +72,7 @@ public class PgvectorRagAdapter implements RagKnowledgePort {
     }
 
     @Override
-    public RagIngestionResult storeChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
+    public ChunkStorageOutcome storeChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
         Objects.requireNonNull(sourceUrl, "sourceUrl");
         Objects.requireNonNull(contentHash, "contentHash");
         Objects.requireNonNull(chunks, "chunks");
@@ -87,47 +87,30 @@ public class PgvectorRagAdapter implements RagKnowledgePort {
         }
 
         try {
-            int existingCount = repository.countChunksForSource(sourceUrl);
-            repository.replaceChunksForSource(sourceUrl, contentHash, chunks);
+            int replacedRows = repository.replaceChunksForSource(sourceUrl, contentHash, chunks);
             RagIngestionReport.Outcome outcome =
-                    existingCount > 0
+                    replacedRows > 0
                             ? RagIngestionReport.Outcome.REPLACED
                             : RagIngestionReport.Outcome.INGESTED;
-            return new RagIngestionResult.Success(
-                    new RagIngestionReport(sourceUrl, contentHash, chunks.size(), outcome));
+            return new ChunkStorageOutcome.Stored(outcome);
         } catch (RuntimeException exception) {
-            return new RagIngestionResult.SourceUnavailable(
-                    SOURCE_LABEL,
-                    "pgvector chunk storage failed",
-                    "Verify PostgreSQL with pgvector is running and the schema is initialized");
+            return new ChunkStorageOutcome.Unavailable(
+                    new SourceUnavailability(
+                            SOURCE_LABEL, "pgvector chunk storage failed", UNAVAILABLE_HINT));
         }
     }
 
     @Override
-    public Optional<String> findContentHashForSource(String sourceUrl) {
+    public StoredSourceState findContentHashForSource(String sourceUrl) {
         if (sourceUrl == null || sourceUrl.isBlank()) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
         try {
-            return repository.findContentHashForSource(sourceUrl);
+            return repository.findStoredSourceState(sourceUrl);
         } catch (RuntimeException exception) {
-            throw new PgvectorStorageException("pgvector content-hash lookup failed", exception);
+            return new StoredSourceState.Unavailable(
+                    new SourceUnavailability(
+                            SOURCE_LABEL, "pgvector content-hash lookup failed", UNAVAILABLE_HINT));
         }
-    }
-
-    @Override
-    public int countChunksForSource(String sourceUrl) {
-        if (sourceUrl == null || sourceUrl.isBlank()) {
-            throw new IllegalArgumentException("sourceUrl must not be blank");
-        }
-        try {
-            return repository.countChunksForSource(sourceUrl);
-        } catch (RuntimeException exception) {
-            throw new PgvectorStorageException("pgvector chunk count lookup failed", exception);
-        }
-    }
-
-    public void initializeSchema() {
-        repository.initializeSchema();
     }
 }

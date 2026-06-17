@@ -39,4 +39,30 @@ class DeterministicTextChunkerTest {
         assertThatThrownBy(() -> new DeterministicTextChunker(100, 100))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void consecutiveChunksShareOverlapWindow() {
+        DeterministicTextChunker overlapChunker = new DeterministicTextChunker(10, 3);
+        String text = "ABCDEFGHIJKLMNOPQRST";
+
+        List<TextChunk> chunks = overlapChunker.chunk(text);
+
+        assertThat(chunks).extracting(TextChunk::chunkText)
+                .containsExactly("ABCDEFGHIJ", "HIJKLMNOPQ", "OPQRST");
+        String firstTail = chunks.get(0).chunkText().substring(7);
+        String secondHead = chunks.get(1).chunkText().substring(0, 3);
+        assertThat(secondHead).isEqualTo(firstTail).isEqualTo("HIJ");
+    }
+
+    @Test
+    void exactMultipleLengthProducesNoTrailingEmptyChunk() {
+        DeterministicTextChunker exactChunker = new DeterministicTextChunker(10, 0);
+        String text = "ABCDEFGHIJKLMNOPQRST";
+
+        List<TextChunk> chunks = exactChunker.chunk(text);
+
+        assertThat(chunks).extracting(TextChunk::chunkText)
+                .containsExactly("ABCDEFGHIJ", "KLMNOPQRST");
+        assertThat(chunks).noneMatch(chunk -> chunk.chunkText().isEmpty());
+    }
 }

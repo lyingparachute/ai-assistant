@@ -2,23 +2,21 @@ package dev.localassistant.assistant.config;
 
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Validated
 @ConfigurationProperties(prefix = "assistant.cors")
-public class AssistantCorsProperties {
+public record AssistantCorsProperties(
+        @NotEmpty @DefaultValue("http://localhost:4321") List<String> allowedOrigins,
+        @NotEmpty @DefaultValue({"POST", "OPTIONS"}) List<String> allowedMethods,
+        @NotEmpty @DefaultValue("Content-Type") List<String> allowedHeaders) {
 
-    @NotEmpty
-    private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:4321"));
-
-    public List<String> allowedOrigins() {
-        return List.copyOf(allowedOrigins);
-    }
-
-    public void setAllowedOrigins(List<String> allowedOrigins) {
-        this.allowedOrigins = new ArrayList<>(allowedOrigins);
+    public AssistantCorsProperties {
+        allowedOrigins = List.copyOf(allowedOrigins);
+        allowedMethods = List.copyOf(allowedMethods);
+        allowedHeaders = List.copyOf(allowedHeaders);
     }
 }

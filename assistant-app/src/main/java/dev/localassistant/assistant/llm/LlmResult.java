@@ -1,8 +1,17 @@
 package dev.localassistant.assistant.llm;
 
+import dev.localassistant.assistant.tools.SourceUnavailability;
 import java.util.Objects;
 
 public sealed interface LlmResult {
+
+    default SourceUnavailability asUnavailability() {
+        return switch (this) {
+            case Success ignored ->
+                    throw new IllegalStateException("asUnavailability requires a failed result");
+            case SourceUnavailable unavailable -> unavailable.unavailability();
+        };
+    }
 
     record Success(String text) implements LlmResult {
         public Success {
@@ -13,20 +22,25 @@ public sealed interface LlmResult {
         }
     }
 
-    record SourceUnavailable(String sourceLabel, String message, String hint) implements LlmResult {
+    record SourceUnavailable(SourceUnavailability unavailability) implements LlmResult {
         public SourceUnavailable {
-            Objects.requireNonNull(sourceLabel, "sourceLabel");
-            Objects.requireNonNull(message, "message");
-            Objects.requireNonNull(hint, "hint");
-            if (sourceLabel.isBlank()) {
-                throw new IllegalArgumentException("sourceLabel must not be blank");
-            }
-            if (message.isBlank()) {
-                throw new IllegalArgumentException("message must not be blank");
-            }
-            if (hint.isBlank()) {
-                throw new IllegalArgumentException("hint must not be blank");
-            }
+            Objects.requireNonNull(unavailability, "unavailability");
+        }
+
+        public SourceUnavailable(String sourceLabel, String message, String hint) {
+            this(new SourceUnavailability(sourceLabel, message, hint));
+        }
+
+        public String sourceLabel() {
+            return unavailability.sourceLabel();
+        }
+
+        public String message() {
+            return unavailability.message();
+        }
+
+        public String hint() {
+            return unavailability.hint();
         }
     }
 }

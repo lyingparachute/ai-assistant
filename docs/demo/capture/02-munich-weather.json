@@ -1,0 +1,1 @@
+{"answerText":"Weather MCP is unavailable: MCP tool call failed for get-weather","sources":[{"type":"weather_observation","status":"UNAVAILABLE","unavailableMessage":"MCP tool call failed for get-weather","unavailableHint":"The weather MCP server could not be reached. Retry later; do not invent temperatures."}],"traceCorrelationId":"2758fef9-2b87-4144-8958-2f7b1e615c1e"}

@@ -6,6 +6,8 @@ import dev.localassistant.assistant.llm.EmbeddingResult;
 import dev.localassistant.assistant.rag.EmbeddingDimensions;
 import org.springframework.ai.embedding.EmbeddingModel;
 
+import java.util.Objects;
+
 public final class OllamaEmbeddingAdapter implements EmbeddingPort {
 
     static final String SOURCE_LABEL = "Ollama embedding";
@@ -18,7 +20,8 @@ public final class OllamaEmbeddingAdapter implements EmbeddingPort {
     private final String queryPrefix;
 
     public OllamaEmbeddingAdapter(EmbeddingModel embeddingModel, AssistantEmbeddingProperties properties) {
-        this.embeddingModel = embeddingModel;
+        this.embeddingModel = Objects.requireNonNull(embeddingModel, "embeddingModel");
+        Objects.requireNonNull(properties, "properties");
         this.documentPrefix = properties.documentPrefix();
         this.queryPrefix = properties.queryPrefix();
     }
@@ -36,7 +39,7 @@ public final class OllamaEmbeddingAdapter implements EmbeddingPort {
     private EmbeddingResult embedWithPrefix(String prefix, String text) {
         try {
             float[] embedding = embeddingModel.embed(prefix + text);
-            if (embedding.length != EmbeddingDimensions.VECTOR_SIZE) {
+            if (!EmbeddingDimensions.matches(embedding)) {
                 return new EmbeddingResult.SourceUnavailable(
                         SOURCE_LABEL,
                         "embedding length must be "
@@ -46,7 +49,7 @@ public final class OllamaEmbeddingAdapter implements EmbeddingPort {
                         UNAVAILABLE_HINT);
             }
             return new EmbeddingResult.Success(embedding);
-        } catch (Exception exception) {
+        } catch (RuntimeException exception) {
             return new EmbeddingResult.SourceUnavailable(
                     SOURCE_LABEL,
                     exception.getMessage() == null ? "Ollama embedding request failed" : exception.getMessage(),

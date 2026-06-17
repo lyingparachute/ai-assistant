@@ -6,7 +6,7 @@ import dev.localassistant.assistant.rag.ProductPageResult;
 import java.io.IOException;
 import java.util.Objects;
 
-public class CdqProductKnowledgeAdapter implements ProductKnowledgePort {
+public final class CdqProductKnowledgeAdapter implements ProductKnowledgePort {
 
     private static final String SOURCE_LABEL = "CDQ product page";
 
@@ -39,7 +39,7 @@ public class CdqProductKnowledgeAdapter implements ProductKnowledgePort {
             }
             return new ProductPageResult.SourceUnavailable(
                     SOURCE_LABEL,
-                    "Failed to fetch CDQ product page",
+                    "Failed to fetch CDQ product page: " + exception.getMessage(),
                     "Verify network connectivity and the configured source URL");
         }
     }

@@ -29,12 +29,13 @@ public final class WeatherMcpClientAdapter implements WeatherPort {
             return responseMapper.mapBlankLocation();
         }
 
+        String canonicalLocation = location.trim();
         try {
             McpToolInvoker.McpToolResponse response = mcpToolInvoker.invoke(
                     toolName,
-                    Map.of("city", location.trim())
+                    Map.of("city", canonicalLocation)
             );
-            return responseMapper.mapResponse(location, response);
+            return responseMapper.mapResponse(canonicalLocation, response);
         } catch (McpToolInvocationException exception) {
             return responseMapper.mapTransportFailure(exception.getMessage());
         }

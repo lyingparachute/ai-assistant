@@ -1,14 +1,14 @@
 package dev.localassistant.assistant.orchestration.support;
 
+import dev.localassistant.assistant.rag.ChunkStorageOutcome;
 import dev.localassistant.assistant.rag.RagChunk;
-import dev.localassistant.assistant.rag.RagIngestionResult;
 import dev.localassistant.assistant.rag.RagKnowledgePort;
 import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.StoredSourceState;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.BiFunction;
 
 public final class StubRagKnowledgePort implements RagKnowledgePort {
@@ -29,18 +29,13 @@ public final class StubRagKnowledgePort implements RagKnowledgePort {
     }
 
     @Override
-    public RagIngestionResult storeChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
+    public ChunkStorageOutcome storeChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
         throw new UnsupportedOperationException("not used in orchestration tests");
     }
 
     @Override
-    public Optional<String> findContentHashForSource(String sourceUrl) {
-        return Optional.empty();
-    }
-
-    @Override
-    public int countChunksForSource(String sourceUrl) {
-        return 0;
+    public StoredSourceState findContentHashForSource(String sourceUrl) {
+        return new StoredSourceState.Absent();
     }
 
     public int retrieveInvocationCount() {

@@ -25,28 +25,18 @@ public final class CountryToolResult {
         return envelope;
     }
 
-    public static Map<String, Object> fromOutcome(CountryLookupOutcome outcome) {
+    public static ToolEnvelope fromOutcome(CountryLookupOutcome outcome) {
         return switch (outcome) {
-            case CountryLookupOutcome.Success success -> success(success.facts());
-            case CountryLookupOutcome.NotRecognized notRecognized ->
-                    CountryToolErrors.envelope(
-                            CountryToolErrors.ERROR_NOT_RECOGNIZED,
-                            notRecognized.hint()
-                    );
+            case CountryLookupOutcome.Success success -> new ToolEnvelope(success(success.facts()), false);
+            case CountryLookupOutcome.NotRecognized ignored ->
+                    new ToolEnvelope(CountryToolErrors.notRecognized(), true);
             case CountryLookupOutcome.AmbiguousCapital ambiguousCapital ->
-                    CountryToolErrors.envelope(
-                            CountryToolErrors.ERROR_AMBIGUOUS_CAPITAL,
-                            ambiguousCapital.hint()
-                    );
-            case CountryLookupOutcome.SourceUnavailable sourceUnavailable ->
-                    CountryToolErrors.envelope(
-                            CountryToolErrors.ERROR_SOURCE_UNAVAILABLE,
-                            sourceUnavailable.hint()
-                    );
+                    new ToolEnvelope(CountryToolErrors.ambiguousCapital(ambiguousCapital.countryNames()), true);
+            case CountryLookupOutcome.SourceUnavailable ignored ->
+                    new ToolEnvelope(CountryToolErrors.sourceUnavailable(), true);
         };
     }
 
-    public static boolean isErrorOutcome(CountryLookupOutcome outcome) {
-        return !(outcome instanceof CountryLookupOutcome.Success);
+    record ToolEnvelope(Map<String, Object> payload, boolean isError) {
     }
 }

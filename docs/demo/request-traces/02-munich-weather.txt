@@ -1,0 +1,6 @@
+correlationId=2758fef9-2b87-4144-8958-2f7b1e615c1e
+route=WEATHER_LOCATION
+portsInvoked=[WeatherPort]
+ragRetrievalCount=0
+outcome=weather_location_answered_sources=1
+sourceStatus=weather_observation:UNAVAILABLE

@@ -84,10 +84,18 @@ Raw REST Countries JSON must never appear in `CountryInfo`.
 | `command` | `ASSISTANT_MCP_COUNTRIES_COMMAND` | `./mvnw` | MCP server launch command |
 | `args` | — | `-q,-pl,countries-mcp-server,spring-boot:run` | Command arguments |
 | `env` | — | REST Countries URL + timeout from Phase 2 | Subprocess environment |
-| `working-directory` | `ASSISTANT_MCP_COUNTRIES_WORKING_DIRECTORY` | `.` | Subprocess cwd |
 | `transport` | — | `stdio` | Only stdio supported in Phase 3 |
 | `timeout-seconds` | `ASSISTANT_MCP_COUNTRIES_TIMEOUT_SECONDS` | `60` | MCP request timeout |
 | `tool-name` | — | `country_lookup` | Semantic tool name |
+
+<a id="mcp-subprocess-cwd"></a>
+**Subprocess working directory (shared note for countries and weather MCP servers).** The MCP server
+subprocess cwd is not configurable: `io.modelcontextprotocol.sdk` 1.0.0 `ServerParameters.Builder`
+exposes no cwd setter. The subprocess therefore inherits the assistant JVM's cwd. `spring-boot:run`
+launches that JVM from `assistant-app/`, which is why the countries jar and weather launcher are
+referenced through paths relative to `assistant-app/` (for example
+`../countries-mcp-server/target/countries-mcp-server-<version>.jar`). Changing cwd needs an SDK
+upgrade or a wrapper command that sets it; tracked in `docs/plans/refactor-4-countries-mcp-structural.md`.
 
 Secrets must not be committed. Assignment defaults may live in `application.yml` when safe.
 

@@ -48,6 +48,19 @@ class CountriesMcpClientContractTest {
     }
 
     @Test
+    void mcpErrorFlagWithUnparseableContentMapsToSourceUnavailable() {
+        var result = mapper.mapResponse(
+                new McpToolInvoker.McpToolResponse(java.util.List.of("upstream crashed"), true)
+        );
+
+        assertThat(result).isInstanceOf(dev.localassistant.assistant.tools.ToolExecutionResult.SourceUnavailable.class);
+        var unavailable = (dev.localassistant.assistant.tools.ToolExecutionResult.SourceUnavailable<
+                dev.localassistant.assistant.tools.CountryInfo>) result;
+        assertThat(unavailable.sourceLabel()).isEqualTo(CountriesMcpResponseMapper.SOURCE_LABEL);
+        assertThat(unavailable.message()).isEqualTo(CountriesMcpResponseMapper.MCP_ERROR_FLAG_MESSAGE);
+    }
+
+    @Test
     void errorEnvelopeShapeMatchesContract() throws Exception {
         String json = """
                 {

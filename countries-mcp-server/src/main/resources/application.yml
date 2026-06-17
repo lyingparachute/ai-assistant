@@ -2,6 +2,7 @@ countries:
   mcp:
     rest-countries-base-url: https://restcountries.com/v3.1
     rest-countries-timeout-seconds: 10
+    request-timeout-seconds: 20
     server-name: countries-mcp-server
     server-version: 0.1.0-SNAPSHOT
     stdio-enabled: true

@@ -7,7 +7,7 @@ import org.jsoup.safety.Safelist;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-public class ProductPageTextExtractor {
+public final class ProductPageTextExtractor {
 
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 

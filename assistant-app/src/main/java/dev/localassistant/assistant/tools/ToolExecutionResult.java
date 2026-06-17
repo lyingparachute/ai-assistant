@@ -4,6 +4,16 @@ import java.util.Objects;
 
 public sealed interface ToolExecutionResult<T> {
 
+    default SourceUnavailability asUnavailability(String fallbackLabel) {
+        return switch (this) {
+            case Success<T> ignored ->
+                    throw new IllegalStateException("asUnavailability requires a failed result");
+            case ToolError<T> toolError ->
+                    new SourceUnavailability(fallbackLabel, toolError.error(), toolError.hint());
+            case SourceUnavailable<T> unavailable -> unavailable.unavailability();
+        };
+    }
+
     record Success<T>(T value) implements ToolExecutionResult<T> {
         public Success {
             Objects.requireNonNull(value, "value");
@@ -20,14 +30,26 @@ public sealed interface ToolExecutionResult<T> {
         }
     }
 
-    record SourceUnavailable<T>(String sourceLabel, String message, String hint) implements ToolExecutionResult<T> {
+    record SourceUnavailable<T>(SourceUnavailability unavailability)
+            implements ToolExecutionResult<T> {
         public SourceUnavailable {
-            Objects.requireNonNull(sourceLabel, "sourceLabel");
-            Objects.requireNonNull(message, "message");
-            Objects.requireNonNull(hint, "hint");
-            if (sourceLabel.isBlank()) {
-                throw new IllegalArgumentException("sourceLabel must not be blank");
-            }
+            Objects.requireNonNull(unavailability, "unavailability");
+        }
+
+        public SourceUnavailable(String sourceLabel, String message, String hint) {
+            this(new SourceUnavailability(sourceLabel, message, hint));
+        }
+
+        public String sourceLabel() {
+            return unavailability.sourceLabel();
+        }
+
+        public String message() {
+            return unavailability.message();
+        }
+
+        public String hint() {
+            return unavailability.hint();
         }
     }
 }

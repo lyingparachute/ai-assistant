@@ -6,17 +6,21 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public final class AssistantRequestTrace {
 
     private static final Logger log = LoggerFactory.getLogger(AssistantRequestTrace.class);
 
+    private static final String OUTCOME_PENDING = "pending";
+    private static final String OUTCOME_ANSWERED_FORMAT = "%s_answered_sources=%d";
+
     private final String correlationId;
     private final List<String> portsInvoked = new ArrayList<>();
     private QuestionRoute route;
     private int ragRetrievalCount;
-    private String outcome = "pending";
+    private String outcome = OUTCOME_PENDING;
 
     private AssistantRequestTrace(String correlationId) {
         this.correlationId = correlationId;
@@ -60,15 +64,17 @@ public final class AssistantRequestTrace {
                 snippetCount);
     }
 
-    public void completed(String completedOutcome) {
-        this.outcome = completedOutcome;
+    public void completed(int answeredSourceCount) {
+        this.outcome =
+                OUTCOME_ANSWERED_FORMAT.formatted(
+                        route.name().toLowerCase(Locale.ROOT), answeredSourceCount);
         log.info(
                 "event=assistant_request_completed correlationId={} route={} portsInvoked={} ragRetrievalCount={} outcome={}",
                 correlationId,
                 route,
                 portsInvoked,
                 ragRetrievalCount,
-                completedOutcome);
+                outcome);
     }
 
     public List<String> portsInvoked() {

@@ -1,7 +1,9 @@
 target/
+.local/
 .mvn/wrapper/dists/
 
 .idea/
+*.iml
 .claude/
 
 .env
@@ -14,3 +16,5 @@ target/
 *.sqlite3
 
 .DS_Store
+
+Recruiting task.pdf

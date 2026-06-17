@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-class OrchestrationConfiguration {
+public class OrchestrationConfiguration {
 
     @Bean
     SourceRoutingPolicy sourceRoutingPolicy() {
@@ -26,9 +26,9 @@ class OrchestrationConfiguration {
     }
 
     @Bean
-    RagRetrievalPolicy ragRetrievalPolicy(AssistantRagProperties assistantRagProperties) {
+    RagRetrievalPolicy ragRetrievalPolicy(AssistantRagRetrievalProperties retrievalProperties) {
         return new RagRetrievalPolicy(
-                assistantRagProperties.topK(), assistantRagProperties.relevanceThreshold());
+                retrievalProperties.topK(), retrievalProperties.relevanceThreshold());
     }
 
     @Bean

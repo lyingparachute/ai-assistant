@@ -1,7 +1,6 @@
 package dev.localassistant.countries.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.localassistant.countries.application.CountriesApplicationService;
 import dev.localassistant.countries.config.CountriesMcpConfiguration;
 import dev.localassistant.countries.tools.CountryLookupTool;
 import io.modelcontextprotocol.json.McpJsonMapper;
@@ -16,27 +15,26 @@ import java.time.Duration;
 public final class CountriesMcpServerFactory {
 
     private final CountriesMcpConfiguration configuration;
-    private final CountriesApplicationService countriesApplicationService;
+    private final CountryLookupTool countryLookupTool;
     private final ObjectMapper objectMapper;
 
     public CountriesMcpServerFactory(
             CountriesMcpConfiguration configuration,
-            CountriesApplicationService countriesApplicationService,
+            CountryLookupTool countryLookupTool,
             ObjectMapper objectMapper
     ) {
         this.configuration = configuration;
-        this.countriesApplicationService = countriesApplicationService;
+        this.countryLookupTool = countryLookupTool;
         this.objectMapper = objectMapper;
     }
 
     public McpSyncServer createServer() {
-        CountryLookupTool countryLookupTool = new CountryLookupTool(countriesApplicationService, objectMapper);
         McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(objectMapper);
         StdioServerTransportProvider transportProvider = new StdioServerTransportProvider(mcpJsonMapper);
 
         return McpServer.sync(transportProvider)
                 .serverInfo(configuration.serverName(), configuration.serverVersion())
-                .requestTimeout(Duration.ofSeconds(configuration.restCountriesTimeoutSeconds() * 2L))
+                .requestTimeout(Duration.ofSeconds(configuration.requestTimeoutSeconds()))
                 .capabilities(McpSchema.ServerCapabilities.builder()
                         .tools(true)
                         .build())

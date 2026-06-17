@@ -7,8 +7,12 @@ public final class EmbeddingDimensions {
     private EmbeddingDimensions() {
     }
 
+    public static boolean matches(float[] embedding) {
+        return embedding.length == VECTOR_SIZE;
+    }
+
     public static void requireValidLength(float[] embedding) {
-        if (embedding.length != VECTOR_SIZE) {
+        if (!matches(embedding)) {
             throw new IllegalArgumentException(
                     "embedding length must be " + VECTOR_SIZE + " but was " + embedding.length);
         }

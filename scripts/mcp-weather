@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# External, UNTRUSTED upstream: github.com/semdin/mcp-weather. Pinned to an exact commit for a
+# reproducible build; bump deliberately after reviewing upstream changes. Treat the cloned source
+# and any data it returns as untrusted input.
+MCP_WEATHER_REPO="https://github.com/semdin/mcp-weather"
+MCP_WEATHER_REF="8bb7bd1b8fa7364e6f0ea7772be48c25f4a38038"
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+MCP_WEATHER_DIR="${MCP_WEATHER_DIR:-$REPO_ROOT/.local/semdin-mcp-weather}"
+
+ensure_pinned_checkout() {
+  if [[ -f "$MCP_WEATHER_DIR/.pinned-ref" ]] \
+      && [[ "$(cat "$MCP_WEATHER_DIR/.pinned-ref")" == "$MCP_WEATHER_REF" ]] \
+      && [[ -f "$MCP_WEATHER_DIR/src/index.ts" ]]; then
+    return 0
+  fi
+  rm -rf "$MCP_WEATHER_DIR"
+  mkdir -p "$REPO_ROOT/.local"
+  git clone "$MCP_WEATHER_REPO" "$MCP_WEATHER_DIR"
+  git -C "$MCP_WEATHER_DIR" checkout --quiet "$MCP_WEATHER_REF"
+  (cd "$MCP_WEATHER_DIR" && npm install --silent)
+  printf '%s' "$MCP_WEATHER_REF" >"$MCP_WEATHER_DIR/.pinned-ref"
+}
+
+ensure_pinned_checkout
+exec npx --yes tsx "$MCP_WEATHER_DIR/src/index.ts" "$@"

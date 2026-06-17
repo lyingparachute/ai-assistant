@@ -6,6 +6,7 @@ import dev.localassistant.assistant.question.AssistantAnswer;
 import dev.localassistant.assistant.question.ConversationTurn;
 import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.tools.CountryInfo;
+import dev.localassistant.assistant.tools.SourceUnavailability;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,9 +20,12 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,7 +42,8 @@ class ChatControllerIntegrationTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mockMvc =
-                MockMvcBuilders.standaloneSetup(new ChatController(answerQuestionUseCase))
+                MockMvcBuilders.standaloneSetup(
+                                new ChatController(answerQuestionUseCase, new ChatHttpMapper()))
                         .setControllerAdvice(new HttpExceptionHandler())
                         .setMessageConverters(new MappingJackson2HttpMessageConverter())
                         .setValidator(validator)
@@ -86,6 +91,22 @@ class ChatControllerIntegrationTest {
     }
 
     @Test
+    void unexpectedDomainFailureReturnsServerErrorWithGenericBody() throws Exception {
+        String internalDetail = "AnswerSource invariant violated: status must be USED";
+        when(answerQuestionUseCase.answer(any(UserQuestion.class)))
+                .thenThrow(new IllegalArgumentException(internalDetail));
+
+        mockMvc.perform(
+                        post("/api/chat")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"question\":\"What is the capital city of Germany?\"}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("internal_error"))
+                .andExpect(jsonPath("$.message").value("an unexpected error occurred"))
+                .andExpect(content().string(not(containsString(internalDetail))));
+    }
+
+    @Test
     void sourceUnavailableReturnsOkWithStructuredBody() throws Exception {
         when(answerQuestionUseCase.answer(any(UserQuestion.class)))
                 .thenReturn(
@@ -95,7 +116,8 @@ class ChatControllerIntegrationTest {
                                         "Weather for Munich is unavailable: weather service down.",
                                         List.of(
                                                 AnswerSource.WeatherObservation.unavailable(
-                                                        "weather service down", "retry later")),
+                                                        new SourceUnavailability(
+                                                                "Weather MCP", "weather service down", "retry later"))),
                                         "trace-weather")));
 
         mockMvc.perform(

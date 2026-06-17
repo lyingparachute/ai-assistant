@@ -17,6 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @org.springframework.context.annotation.Import(McpTestConfiguration.class)
+@org.springframework.test.context.ContextConfiguration(
+        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
 class CountriesMcpClientAdapterIntegrationTest {
 
     private static final String TOOL_NAME = "country_lookup";

@@ -108,17 +108,4 @@ class RagIngestionReportTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("positive");
     }
-
-    @Test
-    void rejectsNonZeroChunkCountForSkippedOutcome() {
-        assertThatThrownBy(
-                        () ->
-                                new RagIngestionReport(
-                                        "https://example.com",
-                                        "hash-1",
-                                        2,
-                                        RagIngestionReport.Outcome.SKIPPED))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("zero");
-    }
 }

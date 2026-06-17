@@ -1,0 +1,7 @@
+correlationId=04e52a3e-a117-45cd-9ee8-117fef8b30c3
+route=PLACE_SYNTHESIS
+portsInvoked=[CountriesPort]
+ragRetrievalCount=0
+outcome=place_synthesis_answered_sources=1
+sourceStatus=countries_facts:UNAVAILABLE
+note=LlmPort not invoked because countries lookup failed

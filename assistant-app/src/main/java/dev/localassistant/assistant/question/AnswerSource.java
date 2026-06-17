@@ -2,6 +2,7 @@ package dev.localassistant.assistant.question;
 
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.tools.CountryInfo;
+import dev.localassistant.assistant.tools.SourceUnavailability;
 import dev.localassistant.assistant.tools.WeatherReport;
 
 import java.util.List;
@@ -10,184 +11,191 @@ import java.util.Optional;
 
 public sealed interface AnswerSource {
 
-    record CountriesFacts(
-            SourceContributionStatus status,
-            CountryInfo resolvedCountryInfo,
-            boolean hasResolvedCountryInfo,
-            String unavailableMessage,
-            String unavailableHint)
-            implements AnswerSource {
+    SourceContributionStatus status();
 
-        public CountriesFacts {
-            Objects.requireNonNull(status, "status");
-            Objects.requireNonNull(unavailableMessage, "unavailableMessage");
-            Objects.requireNonNull(unavailableHint, "unavailableHint");
-            if (status == SourceContributionStatus.INSUFFICIENT) {
-                throw new IllegalArgumentException("CountriesFacts does not support INSUFFICIENT status");
-            }
-            if (status == SourceContributionStatus.USED) {
+    sealed interface CountriesFacts extends AnswerSource {
+
+        Optional<CountryInfo> countryInfo();
+
+        static CountriesFacts used(CountryInfo countryInfo) {
+            return new Used(countryInfo);
+        }
+
+        static CountriesFacts unavailable(SourceUnavailability unavailability) {
+            return new Unavailable(unavailability);
+        }
+
+        record Used(CountryInfo resolvedCountryInfo) implements CountriesFacts {
+            public Used {
                 Objects.requireNonNull(resolvedCountryInfo, "resolvedCountryInfo");
-                if (!hasResolvedCountryInfo) {
-                    throw new IllegalArgumentException("USED CountriesFacts requires hasResolvedCountryInfo");
-                }
-                if (!unavailableMessage.isBlank() || !unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException("USED CountriesFacts must not carry unavailable details");
-                }
-            } else if (status == SourceContributionStatus.UNAVAILABLE) {
-                if (hasResolvedCountryInfo || resolvedCountryInfo != null) {
-                    throw new IllegalArgumentException("UNAVAILABLE CountriesFacts must not carry countryInfo");
-                }
-                if (unavailableMessage.isBlank() || unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "UNAVAILABLE CountriesFacts requires unavailableMessage and unavailableHint");
-                }
+            }
+
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.USED;
+            }
+
+            @Override
+            public Optional<CountryInfo> countryInfo() {
+                return Optional.of(resolvedCountryInfo);
             }
         }
 
-        public static CountriesFacts used(CountryInfo countryInfo) {
-            return new CountriesFacts(
-                    SourceContributionStatus.USED, countryInfo, true, "", "");
-        }
+        record Unavailable(SourceUnavailability unavailability) implements CountriesFacts {
+            public Unavailable {
+                Objects.requireNonNull(unavailability, "unavailability");
+            }
 
-        public static CountriesFacts unavailable(String message, String hint) {
-            return new CountriesFacts(
-                    SourceContributionStatus.UNAVAILABLE, null, false, message, hint);
-        }
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.UNAVAILABLE;
+            }
 
-        public Optional<CountryInfo> countryInfo() {
-            return hasResolvedCountryInfo ? Optional.of(resolvedCountryInfo) : Optional.empty();
+            @Override
+            public Optional<CountryInfo> countryInfo() {
+                return Optional.empty();
+            }
         }
     }
 
-    record WeatherObservation(
-            SourceContributionStatus status,
-            WeatherReport resolvedWeatherReport,
-            boolean hasResolvedWeatherReport,
-            String unavailableMessage,
-            String unavailableHint)
-            implements AnswerSource {
+    sealed interface WeatherObservation extends AnswerSource {
 
-        public WeatherObservation {
-            Objects.requireNonNull(status, "status");
-            Objects.requireNonNull(unavailableMessage, "unavailableMessage");
-            Objects.requireNonNull(unavailableHint, "unavailableHint");
-            if (status == SourceContributionStatus.INSUFFICIENT) {
-                throw new IllegalArgumentException("WeatherObservation does not support INSUFFICIENT status");
-            }
-            if (status == SourceContributionStatus.USED) {
+        Optional<WeatherReport> weatherReport();
+
+        static WeatherObservation used(WeatherReport weatherReport) {
+            return new Used(weatherReport);
+        }
+
+        static WeatherObservation unavailable(SourceUnavailability unavailability) {
+            return new Unavailable(unavailability);
+        }
+
+        record Used(WeatherReport resolvedWeatherReport) implements WeatherObservation {
+            public Used {
                 Objects.requireNonNull(resolvedWeatherReport, "resolvedWeatherReport");
-                if (!hasResolvedWeatherReport) {
-                    throw new IllegalArgumentException("USED WeatherObservation requires hasResolvedWeatherReport");
-                }
-                if (!unavailableMessage.isBlank() || !unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException("USED WeatherObservation must not carry unavailable details");
-                }
-            } else if (status == SourceContributionStatus.UNAVAILABLE) {
-                if (hasResolvedWeatherReport || resolvedWeatherReport != null) {
-                    throw new IllegalArgumentException("UNAVAILABLE WeatherObservation must not carry weatherReport");
-                }
-                if (unavailableMessage.isBlank() || unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "UNAVAILABLE WeatherObservation requires unavailableMessage and unavailableHint");
-                }
+            }
+
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.USED;
+            }
+
+            @Override
+            public Optional<WeatherReport> weatherReport() {
+                return Optional.of(resolvedWeatherReport);
             }
         }
 
-        public static WeatherObservation used(WeatherReport weatherReport) {
-            return new WeatherObservation(
-                    SourceContributionStatus.USED, weatherReport, true, "", "");
-        }
+        record Unavailable(SourceUnavailability unavailability) implements WeatherObservation {
+            public Unavailable {
+                Objects.requireNonNull(unavailability, "unavailability");
+            }
 
-        public static WeatherObservation unavailable(String message, String hint) {
-            return new WeatherObservation(
-                    SourceContributionStatus.UNAVAILABLE, null, false, message, hint);
-        }
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.UNAVAILABLE;
+            }
 
-        public Optional<WeatherReport> weatherReport() {
-            return hasResolvedWeatherReport ? Optional.of(resolvedWeatherReport) : Optional.empty();
+            @Override
+            public Optional<WeatherReport> weatherReport() {
+                return Optional.empty();
+            }
         }
     }
 
-    record RagKnowledge(
-            SourceContributionStatus status,
-            List<KnowledgeSnippet> snippets,
-            String unavailableMessage,
-            String unavailableHint)
-            implements AnswerSource {
+    sealed interface RagKnowledge extends AnswerSource {
 
-        public RagKnowledge {
-            Objects.requireNonNull(status, "status");
-            Objects.requireNonNull(snippets, "snippets");
-            Objects.requireNonNull(unavailableMessage, "unavailableMessage");
-            Objects.requireNonNull(unavailableHint, "unavailableHint");
-            snippets = List.copyOf(snippets);
-            if (status == SourceContributionStatus.USED) {
-                if (snippets.isEmpty()) {
+        List<KnowledgeSnippet> snippets();
+
+        static RagKnowledge used(List<KnowledgeSnippet> snippets) {
+            return new Used(snippets);
+        }
+
+        static RagKnowledge insufficient() {
+            return new Insufficient();
+        }
+
+        static RagKnowledge unavailable(SourceUnavailability unavailability) {
+            return new Unavailable(unavailability);
+        }
+
+        record Used(List<KnowledgeSnippet> resolvedSnippets) implements RagKnowledge {
+            public Used {
+                Objects.requireNonNull(resolvedSnippets, "resolvedSnippets");
+                resolvedSnippets = List.copyOf(resolvedSnippets);
+                if (resolvedSnippets.isEmpty()) {
                     throw new IllegalArgumentException("USED RagKnowledge requires at least one snippet");
                 }
-                if (!unavailableMessage.isBlank() || !unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException("USED RagKnowledge must not carry unavailable details");
-                }
-            } else if (status == SourceContributionStatus.INSUFFICIENT) {
-                if (!snippets.isEmpty()) {
-                    throw new IllegalArgumentException("INSUFFICIENT RagKnowledge must not carry snippets");
-                }
-                if (!unavailableMessage.isBlank() || !unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException("INSUFFICIENT RagKnowledge must not carry unavailable details");
-                }
-            } else if (status == SourceContributionStatus.UNAVAILABLE) {
-                if (!snippets.isEmpty()) {
-                    throw new IllegalArgumentException("UNAVAILABLE RagKnowledge must not carry snippets");
-                }
-                if (unavailableMessage.isBlank() || unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "UNAVAILABLE RagKnowledge requires unavailableMessage and unavailableHint");
-                }
+            }
+
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.USED;
+            }
+
+            @Override
+            public List<KnowledgeSnippet> snippets() {
+                return resolvedSnippets;
             }
         }
 
-        public static RagKnowledge used(List<KnowledgeSnippet> snippets) {
-            return new RagKnowledge(SourceContributionStatus.USED, snippets, "", "");
+        record Insufficient() implements RagKnowledge {
+
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.INSUFFICIENT;
+            }
+
+            @Override
+            public List<KnowledgeSnippet> snippets() {
+                return List.of();
+            }
         }
 
-        public static RagKnowledge insufficient() {
-            return new RagKnowledge(SourceContributionStatus.INSUFFICIENT, List.of(), "", "");
-        }
+        record Unavailable(SourceUnavailability unavailability) implements RagKnowledge {
+            public Unavailable {
+                Objects.requireNonNull(unavailability, "unavailability");
+            }
 
-        public static RagKnowledge unavailable(String message, String hint) {
-            return new RagKnowledge(SourceContributionStatus.UNAVAILABLE, List.of(), message, hint);
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.UNAVAILABLE;
+            }
+
+            @Override
+            public List<KnowledgeSnippet> snippets() {
+                return List.of();
+            }
         }
     }
 
-    record ModelSynthesis(
-            SourceContributionStatus status, String unavailableMessage, String unavailableHint)
-            implements AnswerSource {
+    sealed interface ModelSynthesis extends AnswerSource {
 
-        public ModelSynthesis {
-            Objects.requireNonNull(status, "status");
-            Objects.requireNonNull(unavailableMessage, "unavailableMessage");
-            Objects.requireNonNull(unavailableHint, "unavailableHint");
-            if (status == SourceContributionStatus.INSUFFICIENT) {
-                throw new IllegalArgumentException("ModelSynthesis does not support INSUFFICIENT status");
-            }
-            if (status == SourceContributionStatus.USED) {
-                if (!unavailableMessage.isBlank() || !unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException("USED ModelSynthesis must not carry unavailable details");
-                }
-            } else if (status == SourceContributionStatus.UNAVAILABLE) {
-                if (unavailableMessage.isBlank() || unavailableHint.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "UNAVAILABLE ModelSynthesis requires unavailableMessage and unavailableHint");
-                }
+        static ModelSynthesis used() {
+            return new Used();
+        }
+
+        static ModelSynthesis unavailable(SourceUnavailability unavailability) {
+            return new Unavailable(unavailability);
+        }
+
+        record Used() implements ModelSynthesis {
+
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.USED;
             }
         }
 
-        public static ModelSynthesis used() {
-            return new ModelSynthesis(SourceContributionStatus.USED, "", "");
-        }
+        record Unavailable(SourceUnavailability unavailability) implements ModelSynthesis {
+            public Unavailable {
+                Objects.requireNonNull(unavailability, "unavailability");
+            }
 
-        public static ModelSynthesis unavailable(String message, String hint) {
-            return new ModelSynthesis(SourceContributionStatus.UNAVAILABLE, message, hint);
+            @Override
+            public SourceContributionStatus status() {
+                return SourceContributionStatus.UNAVAILABLE;
+            }
         }
     }
 }

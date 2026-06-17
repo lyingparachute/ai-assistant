@@ -1,0 +1,6 @@
+correlationId=c2ac2fe9-561b-42d8-91a8-5daef28519cd
+route=CDQ_PRODUCT
+portsInvoked=[RagKnowledgePort]
+ragRetrievalCount=0
+outcome=cdq_product_answered_sources=1
+sourceStatus=rag_knowledge:INSUFFICIENT

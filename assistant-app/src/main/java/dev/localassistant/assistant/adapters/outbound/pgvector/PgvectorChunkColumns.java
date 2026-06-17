@@ -11,6 +11,9 @@ final class PgvectorChunkColumns {
     static final String CHUNK_INDEX = "chunk_index";
     static final String INGESTED_AT = "ingested_at";
 
+    static final String CHUNK_COUNT_ALIAS = "chunk_count";
+    static final String SIMILARITY_ALIAS = "similarity";
+
     private PgvectorChunkColumns() {
     }
 }

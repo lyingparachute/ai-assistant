@@ -7,10 +7,12 @@ import dev.localassistant.assistant.tools.WeatherPort;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Clock;
 
 @Configuration
+@Profile("!ingest-rag")
 @EnableConfigurationProperties(AssistantMcpProperties.class)
 class McpOutboundConfiguration {
 
@@ -40,10 +42,5 @@ class McpOutboundConfiguration {
             AssistantMcpProperties assistantMcpProperties
     ) {
         return new WeatherMcpClientAdapter(mcpToolInvoker, weatherMcpResponseMapper, assistantMcpProperties);
-    }
-
-    @Bean
-    Clock clock() {
-        return Clock.systemUTC();
     }
 }

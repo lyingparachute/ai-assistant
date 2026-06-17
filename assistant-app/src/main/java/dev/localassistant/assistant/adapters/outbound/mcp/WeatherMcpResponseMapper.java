@@ -20,6 +20,7 @@ final class WeatherMcpResponseMapper {
             "The weather MCP server returned an unexpected payload. Retry later; do not invent temperatures.";
     static final String ERROR_LOCATION_REQUIRED = "location is required";
     static final String HINT_LOCATION_REQUIRED = "Provide a non-empty city name such as Munich.";
+    static final String MCP_ERROR_FLAG_MESSAGE = "weather MCP reported a tool error with unrecognized content";
 
     private static final Pattern SUCCESS_PATTERN = Pattern.compile(
             "^the weather in (.+) is currently:\\s*(-?\\d+(?:\\.\\d+)?)\\s*$",
@@ -48,6 +49,9 @@ final class WeatherMcpResponseMapper {
 
         Matcher matcher = SUCCESS_PATTERN.matcher(payload.trim());
         if (!matcher.matches()) {
+            if (response.isError()) {
+                return sourceUnavailable(MCP_ERROR_FLAG_MESSAGE);
+            }
             return new ToolExecutionResult.SourceUnavailable<>(
                     SOURCE_LABEL,
                     MALFORMED_PAYLOAD_MESSAGE,
@@ -55,9 +59,8 @@ final class WeatherMcpResponseMapper {
             );
         }
 
-        String parsedCity = matcher.group(1).trim();
         double temperatureCelsius = Double.parseDouble(matcher.group(2));
-        Location location = new Location(requestedLocation.isBlank() ? parsedCity : requestedLocation.trim());
+        Location location = new Location(requestedLocation);
         Instant retrievedAt = clock.instant();
         WeatherReport report = new WeatherReport(
                 location,

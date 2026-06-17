@@ -9,6 +9,7 @@ import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.Location;
+import dev.localassistant.assistant.tools.SourceUnavailability;
 import dev.localassistant.assistant.tools.Temperature;
 import dev.localassistant.assistant.tools.WeatherReport;
 import dev.localassistant.assistant.tools.WeatherTimestamp;
@@ -80,7 +81,8 @@ class ChatContractTest {
                         "Unavailable.",
                         List.of(
                                 AnswerSource.CountriesFacts.unavailable(
-                                        "Countries MCP unavailable", "retry later")));
+                                        new SourceUnavailability(
+                                                "Countries MCP", "Countries MCP unavailable", "retry later"))));
         ChatResponse response = mapper.toChatResponse(new ConversationTurn(UserQuestion.of("q"), answer));
 
         JsonNode json = OBJECT_MAPPER.valueToTree(response);
@@ -89,6 +91,28 @@ class ChatContractTest {
         assertThat(json.get("sources").get(0).get("status").asText()).isEqualTo("UNAVAILABLE");
         assertThat(json.get("sources").get(0).get("unavailableMessage").asText())
                 .isEqualTo("Countries MCP unavailable");
+    }
+
+    @Test
+    void unavailableSourceEmitsMessageAndHintAndOmitsPayload() throws Exception {
+        AssistantAnswer answer =
+                AssistantAnswer.of(
+                        "Countries MCP is unavailable: countries service down",
+                        List.of(
+                                AnswerSource.CountriesFacts.unavailable(
+                                        new SourceUnavailability(
+                                                "Countries MCP", "countries service down", "retry later"))));
+        JsonNode json =
+                OBJECT_MAPPER.valueToTree(
+                        mapper.toChatResponse(new ConversationTurn(UserQuestion.of("q"), answer)));
+        JsonNode source = json.get("sources").get(0);
+
+        assertThat(source.get("type").asText()).isEqualTo("countries_facts");
+        assertThat(source.get("status").asText()).isEqualTo("UNAVAILABLE");
+        assertThat(source.get("unavailableMessage").asText()).isEqualTo("countries service down");
+        assertThat(source.get("unavailableHint").asText()).isEqualTo("retry later");
+        assertThat(source.has("countryInfo")).isFalse();
+        assertThat(source.has("snippets")).isFalse();
     }
 
     @Test

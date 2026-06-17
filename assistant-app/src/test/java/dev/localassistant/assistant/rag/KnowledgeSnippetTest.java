@@ -8,35 +8,27 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class KnowledgeSnippetTest {
 
     @Test
-    void fromStoredChunkHasNoSimilarityScore() {
-        KnowledgeSnippet snippet =
-                KnowledgeSnippet.fromStoredChunk("chunk text", "https://example.com", "abc123", 0);
-
-        assertThat(snippet.similarityScore()).isEmpty();
-        assertThat(snippet.chunkText()).isEqualTo("chunk text");
-        assertThat(snippet.chunkIndex()).isZero();
-    }
-
-    @Test
-    void fromRetrievalExposesSimilarityScore() {
+    void fromRetrievalCarriesMandatoryRetrievalScore() {
         KnowledgeSnippet snippet =
                 KnowledgeSnippet.fromRetrieval(
                         "chunk text", "https://example.com", "abc123", 1, 0.85);
 
-        assertThat(snippet.similarityScore()).contains(0.85);
+        assertThat(snippet.retrievalScore()).isEqualTo(new RetrievalScore(0.85));
+        assertThat(snippet.retrievalScore().value()).isEqualTo(0.85);
+        assertThat(snippet.chunkIndex()).isEqualTo(1);
     }
 
     @Test
     void rejectsBlankChunkText() {
         assertThatThrownBy(
-                        () -> KnowledgeSnippet.fromStoredChunk(" ", "https://example.com", "abc123", 0))
+                        () -> KnowledgeSnippet.fromRetrieval(" ", "https://example.com", "abc123", 0, 0.5))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void rejectsNegativeChunkIndex() {
         assertThatThrownBy(
-                        () -> KnowledgeSnippet.fromStoredChunk("text", "https://example.com", "abc123", -1))
+                        () -> KnowledgeSnippet.fromRetrieval("text", "https://example.com", "abc123", -1, 0.5))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

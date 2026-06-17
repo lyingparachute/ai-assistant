@@ -2,23 +2,28 @@ package dev.localassistant.countries.tools;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.localassistant.countries.application.CountriesApplicationService;
+import dev.localassistant.countries.application.LookupCountryUseCase;
 import dev.localassistant.countries.model.CountryLookupOutcome;
+import dev.localassistant.countries.model.LookupPlace;
 import dev.localassistant.countries.schemas.CountryToolSchemas;
 import dev.localassistant.countries.support.errors.CountryToolErrors;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 
 public final class CountryLookupTool {
 
-    private final CountriesApplicationService countriesApplicationService;
+    private static final Logger log = LoggerFactory.getLogger(CountryLookupTool.class);
+
+    private final LookupCountryUseCase lookupCountryUseCase;
     private final ObjectMapper objectMapper;
 
-    public CountryLookupTool(CountriesApplicationService countriesApplicationService, ObjectMapper objectMapper) {
-        this.countriesApplicationService = countriesApplicationService;
+    public CountryLookupTool(LookupCountryUseCase lookupCountryUseCase, ObjectMapper objectMapper) {
+        this.lookupCountryUseCase = lookupCountryUseCase;
         this.objectMapper = objectMapper;
     }
 
@@ -37,19 +42,24 @@ public final class CountryLookupTool {
             return toCallToolResult(CountryToolErrors.nameRequired(), true);
         }
 
-        CountryLookupOutcome outcome = countriesApplicationService.lookupCountry(name);
-        return toCallToolResult(CountryToolResult.fromOutcome(outcome), CountryToolResult.isErrorOutcome(outcome));
+        CountryLookupOutcome outcome = lookupCountryUseCase.lookup(LookupPlace.of(name));
+        CountryToolResult.ToolEnvelope envelope = CountryToolResult.fromOutcome(outcome);
+        return toCallToolResult(envelope.payload(), envelope.isError());
     }
 
     private McpSchema.CallToolResult toCallToolResult(Map<String, Object> payload, boolean isError) {
         try {
-            String json = objectMapper.writeValueAsString(payload);
-            return McpSchema.CallToolResult.builder()
-                    .content(List.of(new McpSchema.TextContent(json)))
-                    .isError(isError)
-                    .build();
+            return textResult(objectMapper.writeValueAsString(payload), isError);
         } catch (JsonProcessingException exception) {
-            return toCallToolResult(CountryToolErrors.internalFailure(), true);
+            log.error("Failed to serialize country tool result", exception);
+            return textResult(CountryToolErrors.internalFailureJson(), true);
         }
+    }
+
+    private static McpSchema.CallToolResult textResult(String json, boolean isError) {
+        return McpSchema.CallToolResult.builder()
+                .content(List.of(new McpSchema.TextContent(json)))
+                .isError(isError)
+                .build();
     }
 }

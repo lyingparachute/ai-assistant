@@ -5,8 +5,8 @@ import dev.localassistant.assistant.question.AnswerSource;
 import dev.localassistant.assistant.question.AssistantAnswer;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.tools.CountryInfo;
+import dev.localassistant.assistant.tools.SourceUnavailability;
 import dev.localassistant.assistant.tools.Temperature;
-import dev.localassistant.assistant.tools.ToolExecutionResult;
 import dev.localassistant.assistant.tools.WeatherReport;
 import dev.localassistant.assistant.tools.WeatherTimestamp;
 
@@ -21,8 +21,9 @@ public final class ResponseComposer {
     static final String RAG_SOURCE_LABEL = "RAG knowledge";
     static final String OLLAMA_SOURCE_LABEL = "Ollama chat";
 
+    static final String CAPITAL_FACT_TEMPLATE = "%s is the capital of %s.";
+
     private static final String CAPITAL_ANSWER_TEMPLATE = "The capital of %s is %s.";
-    private static final String CAPITAL_FACT_TEMPLATE = "%s is the capital of %s.";
     private static final String WEATHER_ANSWER_TEMPLATE =
             "The current temperature in %s is %s. %s: %s";
     private static final String COMBINED_WEATHER_TEMPLATE =
@@ -49,11 +50,11 @@ public final class ResponseComposer {
     }
 
     public AssistantAnswer composeCountriesUnavailable(
-            ToolExecutionResult.SourceUnavailable<CountryInfo> failure, String traceCorrelationId) {
+            SourceUnavailability failure, String traceCorrelationId) {
         String message = formatSourceUnavailableMessage(COUNTRIES_SOURCE_LABEL, failure.message());
         return withTrace(
                 message,
-                List.of(AnswerSource.CountriesFacts.unavailable(failure.message(), failure.hint())),
+                List.of(AnswerSource.CountriesFacts.unavailable(failure)),
                 traceCorrelationId);
     }
 
@@ -66,11 +67,11 @@ public final class ResponseComposer {
     }
 
     public AssistantAnswer composeWeatherUnavailable(
-            ToolExecutionResult.SourceUnavailable<WeatherReport> failure, String traceCorrelationId) {
+            SourceUnavailability failure, String traceCorrelationId) {
         String message = formatSourceUnavailableMessage(WEATHER_SOURCE_LABEL, failure.message());
         return withTrace(
                 message,
-                List.of(AnswerSource.WeatherObservation.unavailable(failure.message(), failure.hint())),
+                List.of(AnswerSource.WeatherObservation.unavailable(failure)),
                 traceCorrelationId);
     }
 
@@ -94,7 +95,7 @@ public final class ResponseComposer {
 
     public AssistantAnswer composeCountryThenWeatherPartial(
             CountryInfo countryInfo,
-            ToolExecutionResult.SourceUnavailable<WeatherReport> weatherFailure,
+            SourceUnavailability weatherFailure,
             String traceCorrelationId) {
         String answerText =
                 WEATHER_UNAVAILABLE_AFTER_COUNTRY_TEMPLATE.formatted(
@@ -106,8 +107,7 @@ public final class ResponseComposer {
                 answerText,
                 List.of(
                         AnswerSource.CountriesFacts.used(countryInfo),
-                        AnswerSource.WeatherObservation.unavailable(
-                                weatherFailure.message(), weatherFailure.hint())),
+                        AnswerSource.WeatherObservation.unavailable(weatherFailure)),
                 traceCorrelationId);
     }
 
@@ -124,17 +124,8 @@ public final class ResponseComposer {
                 traceCorrelationId);
     }
 
-    public AssistantAnswer composePlaceSynthesisCountriesUnavailable(
-            ToolExecutionResult.SourceUnavailable<CountryInfo> failure, String traceCorrelationId) {
-        String message = formatSourceUnavailableMessage(COUNTRIES_SOURCE_LABEL, failure.message());
-        return withTrace(
-                message,
-                List.of(AnswerSource.CountriesFacts.unavailable(failure.message(), failure.hint())),
-                traceCorrelationId);
-    }
-
     public AssistantAnswer composePlaceSynthesisLlmUnavailable(
-            CountryInfo countryInfo, LlmResult.SourceUnavailable synthesisFailure, String traceCorrelationId) {
+            CountryInfo countryInfo, SourceUnavailability synthesisFailure, String traceCorrelationId) {
         String countryFact =
                 CAPITAL_FACT_TEMPLATE.formatted(countryInfo.capital(), countryInfo.countryName());
         String message =
@@ -144,8 +135,7 @@ public final class ResponseComposer {
                 answerText,
                 List.of(
                         AnswerSource.CountriesFacts.used(countryInfo),
-                        AnswerSource.ModelSynthesis.unavailable(
-                                synthesisFailure.message(), synthesisFailure.hint())),
+                        AnswerSource.ModelSynthesis.unavailable(synthesisFailure)),
                 traceCorrelationId);
     }
 
@@ -167,26 +157,24 @@ public final class ResponseComposer {
     }
 
     public AssistantAnswer composeCdqRagUnavailable(
-            dev.localassistant.assistant.rag.RagRetrievalResult.SourceUnavailable failure,
-            String traceCorrelationId) {
+            SourceUnavailability failure, String traceCorrelationId) {
         String message = formatSourceUnavailableMessage(RAG_SOURCE_LABEL, failure.message());
         return withTrace(
                 message,
-                List.of(AnswerSource.RagKnowledge.unavailable(failure.message(), failure.hint())),
+                List.of(AnswerSource.RagKnowledge.unavailable(failure)),
                 traceCorrelationId);
     }
 
     public AssistantAnswer composeCdqLlmUnavailable(
             List<KnowledgeSnippet> snippets,
-            LlmResult.SourceUnavailable synthesisFailure,
+            SourceUnavailability synthesisFailure,
             String traceCorrelationId) {
         String message = formatSourceUnavailableMessage(OLLAMA_SOURCE_LABEL, synthesisFailure.message());
         return withTrace(
                 message,
                 List.of(
                         AnswerSource.RagKnowledge.used(snippets),
-                        AnswerSource.ModelSynthesis.unavailable(
-                                synthesisFailure.message(), synthesisFailure.hint())),
+                        AnswerSource.ModelSynthesis.unavailable(synthesisFailure)),
                 traceCorrelationId);
     }
 

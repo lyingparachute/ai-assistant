@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public final class RestCountriesHttpAdapter implements RestCountriesPort {
 
@@ -91,18 +92,17 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
         }
     }
 
-    private java.util.Optional<CountryFacts> mapCountry(JsonNode node) {
-        JsonNode nameNode = node.path("name");
-        String countryName = nameNode.path("common").asText(null);
+    private Optional<CountryFacts> mapCountry(JsonNode node) {
+        String countryName = node.path("name").path("common").asText(null);
         JsonNode capitalNode = node.path("capital");
         String capital = capitalNode.isArray() && !capitalNode.isEmpty()
                 ? capitalNode.get(0).asText(null)
                 : null;
         String region = node.path("region").asText(null);
         if (countryName == null || capital == null || region == null || !node.hasNonNull("population")) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
-        return java.util.Optional.of(new CountryFacts(countryName, capital, region, node.path("population").asLong()));
+        return Optional.of(new CountryFacts(countryName, capital, region, node.path("population").asLong()));
     }
 
     private static String encodePathSegment(String value) {

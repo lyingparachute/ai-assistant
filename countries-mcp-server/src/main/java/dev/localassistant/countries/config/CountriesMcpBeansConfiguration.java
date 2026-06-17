@@ -3,10 +3,10 @@ package dev.localassistant.countries.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.localassistant.countries.adapters.inbound.mcp.CountriesMcpServerAdapter;
 import dev.localassistant.countries.adapters.outbound.restcountries.RestCountriesHttpAdapter;
-import dev.localassistant.countries.application.CountriesApplicationService;
 import dev.localassistant.countries.application.LookupCountryUseCase;
 import dev.localassistant.countries.core.CountriesMcpServerFactory;
 import dev.localassistant.countries.ports.RestCountriesPort;
+import dev.localassistant.countries.tools.CountryLookupTool;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,17 +40,17 @@ class CountriesMcpBeansConfiguration {
     }
 
     @Bean
-    CountriesApplicationService countriesApplicationService(LookupCountryUseCase lookupCountryUseCase) {
-        return new CountriesApplicationService(lookupCountryUseCase);
+    CountryLookupTool countryLookupTool(LookupCountryUseCase lookupCountryUseCase, ObjectMapper objectMapper) {
+        return new CountryLookupTool(lookupCountryUseCase, objectMapper);
     }
 
     @Bean
     CountriesMcpServerFactory countriesMcpServerFactory(
             CountriesMcpConfiguration configuration,
-            CountriesApplicationService countriesApplicationService,
+            CountryLookupTool countryLookupTool,
             ObjectMapper objectMapper
     ) {
-        return new CountriesMcpServerFactory(configuration, countriesApplicationService, objectMapper);
+        return new CountriesMcpServerFactory(configuration, countryLookupTool, objectMapper);
     }
 
     @Bean

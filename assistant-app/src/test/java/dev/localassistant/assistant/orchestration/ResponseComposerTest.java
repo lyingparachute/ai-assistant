@@ -7,8 +7,8 @@ import dev.localassistant.assistant.question.SourceContributionStatus;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.Location;
+import dev.localassistant.assistant.tools.SourceUnavailability;
 import dev.localassistant.assistant.tools.Temperature;
-import dev.localassistant.assistant.tools.ToolExecutionResult;
 import dev.localassistant.assistant.tools.WeatherReport;
 import dev.localassistant.assistant.tools.WeatherTimestamp;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,11 +35,12 @@ class ResponseComposerTest {
                     Temperature.celsius(15.0),
                     new WeatherTimestamp.Observed(Instant.parse("2026-06-16T11:30:00Z")));
     private static final KnowledgeSnippet SNIPPET =
-            KnowledgeSnippet.fromStoredChunk(
+            KnowledgeSnippet.fromRetrieval(
                     "Fraud Guard detects anomalies.",
                     "https://www.cdq.com/products/cdq-fraud-guard",
                     "hash",
-                    0);
+                    0,
+                    0.82);
 
     private ResponseComposer composer;
 
@@ -82,9 +83,8 @@ class ResponseComposerTest {
 
     @Test
     void partialCombinedAnswerKeepsCountryFactsAndMarksWeatherUnavailable() {
-        ToolExecutionResult.SourceUnavailable<WeatherReport> weatherFailure =
-                new ToolExecutionResult.SourceUnavailable<>(
-                        "weather MCP", "weather service down", "retry later");
+        SourceUnavailability weatherFailure =
+                new SourceUnavailability("weather MCP", "weather service down", "retry later");
 
         AssistantAnswer answer =
                 composer.composeCountryThenWeatherPartial(GERMANY, weatherFailure, TRACE_ID);
@@ -116,8 +116,7 @@ class ResponseComposerTest {
         AssistantAnswer answer =
                 composer.composePlaceSynthesisLlmUnavailable(
                         GERMANY,
-                        new LlmResult.SourceUnavailable(
-                                "Ollama chat", "model offline", "start Ollama"),
+                        new SourceUnavailability("Ollama chat", "model offline", "start Ollama"),
                         TRACE_ID);
 
         assertThat(answer.answerText()).contains("Berlin is the capital of Germany");
@@ -152,9 +151,8 @@ class ResponseComposerTest {
 
     @Test
     void weatherUnavailableLabelsWeatherObservationUnavailable() {
-        ToolExecutionResult.SourceUnavailable<WeatherReport> weatherFailure =
-                new ToolExecutionResult.SourceUnavailable<>(
-                        "weather MCP", "weather service down", "retry later");
+        SourceUnavailability weatherFailure =
+                new SourceUnavailability("weather MCP", "weather service down", "retry later");
 
         AssistantAnswer answer = composer.composeWeatherUnavailable(weatherFailure, TRACE_ID);
 
@@ -168,8 +166,7 @@ class ResponseComposerTest {
         AssistantAnswer answer =
                 composer.composeCdqLlmUnavailable(
                         List.of(SNIPPET),
-                        new LlmResult.SourceUnavailable(
-                                "Ollama chat", "model offline", "start Ollama"),
+                        new SourceUnavailability("Ollama chat", "model offline", "start Ollama"),
                         TRACE_ID);
 
         assertThat(answer.answerText()).contains("Ollama chat is unavailable");
@@ -184,8 +181,7 @@ class ResponseComposerTest {
     void cdqRagUnavailableUsesRagUnavailableStatus() {
         AssistantAnswer answer =
                 composer.composeCdqRagUnavailable(
-                        new dev.localassistant.assistant.rag.RagRetrievalResult.SourceUnavailable(
-                                "pgvector RAG", "database down", "start postgres"),
+                        new SourceUnavailability("pgvector RAG", "database down", "start postgres"),
                         TRACE_ID);
 
         assertThat(answer.answerText()).contains("RAG knowledge is unavailable");

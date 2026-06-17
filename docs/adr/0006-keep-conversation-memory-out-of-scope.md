@@ -30,7 +30,7 @@ Benefits:
 Trade-offs:
 
 - The assistant will not remember prior user questions across requests.
-- Follow-up questions that depend on earlier turns are out of scope unless the Chat UI sends all needed context in a single request.
+- Follow-up questions that depend on earlier turns are out of scope unless the Chat Interface sends all needed information in a single request.
 - Future memory support would require a separate ADR, data model, tests, and user-facing behavior rules.
 
 ## Alternatives Considered

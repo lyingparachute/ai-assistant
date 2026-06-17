@@ -7,12 +7,12 @@ public sealed interface CountryLookupOutcome {
     record Success(CountryFacts facts) implements CountryLookupOutcome {
     }
 
-    record NotRecognized(String hint) implements CountryLookupOutcome {
+    record NotRecognized() implements CountryLookupOutcome {
     }
 
-    record AmbiguousCapital(List<String> countryNames, String hint) implements CountryLookupOutcome {
+    record AmbiguousCapital(List<String> countryNames) implements CountryLookupOutcome {
     }
 
-    record SourceUnavailable(String hint) implements CountryLookupOutcome {
+    record SourceUnavailable() implements CountryLookupOutcome {
     }
 }

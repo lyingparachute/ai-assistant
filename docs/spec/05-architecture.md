@@ -15,8 +15,8 @@ The assistant must not present model memory as verified country facts, weather o
 
 ```mermaid
 flowchart LR
-    Reviewer[Reviewer] --> ChatUI[Chat UI]
-    ChatUI --> AssistantAPI[Assistant API]
+    Reviewer[Reviewer] --> ChatInterface[Chat Interface]
+    ChatInterface --> AssistantAPI[Assistant API]
     AssistantAPI --> Orchestrator[Assistant Application Service]
 
     Orchestrator --> LLMPort[LLM Port]
@@ -55,6 +55,7 @@ DDD is used pragmatically. The domain is small, so the design should use explici
 
 ```text
 assistant-app/
+chat-ui/
 countries-mcp-server/
 e2e-tests/
 shared-kernel/   (conditional: created only when a concrete cross-module type exists)
@@ -62,7 +63,11 @@ shared-kernel/   (conditional: created only when a concrete cross-module type ex
 
 ### `assistant-app`
 
-Owns the chat interface, Assistant API, application orchestration, RAG ingestion and retrieval orchestration, and outbound adapters for Ollama, pgvector, countries MCP, and weather MCP.
+Owns the Assistant API (JSON REST), application orchestration, RAG ingestion and retrieval orchestration, and outbound adapters for Ollama, pgvector, countries MCP, and weather MCP. It does not serve the Chat Interface HTML; that lives in `chat-ui/`.
+
+### `chat-ui`
+
+Owns the browser-facing Chat Interface as a separate Astro frontend. It calls the Assistant API over HTTP. It is not a Java module and does not import `assistant-app` internals.
 
 It may depend on `shared-kernel` if that conditional module exists. It must not depend on `countries-mcp-server` internals.
 
@@ -170,8 +175,8 @@ Domain objects should validate their own invariants, such as non-empty question 
 
 ### Inbound Adapters
 
-- Chat UI: browser-facing local chat entry point.
-- Assistant API: HTTP endpoint used by the Chat UI and E2E tests.
+- Chat Interface (`chat-ui/`): Astro browser client; calls the Assistant API.
+- Assistant API (`assistant-app` inbound HTTP): JSON endpoint used by the Chat Interface and E2E tests.
 - RAG ingestion command or endpoint: local setup path for extracting and loading CDQ Fraud Guard content.
 
 ### Application Ports
@@ -195,7 +200,7 @@ Domain objects should validate their own invariants, such as non-empty question 
 
 ### "What is the capital city of Germany?"
 
-1. Chat UI sends the user question to the Assistant API.
+1. Chat Interface sends the user question to the Assistant API.
 2. `AssistantApplicationService` classifies the question as country-fact required.
 3. `CountriesPort` asks the countries MCP server for Germany.
 4. Response composer returns Berlin with a countries source.
@@ -374,7 +379,7 @@ Demo verification should capture enough evidence to show which capabilities were
 ```mermaid
 sequenceDiagram
     participant Reviewer
-    participant UI as Chat UI
+    participant UI as Chat Interface
     participant API as Assistant API
     participant App as Assistant Application Service
     participant Sources as Ports

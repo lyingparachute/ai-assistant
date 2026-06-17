@@ -39,10 +39,6 @@ public final class StubRestCountriesServer implements AutoCloseable {
         routes.put(routePath("capital", capital), new StubResponse(statusCode, body));
     }
 
-    public void stubDelayForAllRoutes(long delayMillis) {
-        routes.replaceAll((path, response) -> new StubResponse(response.statusCode(), response.body(), delayMillis));
-    }
-
     private static String routePath(String endpoint, String value) {
         return "/" + endpoint + "/" + value;
     }

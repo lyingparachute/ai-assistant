@@ -204,8 +204,9 @@ Finished at: 2026-06-16T13:10:xx+02:00
 ## M1 decisions
 
 - `docs/spec/14-assistant-api-contract.md` locks `POST /api/chat` JSON shapes before code.
-- `ChatController` and `HttpInboundConfiguration` are `@ConditionalOnBean(AnswerQuestionUseCase.class)` so existing test-profile `@SpringBootTest` contexts without full orchestration wiring still start.
-- `ChatHttpMapper` is package-private, instantiated inside `ChatController` (no Spring bean — mapper is pure translation).
+- `ChatController` is registered through `ChatWebConfiguration` (`@Import` on `AssistantApplication`) because `@ConditionalOnBean(AnswerQuestionUseCase.class)` on a `@RestController` did not reliably match bean registration order during component scan.
+- `HttpInboundConfiguration` registers CORS for `/api/**` whenever the HTTP adapter module is active.
+- `ChatHttpMapper` is package-private and registered as a `@Component`, constructor-injected into `ChatController` (pure translation, no orchestration). It is also directly instantiable for contract tests.
 - Source entries use Jackson `@JsonTypeInfo` discriminator `type` matching contract (`countries_facts`, `weather_observation`, `rag_knowledge`, `model_synthesis`).
 - `assistant.cors.allowed-origins` defaults to `http://localhost:4321`; CORS applies to `/api/**`.
 - Source-unavailable orchestration outcomes return HTTP `200` with structured body per contract.
@@ -250,7 +251,241 @@ BUILD SUCCESS
 
 Manual smoke (requires live backend + dependencies): start `assistant-app`, start `chat-ui` dev server, submit one question, confirm `answerText` and `sources[]` render in the browser.
 
+---
+
+# Phase 7 Implementation Notes
+
+## M1 — e2e-tests
+
+- `RequiredDemoQuestionsE2ETest` calls live `POST /api/chat` via `java.net.http.HttpClient`.
+- Tests assert routing/source fields and trace ids; weather temperature values are not hardcoded.
+- Tests skip when the assistant is not reachable (`assumeTrue`).
+
+## M2 — demo capture
+
+- `./scripts/capture-demo-answers.sh` captures JSON to `docs/demo/capture/`.
+- Evidence written to `docs/demo/final-answers.md`, `docs/demo/demo-run-log.md`, `docs/demo/request-traces/`.
+- Capture hit upstream blockers: REST Countries v3.1 deprecated, `WEATHER_API_KEY` unset, RAG not ingested.
+
+## M3 — runtime wiring fixes for local stack
+
+- `assistant.mcp.countries` uses pre-built jar (`java -jar`) instead of nested `mvnw spring-boot:run`.
+- MCP paths relative to `assistant-app` module cwd (`../...`).
+- `StdioMcpToolInvoker` sets `initializationTimeout` from configured timeout.
+- `ChatController` is registered via `ChatWebConfiguration` + `@Import` on `AssistantApplication` to fix `@ConditionalOnBean` ordering for `ChatController`.
+- `RagIngestionMode` activates profile `ingest-rag` with `WebApplicationType.NONE`, skipping MCP subprocess startup so ingestion can run while another assistant instance holds port 8080.
+- `StdioMcpToolInvoker` forwards host `WEATHER_API_KEY` / `WEATHER_API_URL` to the weather MCP subprocess when not set in `application.yml`.
+- `scripts/mcp-weather` bootstraps semdin/mcp-weather into `.local/`.
+
+## M3 verification
+
+```text
+./mvnw -pl e2e-tests test
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+Chat UI smoke: `http://localhost:4321` returned HTTP 200 during capture session.
+
 ## Follow-up for other plans
 
-- Phase 7: demo answer capture including CDQ product showcase question and `e2e-tests/` expansion.
+- Migrate REST Countries client to v5 API (requires API key) to unblock country-fact demos.
+- Configure `WEATHER_API_KEY` for live weather demos.
+- Re-run RAG ingestion after stopping the chat assistant (`ASSISTANT_INGEST_RAG=true` uses non-web `ingest-rag` profile).
 
+---
+
+# Code-Quality Audit Refactors (branch `review/code-quality-audit`)
+
+Running log for the `docs/plans/refactor-*.md` ExecPlans, executed via subagent-driven
+development (implementer → spec-compliance reviewer → clean-code/quality reviewer, looped
+max 3 until clean). Each milestone committed separately; plan files not committed.
+
+Execution order: 3a → 5a → 1 → 2 → 3b → 4 → 5b.
+
+## refactor-3a — e2e demo honesty gating
+
+- `RequiredDemoQuestionsE2ETest` (surefire `*Test`, green-skipped via `assumeTrue`) renamed to
+  `RequiredDemoQuestionsIT` (failsafe). Both `assumeTrue(client != null)` guards removed; the
+  `@BeforeAll` connect step now throws when the assistant is unreachable, so the opt-in command
+  fails (non-zero) instead of green-skipping.
+- `maven-failsafe-plugin` declared in `e2e-tests/pom.xml` under a new `e2e` profile (inheriting the
+  parent's managed `integration-test`+`verify` execution). The module stays compiled in the default
+  reactor; `mvn test` and `mvn verify` (no profile) run no IT; only `./mvnw verify -P e2e` runs the
+  demo verification.
+- Single authoritative demo-question set: `e2e-tests/src/test/resources/demo-questions.json`
+  (superset of 6, each keyed with a source-path key). `DemoQuestions` loader reads it; the IT
+  subsets it by key (same assertions as before, no coverage expansion); `capture-demo-answers.sh`
+  reads all 6. CDQ wording reconciled to one canonical string ("What is CDQ Fraud Guard?").
+- README §Tests stale `./mvnw -pl e2e-tests test` replaced with `./mvnw verify -P e2e`; README and
+  `docs/spec/08-demo-plan.md` now reference the shared question file instead of inlining lists.
+- Verification (offline, no server / dead port): `./mvnw -o test` BUILD SUCCESS, no demo report;
+  `./mvnw -o verify` (no profile) runs no failsafe; `./mvnw -o verify -P e2e` against a dead base-url
+  → BUILD FAILURE (fail-not-skip); `grep assumeTrue e2e-tests/src` empty.
+- Code-review follow-up (commit after 58f48bc): capture script reads the question file into a
+  variable (so a malformed/missing/empty file fails non-zero, no silent process-substitution skip)
+  and exits with a clear message on empty input; `DEMO_QUESTIONS_FILE` env override added for
+  testability. `sourcePathKey` is now consumed: each captured file records `expectedSourcePathKey`
+  next to the response, so demo evidence shows the source path per question (AGENTS §12). Failure
+  modes verified: malformed JSON / missing file / empty `questions` each exit 1.
+
+## refactor-5a — component-scan filter, controller wiring & context smoke test
+
+- `AssistantApplication`'s direct `@ComponentScan(excludeFilters = {ChatController, ChatWebConfiguration})`
+  is deleted, restoring Spring Boot's default `TypeExcludeFilter` + `AutoConfigurationExcludeFilter`
+  (a direct `@ComponentScan` had suppressed the meta-annotated one, letting `@TestConfiguration`
+  classes under the base package auto-scan in `@SpringBootTest`). `@Import` now carries only
+  `OrchestrationConfiguration.class`.
+- `ChatWebConfiguration` is **deleted**. `ChatController` is now a plain component-scanned
+  `@RestController` with constructor injection — no `@Bean` factory, no `@ConditionalOnBean` on the
+  endpoint. A missing `AnswerQuestionUseCase` is now a startup failure, not a silent 404. The
+  `@ConditionalOnBean(...)` guard survives only on `answerQuestionUseCase` in
+  `OrchestrationConfiguration` (a component-scanned config processed after the outbound-adapter
+  configs, so its ports are registered in time).
+- **Supersession (not a history rewrite):** the present-tense `ChatWebConfiguration` wiring
+  described at `implementation-notes.md:207` (Phase 6) and `:275` (Phase 7), and the runtime-fix
+  note in `docs/demo/demo-run-log.md` ("ChatController registered via `@Import` + `@Bean`
+  (ChatWebConfiguration)"), all describe the pre-refactor state. Those lines are dated
+  chronological / captured-evidence records and are left intact (rewriting them would erase the
+  record / fabricate evidence per AGENTS §12); this refactor-5a note is the current authoritative
+  description and **supersedes** them.
+- New hermetic `AssistantContextLoadTest` (`@SpringBootTest`, profile `test`, imports no existing
+  `@TestConfiguration`): registers stub external ports via an `ApplicationContextInitializer`
+  (`support/ChatPathPortStubs` + a local `McpToolInvoker` stub) before refresh, because
+  `@ConditionalOnBean` is evaluated against definitions present at config-parse time — `@Import`ed
+  or `@MockitoBean` stubs register too late. Asserts the context boots, `ChatController` +
+  `AnswerQuestionUseCase` are present, and `getBeanNamesForType(Clock.class)` is exactly
+  `["systemClock"]` (guards the X-C-2 single-Clock wiring). Verified falsifiable: re-adding the scan
+  filter makes auto-scanned `McpTestConfiguration` add a second `@Primary testClock`, failing the
+  Clock assertion.
+- Regression from making `ChatController` unconditional: four full-context outbound-adapter
+  `@SpringBootTest` classes (`CountriesMcpClientAdapterIntegrationTest`,
+  `WeatherMcpClientAdapterIntegrationTest`, `PgvectorRagAdapterIntegrationTest`,
+  `RagRetrievalIntegrationTest`, `RagIngestionUseCaseIntegrationTest`) boot the full app but do not
+  wire `LlmPort` (MCP-only tests also lack `RagKnowledgePort`), so the now-unconditional controller
+  failed at context load. `support/ChatPathPortStubs` registers a stub `LlmPort` and a non-`@Primary`
+  stub `RagKnowledgePort` before refresh so the `@ConditionalOnBean` guard is satisfied without
+  re-masking the scan leak; contexts with their own `@Primary RagKnowledgePort` keep it. Stubs are
+  wiring-only and throw `UnsupportedOperationException` if invoked.
+- Follow-up for **refactor-1** (out of scope here): the stale claim at `implementation-notes.md:208`
+  ("`ChatHttpMapper` is package-private, instantiated inside `ChatController`") no longer matches the
+  code — `ChatHttpMapper` is a `@Component` injected via the constructor. refactor-1 owns the
+  `ChatHttpMapper` rewrite and should correct that line.
+
+
+---
+
+# refactor-1 Implementation Notes (assistant-app domain typed model)
+
+- `SourceUnavailability` value object lives in `tools` (sourceLabel/message/hint, all non-blank). It
+  is carried by the `SourceUnavailable` variants of `ToolExecutionResult` and `LlmResult`; the three
+  loose fields were replaced by one VO component. A package-private 3-arg convenience constructor and
+  delegating `sourceLabel()/message()/hint()` accessors are kept so adapter construction sites and
+  their contract tests stay unchanged. `rag` result types and `llm.EmbeddingResult` are untouched
+  (owned by refactor-2).
+- `RoutedQuestion` is now a sealed interface with one record per route; `QuestionRoute` is retained
+  (each variant exposes `route()`) so trace `route=`/`outcome=` tokens are unchanged. The four
+  parallel `Optional` fields, `validateRouteFields`, and all `orElseThrow` calls are gone.
+- `AnswerSource.{CountriesFacts,WeatherObservation,RagKnowledge,ModelSynthesis}` are sealed
+  interfaces with `Used`/`Unavailable`(/`Insufficient`) record variants — boolean flags, nullable
+  payloads, and cross-field guards removed; invalid states are unrepresentable by construction. The
+  `used(...)/.unavailable(...)/.insufficient()` static factories are preserved on the sealed parents
+  so construction sites and `ChatContractTest` are unchanged. The `AnswerSource.*.Unavailable`
+  variants carry `unavailableMessage`/`unavailableHint` directly (no source label): the HTTP JSON
+  contract never serializes a label, and the failing-source label in answer text comes from
+  `ResponseComposer` constants. (Plan O-4 — render label from the VO — was dropped in round-2 because
+  the VO label casing differs from the composer constants and would change user-visible text.)
+- `AssistantAnswer` models the trace correlation id as an empty-string-sentinel typed absence
+  (`traceCorrelationId()` returns `Optional`); the `hasTraceCorrelationId` boolean and its guards are
+  gone.
+- `ResponseComposer` failure methods take `SourceUnavailability`; the two byte-identical
+  countries-unavailable methods collapsed into one (`composeCountriesUnavailable`).
+- Synthesis sub-flow (place + CDQ) extracted to one private `synthesize(...)` helper taking the
+  prompt and two outcome composers (O-6). `CAPITAL_FACT_TEMPLATE` has one owner
+  (`ResponseComposer`), referenced by the use case (O-5).
+- `AssistantRequestTrace` owns outcome-string formatting (`completed(int answeredSourceCount)`); the
+  `"pending"` and `%s_answered_sources=%d` literals are named constants. The immutability restructure
+  (O-10) was consciously declined per the plan.
+- `SourceRoutingPolicy` carries a comment that routing is demo-scoped; O-12 characterization test
+  (`offDemoCapitalQuestionFallsThroughToUnsupported`) pins that "capital of France" → UNSUPPORTED.
+- The stale `implementation-notes.md` claim about `ChatHttpMapper` being instantiated inside
+  `ChatController` was corrected (it is a constructor-injected `@Component`).
+- Verification: `./mvnw -o test` BUILD SUCCESS; assistant-app 178 tests (was 169), countries 18, all
+  green. `ChatContractTest` JSON-shape assertions unchanged (diff is additive: one new
+  characterization test for the unavailable-source HTTP shape).
+
+## refactor-2 — RAG ingestion & port redesign (landed)
+
+- `RagKnowledgePort` is exactly three methods, all returning sealed typed results, none throwing:
+  `retrieve` → `RagRetrievalResult`, `storeChunks` → `ChunkStorageOutcome`, `findContentHashForSource`
+  → `StoredSourceState`. `countChunksForSource` is gone.
+- `StoredSourceState` = `Stored(contentHash, chunkCount)` | `Absent` | `Unavailable(SourceUnavailability)`
+  carries the chunk count UNCHANGED needs, so dropping `countChunksForSource` left no orphan read
+  (round-2 [P2R2-A/B]). DB-down during the read is a typed `Unavailable`, never an uncaught throw and
+  never misread as a first ingestion (fixes R-5).
+- Outcome classification lives entirely in `RagIngestionUseCase`; the outbound adapter constructs no
+  `RagIngestionReport`. `storeChunks` returns `ChunkStorageOutcome.Stored(INGESTED|REPLACED)`; the
+  use case builds the report. INGESTED vs REPLACED is derived from the pre-delete row count returned
+  by `PgvectorIngestionRepository.replaceChunksForSource`, which now uses one
+  `transactionTemplate.execute` (delete-count + inserts in a single transaction) — kills the TOCTOU.
+- `SourceUnavailability` VO (owned by `tools`, from refactor-1) is adopted by `RagIngestionResult`,
+  `RagRetrievalResult`, `EmbeddingResult` (llm), and `ProductPageResult`, each via a convenience
+  constructor + delegating accessors + `asUnavailability()`. `AnswerQuestionUseCase`'s RAG-unavailable
+  branch now uses `.asUnavailability()` (refactor-1 follow-up). Edges `rag→tools`, `llm→tools`; `tools`
+  imports neither (leaf) → no cycle.
+- `fromStoredChunk` had no production caller (grep-confirmed) → stored shape deleted. `KnowledgeSnippet`
+  carries a mandatory `RetrievalScore` value object (no boolean flag, no sentinel double, no Optional).
+  `AnswerSourceTest`, `ResponseComposerTest`, `ChatHttpMapper` switched to the retrieval factory/score.
+- `EmbeddingDimensions.matches(float[])` predicate replaces the hand-rolled length comparison in
+  `OllamaEmbeddingAdapter`. pgvector cosine-distance→similarity expression extracted once with an
+  explaining comment; `"similarity"` alias and `%.8f` literal are named constants.
+- Schema init only via `PgvectorSchemaInitializer` (now public for test injection); the adapter
+  pass-through is gone. Production and test share `PgvectorBeansConfiguration` (a profile-neutral
+  `@Import`-only class, not `@Configuration`, so component scan ignores it). The test config imports
+  it and adds only a `@Primary` test `EmbeddingPort` (registered first via a dedicated config so the
+  `@ConditionalOnBean(EmbeddingPort)` guard resolves). pgvector integration tests inject the
+  initializer in `@BeforeEach`.
+- `RagIngestionMode` collapsed to one package-private `enabled(ApplicationArguments, Function<String,String> env)`;
+  public overloads delegate with `System::getenv`; `main` builds `ApplicationArguments` once. Env path
+  is unit-tested via a fake env function.
+- New tests: real failing-DB Testcontainers test (`RagIngestionSourceUnavailableIntegrationTest`
+  stops the pgvector container, asserts `RagIngestionResult.SourceUnavailable` label `pgvector RAG`,
+  no throw); chunker overlap + exact-multiple boundary; retrieval `SourceUnavailable` for embedding
+  failure and query-throw; env-enabled `RagIngestionMode`; embedding prefix tests assert the returned
+  vector (not `verify(...)`).
+- Verification: `./mvnw -o test` BUILD SUCCESS; assistant-app 189 tests, countries-mcp 18, all green.
+
+## refactor-3b — config records & build hygiene
+
+- All five assistant-app `@ConfigurationProperties` are now validated constructor-bound records with
+  `@DefaultValue` defaults, mirroring countries-mcp-server. Defaults moved off Java field initializers
+  (constructor binding ignores those) onto `@DefaultValue` components.
+- Ollama base URL lives once: yml key `assistant.ollama.base-url`; `assistant.embedding.ollama-base-url`
+  and `assistant.llm.ollama-base-url` resolve it via the Spring placeholder `${assistant.ollama.base-url}`.
+  The literal appears once in yml, zero times in Java (the embedding/llm records carry no default for it).
+- `AssistantRagProperties` split into three records at the SAME `assistant.rag.*` prefix (no key rename):
+  `AssistantRagStorageProperties` (jdbc/user/pass), `AssistantRagRetrievalProperties`
+  (top-k/relevance-threshold/source-url/fetch-timeout-seconds), `AssistantRagChunkingProperties`
+  (chunk-max-size/chunk-overlap). Multiple records binding one prefix is allowed; each takes its subset.
+  `@EnableConfigurationProperties` for all three lives in exactly one place (`RagApplicationConfiguration`);
+  the duplicate registrations on `CdqOutboundConfiguration`/`PgvectorOutboundConfiguration` were removed.
+- Chunk validation is defense-in-depth (R2-3b-1): the chunking record adds `@Positive`/`@PositiveOrZero`
+  plus a cross-field `@AssertTrue boolean isOverlapSmallerThanMax()` with a key-named message; a
+  `ApplicationContextRunner` test proves a bad config fails context startup with that exact message.
+  `DeterministicTextChunker` keeps its three constructor guards (it is also constructed directly).
+- `AssistantMcpProperties` is a record with a nested `McpServer` record; `args`/`env` defensive copies
+  (`List.copyOf`/`Map.copyOf`) live in the `McpServer` compact constructor. The dead `working-directory`
+  property is gone (MCP SDK 1.0.0 has no cwd setter) — removed from the record, both docs/spec/12 and 13,
+  and all four yml lines. A shared note in docs/spec/12 (`#mcp-subprocess-cwd`, referenced from 13)
+  documents the real cwd assumption: `spring-boot:run` launches from `assistant-app/`, so the jar path
+  is relative to that directory.
+- Binding-test harness `PropertiesBinding` uses `Binder.bindOrCreate` + `ValidationBindHandler` so it
+  mirrors Spring Boot's startup binding (defaults applied for an absent prefix, validation enforced).
+- Scripts: `scripts/mcp-weather` pins upstream `semdin/mcp-weather` to commit
+  `8bb7bd1b8fa7364e6f0ea7772be48c25f4a38038` with an untrusted-input comment. `start-assistant.sh`
+  globs the newest `countries-mcp-server-*.jar` (excluding `-sources`/`-javadoc`) and exports
+  `COUNTRIES_MCP_JAR`; `application.yml` reads `${COUNTRIES_MCP_JAR:...}`, so the version string is
+  pinned in neither the script nor (twice in) yml — it survives only as the yml fallback default.
+  `capture-demo-answers.sh` keeps python3 for correct JSON quoting but adds an explicit
+  `require_command python3` (and `curl`) guard that fails loudly if the interpreter is missing
+  (S-2: explicit guard chosen over a jq rewrite to avoid quoting-bug risk in payload construction).

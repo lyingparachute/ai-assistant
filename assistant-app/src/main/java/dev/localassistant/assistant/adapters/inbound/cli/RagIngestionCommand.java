@@ -1,16 +1,14 @@
 package dev.localassistant.assistant.adapters.inbound.cli;
 
-import dev.localassistant.assistant.config.AssistantRagProperties;
+import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
 import dev.localassistant.assistant.rag.RagIngestionReport;
 import dev.localassistant.assistant.rag.RagIngestionResult;
 import dev.localassistant.assistant.rag.RagIngestionUseCase;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
 
 /**
  * Local setup entry point for CDQ Fraud Guard RAG ingestion.
@@ -18,25 +16,20 @@ import org.springframework.stereotype.Component;
  * Run with {@code --ingest-rag} or {@code ASSISTANT_INGEST_RAG=true} to extract product-page
  * content, chunk it, embed it, and store it in pgvector without starting chat orchestration.
  */
-@Component
 @Order(0)
-@ConditionalOnBean(RagIngestionUseCase.class)
-class RagIngestionCommand implements ApplicationRunner {
-
-    private static final String INGEST_RAG_ARGUMENT = "ingest-rag";
-    private static final String INGEST_RAG_ENV = "ASSISTANT_INGEST_RAG";
+public class RagIngestionCommand implements ApplicationRunner {
 
     private final ConfigurableApplicationContext applicationContext;
     private final RagIngestionUseCase ragIngestionUseCase;
-    private final AssistantRagProperties assistantRagProperties;
+    private final AssistantRagRetrievalProperties retrievalProperties;
 
-    RagIngestionCommand(
+    public RagIngestionCommand(
             ConfigurableApplicationContext applicationContext,
             RagIngestionUseCase ragIngestionUseCase,
-            AssistantRagProperties assistantRagProperties) {
+            AssistantRagRetrievalProperties retrievalProperties) {
         this.applicationContext = applicationContext;
         this.ragIngestionUseCase = ragIngestionUseCase;
-        this.assistantRagProperties = assistantRagProperties;
+        this.retrievalProperties = retrievalProperties;
     }
 
     @Override
@@ -45,18 +38,14 @@ class RagIngestionCommand implements ApplicationRunner {
             return;
         }
 
-        RagIngestionResult result = ragIngestionUseCase.ingest(assistantRagProperties.sourceUrl());
+        RagIngestionResult result = ragIngestionUseCase.ingest(retrievalProperties.sourceUrl());
         printReport(result);
         int exitCode = result instanceof RagIngestionResult.Success ? 0 : 1;
         SpringApplication.exit(applicationContext, () -> exitCode);
     }
 
     private boolean shouldRunIngestion(ApplicationArguments args) {
-        if (args.containsOption(INGEST_RAG_ARGUMENT)) {
-            return true;
-        }
-        String envValue = System.getenv(INGEST_RAG_ENV);
-        return envValue != null && Boolean.parseBoolean(envValue);
+        return RagIngestionMode.enabled(args);
     }
 
     private void printReport(RagIngestionResult result) {

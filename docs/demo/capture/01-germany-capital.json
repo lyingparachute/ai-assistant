@@ -1,0 +1,1 @@
+{"answerText":"Countries MCP is unavailable: REST Countries source unavailable","sources":[{"type":"countries_facts","status":"UNAVAILABLE","unavailableMessage":"REST Countries source unavailable","unavailableHint":"REST Countries is unavailable. Retry the lookup later and do not invent country facts."}],"traceCorrelationId":"d48e4298-eff0-45df-bc3b-80b62d815c54"}

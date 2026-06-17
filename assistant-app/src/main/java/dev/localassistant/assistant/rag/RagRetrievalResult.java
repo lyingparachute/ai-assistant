@@ -1,5 +1,7 @@
 package dev.localassistant.assistant.rag;
 
+import dev.localassistant.assistant.tools.SourceUnavailability;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -19,14 +21,29 @@ public sealed interface RagRetrievalResult {
     record NoRelevantKnowledge() implements RagRetrievalResult {
     }
 
-    record SourceUnavailable(String sourceLabel, String message, String hint) implements RagRetrievalResult {
+    record SourceUnavailable(SourceUnavailability unavailability) implements RagRetrievalResult {
         public SourceUnavailable {
-            Objects.requireNonNull(sourceLabel, "sourceLabel");
-            Objects.requireNonNull(message, "message");
-            Objects.requireNonNull(hint, "hint");
-            if (sourceLabel.isBlank()) {
-                throw new IllegalArgumentException("sourceLabel must not be blank");
-            }
+            Objects.requireNonNull(unavailability, "unavailability");
+        }
+
+        public SourceUnavailable(String sourceLabel, String message, String hint) {
+            this(new SourceUnavailability(sourceLabel, message, hint));
+        }
+
+        public SourceUnavailability asUnavailability() {
+            return unavailability;
+        }
+
+        public String sourceLabel() {
+            return unavailability.sourceLabel();
+        }
+
+        public String message() {
+            return unavailability.message();
+        }
+
+        public String hint() {
+            return unavailability.hint();
         }
     }
 }

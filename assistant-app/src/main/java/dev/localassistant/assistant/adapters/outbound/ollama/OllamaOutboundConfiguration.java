@@ -18,6 +18,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
+
 @Configuration
 @Profile("!test")
 @EnableConfigurationProperties({AssistantEmbeddingProperties.class, AssistantLlmProperties.class})
@@ -47,8 +49,8 @@ class OllamaOutboundConfiguration {
     LlmPort ollamaLlmPort(AssistantLlmProperties assistantLlmProperties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(
-                java.time.Duration.ofSeconds(assistantLlmProperties.timeoutSeconds()));
-        requestFactory.setReadTimeout(java.time.Duration.ofSeconds(assistantLlmProperties.timeoutSeconds()));
+                Duration.ofSeconds(assistantLlmProperties.timeoutSeconds()));
+        requestFactory.setReadTimeout(Duration.ofSeconds(assistantLlmProperties.timeoutSeconds()));
         OllamaApi ollamaApi = OllamaApi.builder()
                 .baseUrl(assistantLlmProperties.ollamaBaseUrl())
                 .restClientBuilder(RestClient.builder().requestFactory(requestFactory))

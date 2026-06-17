@@ -3,6 +3,7 @@ package dev.localassistant.countries.config;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
@@ -11,7 +12,8 @@ public record CountriesMcpConfiguration(
         @NotBlank String restCountriesBaseUrl,
         @Positive int restCountriesTimeoutSeconds,
         @NotBlank String serverName,
-        @NotBlank String serverVersion
+        @NotBlank String serverVersion,
+        @Positive @DefaultValue("20") int requestTimeoutSeconds
 ) {
 
     public CountriesMcpConfiguration {

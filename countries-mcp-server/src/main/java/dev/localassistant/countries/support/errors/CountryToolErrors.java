@@ -32,18 +32,22 @@ public final class CountryToolErrors {
     }
 
     public static Map<String, Object> ambiguousCapital(List<String> countryNames) {
-        return envelope(
-                ERROR_AMBIGUOUS_CAPITAL,
-                dev.localassistant.countries.application.CountryLookupHints.ambiguousCapital(countryNames)
-        );
+        return envelope(ERROR_AMBIGUOUS_CAPITAL, ambiguousCapitalHint(countryNames));
+    }
+
+    public static String ambiguousCapitalHint(List<String> countryNames) {
+        return "Capital matches multiple countries: "
+                + String.join(", ", countryNames)
+                + ". Provide the country name instead.";
     }
 
     public static Map<String, Object> sourceUnavailable() {
         return envelope(ERROR_SOURCE_UNAVAILABLE, HINT_SOURCE_UNAVAILABLE);
     }
 
-    public static Map<String, Object> internalFailure() {
-        return envelope(ERROR_INTERNAL_FAILURE, HINT_INTERNAL_FAILURE);
+    public static String internalFailureJson() {
+        return "{\"ok\":false,\"error\":\"" + ERROR_INTERNAL_FAILURE
+                + "\",\"hint\":\"" + HINT_INTERNAL_FAILURE + "\"}";
     }
 
     public static Map<String, Object> envelope(String error, String hint) {

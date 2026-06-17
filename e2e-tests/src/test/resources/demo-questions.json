@@ -1,0 +1,34 @@
+{
+  "questions": [
+    {
+      "key": "germany-capital",
+      "question": "What is the capital city of Germany?",
+      "sourcePathKey": "countries"
+    },
+    {
+      "key": "munich-weather",
+      "question": "What is the temperature currently in Munich?",
+      "sourcePathKey": "weather"
+    },
+    {
+      "key": "germany-capital-weather",
+      "question": "What is the temperature of the capital of Germany currently?",
+      "sourcePathKey": "combined"
+    },
+    {
+      "key": "berlin-place",
+      "question": "What do you know about Berlin?",
+      "sourcePathKey": "place-synthesis"
+    },
+    {
+      "key": "cdq-product",
+      "question": "What is CDQ Fraud Guard?",
+      "sourcePathKey": "cdq-product"
+    },
+    {
+      "key": "source-unavailable-invalid-country",
+      "question": "What is the capital city of Atlantis?",
+      "sourcePathKey": "source-unavailable"
+    }
+  ]
+}

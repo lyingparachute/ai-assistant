@@ -3,10 +3,10 @@ package dev.localassistant.assistant.adapters.outbound.pgvector;
 import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
 import dev.localassistant.assistant.adapters.outbound.pgvector.support.DeterministicTestEmbeddingAdapter;
 import dev.localassistant.assistant.llm.EmbeddingPort;
+import dev.localassistant.assistant.rag.ChunkStorageOutcome;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.rag.RagChunk;
 import dev.localassistant.assistant.rag.RagIngestionReport;
-import dev.localassistant.assistant.rag.RagIngestionResult;
 import dev.localassistant.assistant.rag.RagKnowledgePort;
 import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
@@ -32,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class})
+@org.springframework.test.context.ContextConfiguration(
+        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
 @Testcontainers
 class PgvectorRagAdapterIntegrationTest {
 
@@ -61,7 +63,7 @@ class PgvectorRagAdapterIntegrationTest {
     private RagKnowledgePort ragKnowledgePort;
 
     @Autowired
-    private PgvectorRagAdapter pgvectorRagAdapter;
+    private PgvectorSchemaInitializer pgvectorSchemaInitializer;
 
     @Autowired
     private JdbcTemplate ragJdbcTemplate;
@@ -75,7 +77,7 @@ class PgvectorRagAdapterIntegrationTest {
     void resetDatabase() {
         deterministicEmbeddingAdapter = (DeterministicTestEmbeddingAdapter) embeddingPort;
         ragJdbcTemplate.execute("TRUNCATE rag_chunks RESTART IDENTITY");
-        pgvectorRagAdapter.initializeSchema();
+        pgvectorSchemaInitializer.initializeSchema();
     }
 
     @Test
@@ -94,12 +96,11 @@ class PgvectorRagAdapterIntegrationTest {
 
     @Test
     void insertChunksStoresVector768Embeddings() {
-        RagIngestionResult result = ingestSingleChunk("Fraud Guard monitors suspicious transactions.");
+        ChunkStorageOutcome result = ingestSingleChunk("Fraud Guard monitors suspicious transactions.");
 
-        assertThat(result).isInstanceOf(RagIngestionResult.Success.class);
-        RagIngestionResult.Success success = (RagIngestionResult.Success) result;
-        assertThat(success.report().outcome()).isEqualTo(RagIngestionReport.Outcome.INGESTED);
-        assertThat(success.report().chunkCount()).isEqualTo(1);
+        assertThat(result).isInstanceOf(ChunkStorageOutcome.Stored.class);
+        assertThat(((ChunkStorageOutcome.Stored) result).outcome())
+                .isEqualTo(RagIngestionReport.Outcome.INGESTED);
 
         Integer dimension =
                 ragJdbcTemplate.queryForObject(
@@ -127,19 +128,18 @@ class PgvectorRagAdapterIntegrationTest {
         RagRetrievalResult.Success success = (RagRetrievalResult.Success) retrievalResult;
         KnowledgeSnippet snippet = success.snippets().getFirst();
         assertThat(snippet.chunkText()).contains("Fraud Guard monitors suspicious transactions");
-        assertThat(snippet.similarityScore()).isPresent();
-        assertThat(snippet.similarityScore().orElseThrow()).isGreaterThanOrEqualTo(0.3);
+        assertThat(snippet.retrievalScore().value()).isGreaterThanOrEqualTo(0.3);
     }
 
     @Test
     void storedChunkMetadataRoundTripsThroughSimilarityRetrieval() {
         String chunkText = "Fraud Guard monitors suspicious transactions for payment fraud.";
         String contentHash = "metadata-round-trip-hash";
-        RagIngestionResult result =
+        ChunkStorageOutcome result =
                 ingestChunks(
                         contentHash,
                         List.of(chunk(0, chunkText, chunkText, contentHash)));
-        assertThat(result).isInstanceOf(RagIngestionResult.Success.class);
+        assertThat(result).isInstanceOf(ChunkStorageOutcome.Stored.class);
 
         RagRetrievalResult retrievalResult =
                 ragKnowledgePort.retrieve(
@@ -152,12 +152,12 @@ class PgvectorRagAdapterIntegrationTest {
         assertThat(snippet.sourceUrl()).isEqualTo(SOURCE_URL);
         assertThat(snippet.contentHash()).isEqualTo(contentHash);
         assertThat(snippet.chunkIndex()).isZero();
-        assertThat(snippet.similarityScore()).isPresent();
+        assertThat(snippet.retrievalScore().value()).isGreaterThanOrEqualTo(0.0);
     }
 
     @Test
     void reIngestionReplacesPriorChunkSetWithoutDuplicates() {
-        RagIngestionResult firstIngestion =
+        ChunkStorageOutcome firstIngestion =
                 ingestChunks(
                         FIRST_HASH,
                         List.of(
@@ -166,11 +166,11 @@ class PgvectorRagAdapterIntegrationTest {
                                         "First chunk about fraud detection rules.",
                                         "First chunk about fraud detection rules.",
                                         FIRST_HASH)));
-        assertThat(firstIngestion).isInstanceOf(RagIngestionResult.Success.class);
-        assertThat(((RagIngestionResult.Success) firstIngestion).report().outcome())
+        assertThat(firstIngestion).isInstanceOf(ChunkStorageOutcome.Stored.class);
+        assertThat(((ChunkStorageOutcome.Stored) firstIngestion).outcome())
                 .isEqualTo(RagIngestionReport.Outcome.INGESTED);
 
-        RagIngestionResult secondIngestion =
+        ChunkStorageOutcome secondIngestion =
                 ingestChunks(
                         SECOND_HASH,
                         List.of(
@@ -184,10 +184,9 @@ class PgvectorRagAdapterIntegrationTest {
                                         "Second replacement chunk about merchant risk scoring.",
                                         "Second replacement chunk about merchant risk scoring.",
                                         SECOND_HASH)));
-        assertThat(secondIngestion).isInstanceOf(RagIngestionResult.Success.class);
-        RagIngestionResult.Success replaced = (RagIngestionResult.Success) secondIngestion;
-        assertThat(replaced.report().outcome()).isEqualTo(RagIngestionReport.Outcome.REPLACED);
-        assertThat(replaced.report().chunkCount()).isEqualTo(2);
+        assertThat(secondIngestion).isInstanceOf(ChunkStorageOutcome.Stored.class);
+        assertThat(((ChunkStorageOutcome.Stored) secondIngestion).outcome())
+                .isEqualTo(RagIngestionReport.Outcome.REPLACED);
 
         Integer storedCount =
                 ragJdbcTemplate.queryForObject(
@@ -208,11 +207,11 @@ class PgvectorRagAdapterIntegrationTest {
         assertThat(chunkTexts).doesNotContain("First chunk about fraud detection rules.");
     }
 
-    private RagIngestionResult ingestSingleChunk(String chunkText) {
+    private ChunkStorageOutcome ingestSingleChunk(String chunkText) {
         return ingestChunks(FIRST_HASH, List.of(chunk(0, chunkText, chunkText, FIRST_HASH)));
     }
 
-    private RagIngestionResult ingestChunks(String contentHash, List<RagChunk> chunks) {
+    private ChunkStorageOutcome ingestChunks(String contentHash, List<RagChunk> chunks) {
         return ragKnowledgePort.storeChunks(SOURCE_URL, contentHash, chunks);
     }
 

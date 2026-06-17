@@ -2,7 +2,6 @@ package dev.localassistant.countries;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.localassistant.countries.application.CountriesApplicationService;
 import dev.localassistant.countries.application.LookupCountryUseCase;
 import dev.localassistant.countries.config.CountriesMcpConfiguration;
 import dev.localassistant.countries.schemas.CountryToolSchemas;
@@ -23,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CountryLookupIntegrationTest {
 
     private StubRestCountriesServer stubRestCountriesServer;
-    private CountriesApplicationService countriesApplicationService;
     private CountryLookupTool countryLookupTool;
     private ObjectMapper objectMapper;
 
@@ -35,15 +33,15 @@ class CountryLookupIntegrationTest {
                 stubRestCountriesServer.baseUrl(),
                 2,
                 "countries-mcp-server-test",
-                "test"
+                "test",
+                20
         );
         RestCountriesHttpAdapter restCountriesPort = new RestCountriesHttpAdapter(
                 configuration,
                 HttpClient.newHttpClient(),
                 objectMapper
         );
-        countriesApplicationService = new CountriesApplicationService(new LookupCountryUseCase(restCountriesPort));
-        countryLookupTool = new CountryLookupTool(countriesApplicationService, objectMapper);
+        countryLookupTool = new CountryLookupTool(new LookupCountryUseCase(restCountriesPort), objectMapper);
     }
 
     @AfterEach
@@ -166,6 +164,26 @@ class CountryLookupIntegrationTest {
         assertThat(payload.path("error").asText()).isEqualTo(CountryToolErrors.ERROR_AMBIGUOUS_CAPITAL);
         assertThat(payload.path("hint").asText()).contains("Country A");
         assertThat(payload.path("hint").asText()).contains("Country B");
+    }
+
+    @Test
+    void missingPopulationMapsToSourceUnavailableNotZeroPopulationSuccess() throws Exception {
+        String bodyMissingPopulation = """
+                [{"name":{"common":"Germany"},"capital":["Berlin"],"region":"Europe"}]
+                """;
+        stubRestCountriesServer.stubNameLookup("Germany", 200, bodyMissingPopulation);
+        stubRestCountriesServer.stubCapitalLookup("Germany", 200, bodyMissingPopulation);
+
+        McpSchema.CallToolResult result = countryLookupTool.handle(
+                null,
+                new McpSchema.CallToolRequest(CountryToolSchemas.TOOL_NAME, Map.of("name", "Germany"))
+        );
+
+        assertThat(result.isError()).isTrue();
+        JsonNode payload = readToolPayload(result);
+        assertThat(payload.path("ok").asBoolean()).isFalse();
+        assertThat(payload.path("error").asText()).isEqualTo(CountryToolErrors.ERROR_SOURCE_UNAVAILABLE);
+        assertThat(payload.has("data")).isFalse();
     }
 
     private JsonNode readToolPayload(McpSchema.CallToolResult result) throws Exception {

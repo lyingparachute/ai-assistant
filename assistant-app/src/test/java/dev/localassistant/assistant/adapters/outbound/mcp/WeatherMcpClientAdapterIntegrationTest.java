@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @org.springframework.context.annotation.Import(McpTestConfiguration.class)
+@org.springframework.test.context.ContextConfiguration(
+        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
 class WeatherMcpClientAdapterIntegrationTest {
 
     private static final String TOOL_NAME = "get-weather";
@@ -45,6 +47,25 @@ class WeatherMcpClientAdapterIntegrationTest {
         assertThat(report.temperature().celsius()).isEqualTo(12.3);
         assertThat(report.timestamp()).isInstanceOf(WeatherTimestamp.Retrieved.class);
         assertThat(report.timestamp().value()).isEqualTo(McpTestConfiguration.FIXED_INSTANT);
+    }
+
+    @Test
+    void surroundingWhitespaceTrimmedBeforeMcpCallAndInReportLocation() {
+        java.util.concurrent.atomic.AtomicReference<String> requestedCity =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        stubMcpToolInvoker.when(TOOL_NAME, arguments -> {
+            requestedCity.set(arguments.get("city").toString());
+            return StubMcpToolInvoker.textResponse(
+                    FixtureSupport.readFixture("fixtures/mcp/weather/munich-success.txt")
+            );
+        });
+
+        ToolExecutionResult<WeatherReport> result = weatherPort.currentWeather("  Munich  ");
+
+        assertThat(requestedCity.get()).isEqualTo("Munich");
+        assertThat(result).isInstanceOf(ToolExecutionResult.Success.class);
+        WeatherReport report = ((ToolExecutionResult.Success<WeatherReport>) result).value();
+        assertThat(report.location().city()).isEqualTo("Munich");
     }
 
     @Test

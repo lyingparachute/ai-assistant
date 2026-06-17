@@ -1,6 +1,7 @@
 package dev.localassistant.assistant.rag;
 
 import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorSchemaInitializer;
 import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.FixtureProductKnowledgePort;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
@@ -26,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class, RagIngestionTestConfiguration.class})
+@org.springframework.test.context.ContextConfiguration(
+        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
 @Testcontainers
 class RagIngestionUseCaseIntegrationTest {
 
@@ -59,8 +62,12 @@ class RagIngestionUseCaseIntegrationTest {
     @Autowired
     private AtomicReference<FixtureProductKnowledgePort> fixtureProductKnowledgePortHolder;
 
+    @Autowired
+    private PgvectorSchemaInitializer pgvectorSchemaInitializer;
+
     @BeforeEach
     void resetDatabase() throws IOException {
+        pgvectorSchemaInitializer.initializeSchema();
         ragJdbcTemplate.execute("TRUNCATE rag_chunks RESTART IDENTITY");
         fixtureProductKnowledgePortHolder.set(
                 FixtureProductKnowledgePort.fromClasspathHtml(RagIngestionTestConfiguration.FIXTURE_HTML));

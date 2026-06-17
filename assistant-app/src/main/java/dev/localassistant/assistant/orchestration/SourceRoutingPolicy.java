@@ -6,6 +6,9 @@ import java.util.Locale;
 
 public final class SourceRoutingPolicy {
 
+    // Routing is deliberately scoped to the fixed demo questions: keyword matches gate Germany and
+    // Munich only. Off-demo inputs (for example "capital of France") fall through to UNSUPPORTED
+    // rather than answering from model memory.
     private static final String GERMANY_LOOKUP_KEY = "Germany";
     private static final String MUNICH_LOCATION = "Munich";
     private static final String PLACE_SYNTHESIS_PREFIX = "what do you know about";
@@ -21,21 +24,21 @@ public final class SourceRoutingPolicy {
         String normalized = question.text().toLowerCase(Locale.ROOT);
 
         if (containsCountryThenWeather(normalized)) {
-            return RoutedQuestion.countryThenWeather(question, GERMANY_LOOKUP_KEY);
+            return new RoutedQuestion.CountryThenWeather(question, GERMANY_LOOKUP_KEY);
         }
         if (containsCountryCapital(normalized)) {
-            return RoutedQuestion.countryCapital(question, GERMANY_LOOKUP_KEY);
+            return new RoutedQuestion.CountryCapital(question, GERMANY_LOOKUP_KEY);
         }
         if (containsWeatherLocation(normalized)) {
-            return RoutedQuestion.weatherLocation(question, Location.of(MUNICH_LOCATION));
+            return new RoutedQuestion.WeatherOnly(question, Location.of(MUNICH_LOCATION));
         }
         if (startsWithPlaceSynthesisPrefix(normalized)) {
-            return RoutedQuestion.placeSynthesis(question, extractPlaceName(question.text()));
+            return new RoutedQuestion.PlaceSynthesis(question, extractPlaceName(question.text()));
         }
         if (containsCdqProduct(normalized)) {
-            return RoutedQuestion.cdqProduct(question);
+            return new RoutedQuestion.CdqProduct(question);
         }
-        return RoutedQuestion.unsupported(question, UNSUPPORTED_REASON);
+        return new RoutedQuestion.Unsupported(question, UNSUPPORTED_REASON);
     }
 
     private static boolean containsCountryThenWeather(String normalized) {

@@ -52,6 +52,20 @@ class WeatherMcpClientContractTest {
     }
 
     @Test
+    void mcpErrorFlagWithUnrecognizedContentMapsToSourceUnavailable() {
+        var result = mapper.mapResponse(
+                "Munich",
+                new McpToolInvoker.McpToolResponse(java.util.List.of("upstream crashed"), true)
+        );
+
+        assertThat(result).isInstanceOf(dev.localassistant.assistant.tools.ToolExecutionResult.SourceUnavailable.class);
+        var unavailable = (dev.localassistant.assistant.tools.ToolExecutionResult.SourceUnavailable<
+                dev.localassistant.assistant.tools.WeatherReport>) result;
+        assertThat(unavailable.sourceLabel()).isEqualTo(WeatherMcpResponseMapper.SOURCE_LABEL);
+        assertThat(unavailable.message()).isEqualTo(WeatherMcpResponseMapper.MCP_ERROR_FLAG_MESSAGE);
+    }
+
+    @Test
     void malformedPayloadMapsToSourceUnavailable() {
         var result = mapper.mapResponse(
                 "Munich",

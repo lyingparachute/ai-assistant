@@ -1,5 +1,7 @@
 import type { ApiErrorResponse, ChatResponse } from './types';
 
+// PUBLIC_ASSISTANT_API_URL (see .env.example) is the configured source of the Assistant API
+// base URL. DEFAULT_API_URL is only the local-dev fallback when that env var is unset.
 const DEFAULT_API_URL = 'http://localhost:8080';
 
 export function assistantApiUrl(): string {

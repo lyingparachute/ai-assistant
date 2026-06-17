@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-class PgvectorSchemaInitializer {
+public class PgvectorSchemaInitializer {
 
     private static final String SCHEMA_RESOURCE = "db/rag-schema.sql";
 
@@ -20,7 +20,7 @@ class PgvectorSchemaInitializer {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate");
     }
 
-    void initializeSchema() {
+    public void initializeSchema() {
         for (String statement : splitStatements(readSchemaSql())) {
             jdbcTemplate.execute(statement);
         }

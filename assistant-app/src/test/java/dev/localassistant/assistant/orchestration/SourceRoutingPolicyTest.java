@@ -24,10 +24,9 @@ class SourceRoutingPolicyTest {
 
         assertThat(routed.route()).isEqualTo(QuestionRoute.COUNTRY_CAPITAL);
         assertThat(routed.question()).isEqualTo(question);
-        assertThat(routed.countryLookupKey()).contains("Germany");
-        assertThat(routed.weatherLocation()).isEmpty();
-        assertThat(routed.placeName()).isEmpty();
-        assertThat(routed.unsupportedReason()).isEmpty();
+        assertThat(routed).isInstanceOfSatisfying(
+                RoutedQuestion.CountryCapital.class,
+                capital -> assertThat(capital.countryLookupKey()).isEqualTo("Germany"));
     }
 
     @Test
@@ -37,10 +36,9 @@ class SourceRoutingPolicyTest {
         RoutedQuestion routed = policy.route(question);
 
         assertThat(routed.route()).isEqualTo(QuestionRoute.WEATHER_LOCATION);
-        assertThat(routed.weatherLocation()).contains(Location.of("Munich"));
-        assertThat(routed.countryLookupKey()).isEmpty();
-        assertThat(routed.placeName()).isEmpty();
-        assertThat(routed.unsupportedReason()).isEmpty();
+        assertThat(routed).isInstanceOfSatisfying(
+                RoutedQuestion.WeatherOnly.class,
+                weather -> assertThat(weather.weatherLocation()).isEqualTo(Location.of("Munich")));
     }
 
     @Test
@@ -51,10 +49,9 @@ class SourceRoutingPolicyTest {
         RoutedQuestion routed = policy.route(question);
 
         assertThat(routed.route()).isEqualTo(QuestionRoute.COUNTRY_THEN_WEATHER);
-        assertThat(routed.countryLookupKey()).contains("Germany");
-        assertThat(routed.weatherLocation()).isEmpty();
-        assertThat(routed.placeName()).isEmpty();
-        assertThat(routed.unsupportedReason()).isEmpty();
+        assertThat(routed).isInstanceOfSatisfying(
+                RoutedQuestion.CountryThenWeather.class,
+                chain -> assertThat(chain.countryLookupKey()).isEqualTo("Germany"));
     }
 
     @Test
@@ -64,10 +61,9 @@ class SourceRoutingPolicyTest {
         RoutedQuestion routed = policy.route(question);
 
         assertThat(routed.route()).isEqualTo(QuestionRoute.PLACE_SYNTHESIS);
-        assertThat(routed.placeName()).contains("Berlin");
-        assertThat(routed.countryLookupKey()).isEmpty();
-        assertThat(routed.weatherLocation()).isEmpty();
-        assertThat(routed.unsupportedReason()).isEmpty();
+        assertThat(routed).isInstanceOfSatisfying(
+                RoutedQuestion.PlaceSynthesis.class,
+                place -> assertThat(place.placeName()).isEqualTo("Berlin"));
     }
 
     @Test
@@ -77,10 +73,7 @@ class SourceRoutingPolicyTest {
         RoutedQuestion routed = policy.route(question);
 
         assertThat(routed.route()).isEqualTo(QuestionRoute.CDQ_PRODUCT);
-        assertThat(routed.placeName()).isEmpty();
-        assertThat(routed.countryLookupKey()).isEmpty();
-        assertThat(routed.weatherLocation()).isEmpty();
-        assertThat(routed.unsupportedReason()).isEmpty();
+        assertThat(routed).isInstanceOf(RoutedQuestion.CdqProduct.class);
     }
 
     @Test
@@ -103,16 +96,25 @@ class SourceRoutingPolicyTest {
     }
 
     @Test
+    void offDemoCapitalQuestionFallsThroughToUnsupported() {
+        UserQuestion question = UserQuestion.of("What is the capital of France?");
+
+        RoutedQuestion routed = policy.route(question);
+
+        assertThat(routed.route()).isEqualTo(QuestionRoute.UNSUPPORTED);
+        assertThat(routed).isNotInstanceOf(RoutedQuestion.CountryCapital.class);
+    }
+
+    @Test
     void routesOffTopicQuestionAsUnsupported() {
         UserQuestion question = UserQuestion.of("Who won the World Cup in 2022?");
 
         RoutedQuestion routed = policy.route(question);
 
         assertThat(routed.route()).isEqualTo(QuestionRoute.UNSUPPORTED);
-        assertThat(routed.unsupportedReason()).hasValueSatisfying(
-                reason -> assertThat(reason).contains("No matching source route"));
-        assertThat(routed.placeName()).isEmpty();
-        assertThat(routed.countryLookupKey()).isEmpty();
-        assertThat(routed.weatherLocation()).isEmpty();
+        assertThat(routed).isInstanceOfSatisfying(
+                RoutedQuestion.Unsupported.class,
+                unsupported ->
+                        assertThat(unsupported.reason()).contains("No matching source route"));
     }
 }

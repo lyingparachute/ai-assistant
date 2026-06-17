@@ -1,0 +1,7 @@
+correlationId=7b30e13e-5ad7-49f0-b357-05c3b34e5269
+route=COUNTRY_THEN_WEATHER
+portsInvoked=[CountriesPort]
+ragRetrievalCount=0
+outcome=country_then_weather_answered_sources=1
+sourceStatus=countries_facts:UNAVAILABLE
+note=WeatherPort not invoked because capital resolution failed

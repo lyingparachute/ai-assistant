@@ -2,74 +2,32 @@ package dev.localassistant.assistant.adapters.outbound.pgvector;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import dev.localassistant.assistant.adapters.outbound.pgvector.support.DeterministicTestEmbeddingAdapter;
-import dev.localassistant.assistant.config.AssistantRagProperties;
-import dev.localassistant.assistant.llm.EmbeddingPort;
-import dev.localassistant.assistant.rag.RagKnowledgePort;
+import dev.localassistant.assistant.adapters.outbound.pgvector.support.TestEmbeddingPortConfiguration;
+import dev.localassistant.assistant.config.AssistantRagStorageProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.context.annotation.Import;
 
 import javax.sql.DataSource;
 
 @TestConfiguration
-@EnableConfigurationProperties(AssistantRagProperties.class)
+@EnableConfigurationProperties(AssistantRagStorageProperties.class)
+@Import({TestEmbeddingPortConfiguration.class, PgvectorBeansConfiguration.class})
 public class PgvectorTestConfiguration {
 
+    // Fail fast against a stopped/unreachable container so the source-unavailable integration test
+    // surfaces the typed outcome in seconds instead of waiting out Hikari's 30s default.
+    private static final long TEST_CONNECTION_TIMEOUT_MILLIS = 2000L;
+
     @Bean(destroyMethod = "close")
-    DataSource ragDataSource(AssistantRagProperties assistantRagProperties) {
+    DataSource ragDataSource(AssistantRagStorageProperties storageProperties) {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(assistantRagProperties.jdbcUrl());
-        config.setUsername(assistantRagProperties.username());
-        config.setPassword(assistantRagProperties.password());
+        config.setJdbcUrl(storageProperties.jdbcUrl());
+        config.setUsername(storageProperties.username());
+        config.setPassword(storageProperties.password());
         config.setPoolName("rag-pgvector-test");
+        config.setConnectionTimeout(TEST_CONNECTION_TIMEOUT_MILLIS);
         return new HikariDataSource(config);
-    }
-
-    @Bean
-    JdbcTemplate ragJdbcTemplate(DataSource ragDataSource) {
-        return new JdbcTemplate(ragDataSource);
-    }
-
-    @Bean
-    PlatformTransactionManager ragTransactionManager(DataSource ragDataSource) {
-        return new DataSourceTransactionManager(ragDataSource);
-    }
-
-    @Bean
-    TransactionTemplate ragTransactionTemplate(PlatformTransactionManager ragTransactionManager) {
-        return new TransactionTemplate(ragTransactionManager);
-    }
-
-    @Bean
-    PgvectorIngestionRepository pgvectorIngestionRepository(
-            JdbcTemplate ragJdbcTemplate, TransactionTemplate ragTransactionTemplate) {
-        return new PgvectorIngestionRepository(ragJdbcTemplate, ragTransactionTemplate);
-    }
-
-    @Bean
-    @Primary
-    EmbeddingPort deterministicTestEmbeddingPort() {
-        return new DeterministicTestEmbeddingAdapter();
-    }
-
-    @Bean
-    PgvectorRagAdapter pgvectorRagAdapter(
-            PgvectorIngestionRepository pgvectorIngestionRepository,
-            EmbeddingPort deterministicTestEmbeddingPort,
-            JdbcTemplate ragJdbcTemplate) {
-        new PgvectorSchemaInitializer(ragJdbcTemplate).initializeSchema();
-        return new PgvectorRagAdapter(pgvectorIngestionRepository, deterministicTestEmbeddingPort);
-    }
-
-    @Bean
-    @Primary
-    RagKnowledgePort ragKnowledgePort(PgvectorRagAdapter pgvectorRagAdapter) {
-        return pgvectorRagAdapter;
     }
 }

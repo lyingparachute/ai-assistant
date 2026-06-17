@@ -15,6 +15,8 @@ final class CountriesMcpResponseMapper {
             "The countries MCP server returned an unexpected payload. Retry later; do not invent country facts.";
     static final String ERROR_NAME_REQUIRED = "name is required";
     static final String HINT_NAME_REQUIRED = "Provide a non-empty English country or capital city name.";
+    static final String MCP_ERROR_FLAG_MESSAGE = "countries MCP reported a tool error with unrecognized content";
+    private static final String ENVELOPE_OK_FIELD = "ok";
 
     private final ObjectMapper objectMapper;
 
@@ -32,15 +34,25 @@ final class CountriesMcpResponseMapper {
             return sourceUnavailable("countries MCP returned empty tool content");
         }
 
+        JsonNode root;
         try {
-            JsonNode root = objectMapper.readTree(payload);
-            if (root.path("ok").asBoolean(false)) {
-                return mapSuccess(root.path("data"));
-            }
-            return mapToolError(root);
+            root = objectMapper.readTree(payload);
         } catch (Exception exception) {
-            return sourceUnavailable("countries MCP returned unparseable JSON");
+            return response.isError()
+                    ? sourceUnavailable(MCP_ERROR_FLAG_MESSAGE)
+                    : sourceUnavailable("countries MCP returned unparseable JSON");
         }
+
+        if (!root.has(ENVELOPE_OK_FIELD)) {
+            return response.isError()
+                    ? sourceUnavailable(MCP_ERROR_FLAG_MESSAGE)
+                    : sourceUnavailable("countries MCP returned an unrecognized payload");
+        }
+
+        if (root.path(ENVELOPE_OK_FIELD).asBoolean(false)) {
+            return mapSuccess(root.path("data"));
+        }
+        return mapToolError(root);
     }
 
     private ToolExecutionResult<CountryInfo> mapSuccess(JsonNode data) {

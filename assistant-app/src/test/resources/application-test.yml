@@ -14,7 +14,6 @@ assistant:
       args:
         - stub-countries
       env: {}
-      working-directory: .
       transport: stdio
       timeout-seconds: 5
       tool-name: country_lookup
@@ -23,7 +22,6 @@ assistant:
       args:
         - stub-weather
       env: {}
-      working-directory: .
       transport: stdio
       timeout-seconds: 5
       tool-name: get-weather

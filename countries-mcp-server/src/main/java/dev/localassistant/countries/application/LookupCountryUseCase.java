@@ -7,6 +7,7 @@ import dev.localassistant.countries.ports.RestCountriesPort;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class LookupCountryUseCase {
 
@@ -31,41 +32,38 @@ public final class LookupCountryUseCase {
             LookupPlace place,
             RestCountriesPort.RestCountriesQueryResult byName
     ) {
-        return switch (byName) {
-            case RestCountriesPort.RestCountriesQueryResult.SourceUnavailable sourceUnavailable ->
-                    new CountryLookupOutcome.SourceUnavailable(CountryLookupHints.SOURCE_UNAVAILABLE);
-            case RestCountriesPort.RestCountriesQueryResult.NotFound ignored ->
-                    new CountryLookupOutcome.NotRecognized(CountryLookupHints.NOT_RECOGNIZED);
-            case RestCountriesPort.RestCountriesQueryResult.Success success -> {
-                Optional<CountryFacts> selected = selectSingleCountry(place.value(), success.countries());
-                if (selected.isPresent()) {
-                    yield new CountryLookupOutcome.Success(selected.get());
-                }
-                yield new CountryLookupOutcome.NotRecognized(CountryLookupHints.NOT_RECOGNIZED);
-            }
-        };
+        return resolve(byName, success -> {
+            Optional<CountryFacts> selected = selectSingleCountry(place.value(), success.countries());
+            return selected
+                    .<CountryLookupOutcome>map(CountryLookupOutcome.Success::new)
+                    .orElseGet(CountryLookupOutcome.NotRecognized::new);
+        });
     }
 
     private CountryLookupOutcome resolveCapitalLookup(RestCountriesPort.RestCountriesQueryResult byCapital) {
-        return switch (byCapital) {
-            case RestCountriesPort.RestCountriesQueryResult.SourceUnavailable sourceUnavailable ->
-                    new CountryLookupOutcome.SourceUnavailable(CountryLookupHints.SOURCE_UNAVAILABLE);
-            case RestCountriesPort.RestCountriesQueryResult.NotFound ignored ->
-                    new CountryLookupOutcome.NotRecognized(CountryLookupHints.NOT_RECOGNIZED);
-            case RestCountriesPort.RestCountriesQueryResult.Success success -> {
-                List<CountryFacts> countries = success.countries();
-                if (countries.isEmpty()) {
-                    yield new CountryLookupOutcome.NotRecognized(CountryLookupHints.NOT_RECOGNIZED);
-                }
-                if (countries.size() == 1) {
-                    yield new CountryLookupOutcome.Success(countries.getFirst());
-                }
-                List<String> countryNames = countries.stream().map(CountryFacts::countryName).toList();
-                yield new CountryLookupOutcome.AmbiguousCapital(
-                        countryNames,
-                        CountryLookupHints.ambiguousCapital(countryNames)
-                );
+        return resolve(byCapital, success -> {
+            List<CountryFacts> countries = success.countries();
+            if (countries.isEmpty()) {
+                return new CountryLookupOutcome.NotRecognized();
             }
+            if (countries.size() == 1) {
+                return new CountryLookupOutcome.Success(countries.getFirst());
+            }
+            List<String> countryNames = countries.stream().map(CountryFacts::countryName).toList();
+            return new CountryLookupOutcome.AmbiguousCapital(countryNames);
+        });
+    }
+
+    private CountryLookupOutcome resolve(
+            RestCountriesPort.RestCountriesQueryResult result,
+            Function<RestCountriesPort.RestCountriesQueryResult.Success, CountryLookupOutcome> onSuccess
+    ) {
+        return switch (result) {
+            case RestCountriesPort.RestCountriesQueryResult.SourceUnavailable sourceUnavailable ->
+                    new CountryLookupOutcome.SourceUnavailable();
+            case RestCountriesPort.RestCountriesQueryResult.NotFound ignored ->
+                    new CountryLookupOutcome.NotRecognized();
+            case RestCountriesPort.RestCountriesQueryResult.Success success -> onSuccess.apply(success);
         };
     }
 

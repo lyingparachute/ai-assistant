@@ -1,291 +1,94 @@
 # Local Java AI Assistant
 
-## Overview
-
-This repository contains a recruitment-task implementation of a local AI Assistant built with Java frameworks. The assistant will provide a chat interface backed by a local Ollama model, retrieval-augmented generation over CDQ Fraud Guard product knowledge, a local pgvector database, and MCP tool integrations.
-
-The implementation is intentionally local-first. Required runtime dependencies are expected to run on the developer machine, including Ollama with the assignment model, PostgreSQL with pgvector, the custom REST Countries MCP server, and the local weather MCP server.
-
-Phase 1 added the minimal Java/Spring multi-module skeleton. Phase 2 added the custom countries MCP server backed by REST Countries. Phase 3 added assistant-side MCP client adapters for countries and weather behind `CountriesPort` and `WeatherPort`. Phase 4 added CDQ Fraud Guard RAG ingestion and retrieval over pgvector behind `RagKnowledgePort`, with a documented local ingestion entry point. Phase 5 added deterministic source routing and `AnswerQuestionUseCase` orchestration behind `LlmPort`, composing grounded answers with explicit source labeling. Phase 6 added the JSON Assistant API (`POST /api/chat`) and a separate Astro Chat Interface in `chat-ui/`.
-
-## Architecture
-
-The planned architecture follows a hexagonal style:
-
-- The chat interface is an inbound adapter.
-- Application services orchestrate assistant requests, RAG retrieval, and tool calls.
-- Domain ports describe required capabilities such as country lookup, weather lookup, document retrieval, and model completion.
-- Infrastructure adapters integrate with Ollama, pgvector, REST Countries, and MCP servers.
-- Tests verify behavior at boundaries with real or controlled local dependencies where practical.
-
-Detailed architecture decisions are recorded under `docs/adr/`.
-
-## Tech Stack
-
-- Java 21 LTS.
-- Maven Wrapper using Apache Maven 3.9.11.
-- Spring Boot 3.5.9.
-- Spring AI dependency management through Spring AI BOM 1.1.2. Spring AI runtime dependencies will be added only inside outbound adapters or configuration when those phases implement them.
-- Ollama for local model execution.
-- Assignment model: `qwen3:4b`, configured externally.
-- Embedding model: `nomic-embed-text` (dimension 768), configured externally (ADR `0007`).
-- PostgreSQL with pgvector using `pgvector/pgvector:pg17`.
-- MCP for tool integrations.
-- REST Countries API through a custom MCP server.
-- Local weather MCP server from `semdin/mcp-weather`.
-- JUnit Jupiter through Spring Boot test conventions.
+Local-first AI assistant: Astro Chat Interface, Spring Boot API, Ollama synthesis, RAG over CDQ Fraud Guard product knowledge (pgvector), and MCP tools for countries and weather.
 
 ## Prerequisites
 
-Expected local tools for the current skeleton:
-
-- Java 21 JDK.
-- Network access for the first Maven Wrapper run so it can download Apache Maven and dependencies.
-
-Expected local tools for later implementation phases:
-
-- Docker or another local container runtime for pgvector.
-- Ollama installed locally.
-- The assignment Ollama model available locally.
-- Network access during setup to retrieve CDQ Fraud Guard source text and REST Countries data.
-- Local MCP weather server installed and runnable.
-
-The build itself does not require Docker, Ollama, pgvector, or weather configuration yet. The countries MCP server needs network access only when it calls REST Countries at runtime.
-
-## Countries MCP Server
-
-Run the server from the repository root using the documented `.mcp.json` entry (`transport: stdio`, host `timeout: 60000` ms):
-
-```bash
-./mvnw -q -pl countries-mcp-server spring-boot:run
-```
-
-Configuration is externalized under `countries.mcp.*` (see `docs/spec/11-countries-mcp-tool-contract.md`). Defaults target REST Countries v3.1 at `https://restcountries.com/v3.1`.
-
-Run focused countries MCP tests:
-
-```bash
-./mvnw -pl countries-mcp-server test
-```
-
-Manual smoke check (requires an MCP host or client that speaks stdio JSON-RPC):
-
-1. Start the server with the command above from the repository root.
-2. Call the `country_lookup` tool with `{"name":"Germany"}` and confirm `countryName`, `capital`, `region`, and `population` in the success envelope.
-3. Call with `{"name":"Berlin"}` and confirm the same Germany facts through the capital-city path.
-4. Stop the process with Ctrl+C and confirm it exits without hanging.
-
-Automated tests use a stubbed REST Countries HTTP server and do not call the live API.
-
-## Weather MCP Server
-
-The assistant calls the local `semdin/mcp-weather` server through `WeatherMcpClientAdapter` behind `WeatherPort`. See `docs/spec/13-weather-mcp-tool-contract.md` for the tool name, input schema, and text response pattern.
-
-Install and configure the weather server locally:
-
-1. Clone or install [semdin/mcp-weather](https://github.com/semdin/mcp-weather) and ensure `mcp-weather` (or `npx tsx src/index.ts`) is on your PATH.
-2. Set environment variables (do not commit secrets):
-   - `WEATHER_API_KEY` — provider API key.
-   - `WEATHER_API_URL` — provider URL (for example `https://api.weatherapi.com/v1/current.json`).
-3. Use the `.mcp.json` `weather` entry (`transport: stdio`, `timeout: 60000` ms) or `assistant.mcp.weather.*` in `assistant-app/src/main/resources/application.yml`.
-
-Run focused assistant MCP adapter tests:
-
-```bash
-./mvnw -pl assistant-app test
-```
-
-Manual smoke check (optional, requires live weather API configuration):
-
-1. Export `WEATHER_API_KEY` and `WEATHER_API_URL`.
-2. Start `mcp-weather` from your MCP host or call `get-weather` with `{"city":"Munich"}`.
-3. Confirm the text response matches `the weather in Munich is currently: <temperature>`.
-
-Automated tests stub MCP responses and do not call the live weather API.
-
-## RAG over pgvector (CDQ Fraud Guard)
-
-Phase 4 ingests CDQ Fraud Guard product-page content into PostgreSQL with pgvector and retrieves `KnowledgeSnippet` values behind `RagKnowledgePort`. Chat orchestration that answers product questions is still in a later phase; ingestion and retrieval are runnable and tested now.
-
-### PostgreSQL with pgvector
-
-Start a local database matching `assistant.rag.*` defaults in `assistant-app/src/main/resources/application.yml`:
-
-```bash
-docker run -d --name assistant-pgvector \
-  -e POSTGRES_DB=assistant_rag \
-  -e POSTGRES_USER=assistant \
-  -e POSTGRES_PASSWORD=assistant \
-  -p 5432:5432 \
-  pgvector/pgvector:pg17
-```
-
-Defaults: JDBC URL `jdbc:postgresql://localhost:5432/assistant_rag`, user `assistant`, password `assistant`.
-
-### Ollama embedding model
-
-Pull the assignment embedding model (dimension 768, ADR `0007`):
-
-```bash
-ollama pull nomic-embed-text
-```
-
-Ollama must be running at the configured base URL (`assistant.embedding.ollama-base-url`, default `http://localhost:11434`).
-
-### Ingest product knowledge
-
-From the repository root, with pgvector and Ollama available:
-
-```bash
-./mvnw -pl assistant-app spring-boot:run -- --ingest-rag
-```
-
-Or:
-
-```bash
-ASSISTANT_INGEST_RAG=true ./mvnw -pl assistant-app spring-boot:run
-```
-
-Ingestion fetches the configured CDQ Fraud Guard source URL (`assistant.rag.source-url`), extracts plain text, chunks it deterministically, embeds with `nomic-embed-text`, and stores rows in `rag_chunks`. Re-running replaces changed content or skips unchanged content by content hash.
-
-### RAG-focused tests
-
-```bash
-./mvnw -pl assistant-app test
-```
-
-RAG integration tests use Testcontainers (`pgvector/pgvector:pg17`) and a deterministic test embedding adapter; they do not call the live CDQ website or Ollama during `./mvnw test`.
-
-## Ollama chat model (assistant synthesis)
-
-Pull the assignment chat model (ADR `0002`):
+- Java 21, Node.js ≥ 22.12, Docker (for pgvector)
+- [Ollama](https://ollama.com/) with `qwen3:4b` and `nomic-embed-text`
+- Optional for live weather: `WEATHER_API_KEY` and `WEATHER_API_URL` (for example `https://api.weatherapi.com/v1/current.json`)
 
 ```bash
 ollama pull qwen3:4b
+ollama pull nomic-embed-text
 ```
 
-Ollama must be running at the configured base URL (`assistant.llm.ollama-base-url`, default `http://localhost:11434`). Chat completion is wired behind `LlmPort` in `OllamaLlmAdapter`; orchestration calls it only when synthesis is required (for example Berlin place questions or CDQ product answers after RAG retrieval).
+## Quick Start
 
-Configuration in `assistant-app/src/main/resources/application.yml`:
-
-```yaml
-assistant:
-  llm:
-    ollama-base-url: http://localhost:11434
-    model-name: qwen3:4b
-    timeout-seconds: 120
-```
-
-Orchestration tests use `StubLlmPort` and do not call live Ollama during `./mvnw test`.
-
-## Local Setup
-
-Current repository state:
-
-1. Review `CONTEXT.md`.
-2. Review the requirement documents under `docs/spec/`.
-3. Confirm architecture decisions under `docs/adr/` before implementing production source code.
-4. Run the wrapper-based build or tests:
+From the repository root:
 
 ```bash
-./mvnw verify
-./mvnw test
+./scripts/start-assistant.sh
 ```
 
-The repository contains these modules:
+macOS: double-click `scripts/start-assistant.command` in Finder.
 
-- `assistant-app`: Spring Boot application with countries and weather MCP client adapters, RAG ingestion and retrieval over pgvector, Phase 5 orchestration, and Phase 6 JSON chat API.
-- `chat-ui`: Astro Chat Interface (separate frontend; calls the Assistant API over HTTP).
-- `countries-mcp-server`: custom MCP server exposing the `country_lookup` tool over REST Countries v3.1.
-- `e2e-tests`: placeholder black-box test module for later demo-path verification.
+Starts the backend on `http://localhost:8080` and the Chat Interface on `http://localhost:4321`. Logs: `.local/logs/`. Stop with **Ctrl+C**.
 
-`shared-kernel` is not present because no concrete cross-module Java type is required yet.
+The script builds the countries MCP jar and installs Chat Interface dependencies on first run. It warns when Ollama, pgvector, or weather credentials are missing but still starts the stack.
 
-## Running the Assistant
-
-The assistant runs as two local processes: the Spring Boot API and the Astro Chat Interface.
-
-### 1. Start the backend (port 8080)
-
-From the repository root, with local dependencies available (Ollama, pgvector, countries MCP, weather MCP as needed for live answers):
+### RAG database and ingestion
 
 ```bash
-./mvnw -pl assistant-app spring-boot:run
+docker run -d --name assistant-pgvector \
+  -e POSTGRES_DB=assistant_rag -e POSTGRES_USER=assistant -e POSTGRES_PASSWORD=assistant \
+  -p 5432:5432 pgvector/pgvector:pg17
+
+./mvnw -pl assistant-app spring-boot:run -- --ingest-rag
 ```
 
-The Assistant API listens on `http://localhost:8080` by default (`server.port` in `application.yml`).
+Stop a running assistant on port 8080 before ingestion — it uses a non-web context and exits after storing chunks.
 
-### 2. Start the Chat Interface (port 4321)
-
-In a second terminal:
+### Manual run
 
 ```bash
-cd chat-ui
-npm install
-cp .env.example .env   # optional; default API URL is http://localhost:8080
-npm run dev
+./mvnw -pl countries-mcp-server -am package -DskipTests   # once
+./mvnw -pl assistant-app spring-boot:run                  # terminal 1
+
+cd chat-ui && npm install && npm run dev                  # terminal 2
 ```
 
-Open the Astro dev URL (default `http://localhost:4321`). Each submit sends only the current question to `POST /api/chat` — no chat history.
+API contract: `docs/spec/14-assistant-api-contract.md`.
 
-### Environment variables
-
-| Variable | Module | Default | Purpose |
-| --- | --- | --- | --- |
-| `PUBLIC_ASSISTANT_API_URL` | `chat-ui` | `http://localhost:8080` | Backend base URL for browser `fetch` |
-| `ASSISTANT_CORS_ALLOWED_ORIGINS` | `assistant-app` | `http://localhost:4321` | Comma-separated CORS origins for the Chat Interface |
-
-See `docs/spec/14-assistant-api-contract.md` for the HTTP contract.
-
-### What the assistant does
-
-The assistant routes demo questions using deterministic source routing and composes answers from:
-
-- country facts through the REST Countries MCP server;
-- weather facts through the local weather MCP server;
-- CDQ Fraud Guard product knowledge through RAG over pgvector;
-- general synthesis through the local Ollama model.
-
-Demo answer capture is Phase 7 (`docs/spec/08-demo-plan.md`).
-
-## Running Tests
-
-Run all current tests:
+## Tests
 
 ```bash
-./mvnw test
+./mvnw test                    # all modules, no running server required
+./mvnw verify                  # full build, no demo verification
+./mvnw verify -P e2e           # demo verification against a live stack on port 8080
 ```
 
-Run the current build verification:
-
-```bash
-./mvnw verify
-```
-
-Current tests include the Phase 1 skeleton smoke tests, Phase 2 countries MCP contract and integration tests, Phase 3 assistant MCP adapter contract and integration tests, Phase 4 RAG domain, pgvector, ingestion, and retrieval tests, Phase 5 orchestration tests with controlled ports, and Phase 6 Assistant API contract and HTTP chat-path tests. Phase 7 adds demo-question end-to-end verification.
+`./mvnw verify -P e2e` runs the demo verification (`RequiredDemoQuestionsIT`) against a running
+assistant. It is opt-in: without `-P e2e` it never runs, and with `-P e2e` it fails (does not skip)
+when no assistant responds on the configured base URL.
 
 ## Demo Questions
 
-Required demo questions:
+The required and showcase demo questions are defined once in
+[`e2e-tests/src/test/resources/demo-questions.json`](e2e-tests/src/test/resources/demo-questions.json).
+Both `scripts/capture-demo-answers.sh` and `RequiredDemoQuestionsIT` read that file.
 
-- What is the capital city of Germany?
-- What is the temperature currently in Munich?
-- What is the temperature of the capital of Germany currently?
-- What do you know about Berlin?
+Captured answers and traces: [docs/demo/final-answers.md](docs/demo/final-answers.md).
 
-Additional showcase questions will be added after the assistant capabilities are implemented. Final runtime answers must be captured from the running assistant and must not be invented in documentation.
+## Documentation
 
-## AI Usage
+| Topic | Location |
+| --- | --- |
+| Domain language | `CONTEXT.md` |
+| Requirements and architecture | `docs/spec/` |
+| Decisions | `docs/adr/` |
+| Demo evidence | `docs/demo/` |
+| AI-assisted work | `docs/ai/` |
 
-AI assistance is allowed by the assignment. AI-assisted work is documented under `docs/ai/` with the prompt or task summary, agent role, files affected, human review performed, and verification evidence.
+## Modules
+
+- `assistant-app` — API, orchestration, RAG, MCP client adapters
+- `chat-ui` — Astro Chat Interface
+- `countries-mcp-server` — REST Countries MCP server
+- `e2e-tests` — black-box checks against a running assistant
 
 ## Limitations
 
-- Long-term and short-term memory are out of scope.
-- The assistant must not fabricate unavailable tool or RAG results.
-- Runtime answers are not included yet because the assistant has not been implemented.
-- Phase 3 delivers countries and weather MCP client adapters in `assistant-app`; assistant orchestration and chat remain in later phases.
-- Phase 4 delivers RAG ingestion and retrieval over pgvector; demo answers and chat UI remain in later phases.
-- Phase 5 delivers deterministic orchestration and `ResponseComposer` source labeling; demo capture remains in Phase 7.
-- Phase 6 delivers the JSON Assistant API and Astro Chat Interface; demo answer capture remains in Phase 7.
-- `.mcp.json` launches the countries MCP server over documented stdio transport; weather requires local `mcp-weather` installation and API configuration.
+- No conversational memory across requests (ADR `0006`).
+- The assistant does not fabricate tool or RAG results when a source is unavailable.
+- Demo capture on 2026-06-16 hit upstream blockers (REST Countries v3.1 deprecated, weather key unset, RAG not ingested). Details: [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md).

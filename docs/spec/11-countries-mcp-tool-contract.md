@@ -111,6 +111,7 @@ Expected failures return `ok: false` with a recovery hint. They do not crash the
 | --- | --- | --- | --- |
 | `countries.mcp.rest-countries-base-url` | `COUNTRIES_MCP_REST_COUNTRIES_BASE_URL` | `https://restcountries.com/v3.1` | REST Countries API base URL. |
 | `countries.mcp.rest-countries-timeout-seconds` | `COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS` | `10` | HTTP read timeout for REST Countries calls. |
+| `countries.mcp.request-timeout-seconds` | `COUNTRIES_MCP_REQUEST_TIMEOUT_SECONDS` | `20` | MCP server-side request timeout for a single tool call. Distinct from the assistant client-side `ASSISTANT_MCP_COUNTRIES_TIMEOUT_SECONDS` (spec 12). |
 | `countries.mcp.server-name` | `COUNTRIES_MCP_SERVER_NAME` | `countries-mcp-server` | MCP server name announced to hosts. |
 | `countries.mcp.server-version` | `COUNTRIES_MCP_SERVER_VERSION` | `0.1.0-SNAPSHOT` | MCP server version announced to hosts. |
 

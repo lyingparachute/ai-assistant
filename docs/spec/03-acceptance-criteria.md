@@ -1,6 +1,6 @@
 # Acceptance Criteria
 
-## Chat UI
+## Chat Interface
 
 - A reviewer can start the assistant locally using documented commands.
 - A reviewer can submit a natural-language question through the chat interface.
@@ -33,8 +33,11 @@
 
 - The repository includes a custom MCP server that calls REST Countries.
 - A country-capital query for Germany returns Berlin through the MCP path.
+- A capital-city query for Berlin resolves to Germany through the MCP path.
+- Country tool output includes the fields needed by the assistant: country name, capital, region, and population.
 - REST Countries failures are surfaced as source failures.
-- Tests cover successful lookup and unavailable or invalid-country behavior.
+- Contract tests pin the tool name, required fields, compact output shape, and recovery-hint error shape.
+- Tests cover successful lookup, unavailable-source behavior, and invalid-country or invalid-capital behavior without uncontrolled network access.
 
 ## Weather MCP Integration
 
@@ -58,6 +61,7 @@
 - Tests cover happy paths and source-unavailable paths.
 - Tests do not require secrets or machine-specific local paths.
 - A failing required dependency produces a meaningful test failure or skipped external verification with an explicit documented reason.
+- Each implementation phase records the focused test command and actual output before the phase is marked complete.
 
 ## README
 

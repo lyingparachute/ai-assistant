@@ -8,8 +8,7 @@ public record RagIngestionReport(
     public enum Outcome {
         INGESTED,
         REPLACED,
-        UNCHANGED,
-        SKIPPED
+        UNCHANGED
     }
 
     public RagIngestionReport {
@@ -25,15 +24,9 @@ public record RagIngestionReport(
         if (chunkCount < 0) {
             throw new IllegalArgumentException("chunkCount must not be negative");
         }
-        if ((outcome == Outcome.INGESTED
-                        || outcome == Outcome.REPLACED
-                        || outcome == Outcome.UNCHANGED)
-                && chunkCount == 0) {
+        if (chunkCount == 0) {
             throw new IllegalArgumentException(
                     "chunkCount must be positive when outcome is " + outcome);
-        }
-        if (outcome == Outcome.SKIPPED && chunkCount != 0) {
-            throw new IllegalArgumentException("chunkCount must be zero when outcome is SKIPPED");
         }
     }
 }

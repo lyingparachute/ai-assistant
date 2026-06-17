@@ -3,110 +3,89 @@ package dev.localassistant.assistant.orchestration;
 import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.tools.Location;
 import java.util.Objects;
-import java.util.Optional;
 
-public record RoutedQuestion(
-        UserQuestion question,
-        QuestionRoute route,
-        Optional<String> placeName,
-        Optional<Location> weatherLocation,
-        Optional<String> countryLookupKey,
-        Optional<String> unsupportedReason) {
+public sealed interface RoutedQuestion {
 
-    public RoutedQuestion {
-        Objects.requireNonNull(question, "question");
-        Objects.requireNonNull(route, "route");
-        Objects.requireNonNull(placeName, "placeName");
-        Objects.requireNonNull(weatherLocation, "weatherLocation");
-        Objects.requireNonNull(countryLookupKey, "countryLookupKey");
-        Objects.requireNonNull(unsupportedReason, "unsupportedReason");
-        validateRouteFields(route, placeName, weatherLocation, countryLookupKey);
+    UserQuestion question();
+
+    QuestionRoute route();
+
+    record CountryCapital(UserQuestion question, String countryLookupKey) implements RoutedQuestion {
+        public CountryCapital {
+            Objects.requireNonNull(question, "question");
+            requireNonBlank(countryLookupKey, "countryLookupKey");
+        }
+
+        @Override
+        public QuestionRoute route() {
+            return QuestionRoute.COUNTRY_CAPITAL;
+        }
     }
 
-    static RoutedQuestion countryCapital(UserQuestion question, String countryLookupKey) {
-        return new RoutedQuestion(
-                question,
-                QuestionRoute.COUNTRY_CAPITAL,
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of(countryLookupKey),
-                Optional.empty());
+    record CountryThenWeather(UserQuestion question, String countryLookupKey)
+            implements RoutedQuestion {
+        public CountryThenWeather {
+            Objects.requireNonNull(question, "question");
+            requireNonBlank(countryLookupKey, "countryLookupKey");
+        }
+
+        @Override
+        public QuestionRoute route() {
+            return QuestionRoute.COUNTRY_THEN_WEATHER;
+        }
     }
 
-    static RoutedQuestion countryThenWeather(UserQuestion question, String countryLookupKey) {
-        return new RoutedQuestion(
-                question,
-                QuestionRoute.COUNTRY_THEN_WEATHER,
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of(countryLookupKey),
-                Optional.empty());
+    record WeatherOnly(UserQuestion question, Location weatherLocation) implements RoutedQuestion {
+        public WeatherOnly {
+            Objects.requireNonNull(question, "question");
+            Objects.requireNonNull(weatherLocation, "weatherLocation");
+        }
+
+        @Override
+        public QuestionRoute route() {
+            return QuestionRoute.WEATHER_LOCATION;
+        }
     }
 
-    static RoutedQuestion weatherLocation(UserQuestion question, Location location) {
-        return new RoutedQuestion(
-                question,
-                QuestionRoute.WEATHER_LOCATION,
-                Optional.empty(),
-                Optional.of(location),
-                Optional.empty(),
-                Optional.empty());
+    record PlaceSynthesis(UserQuestion question, String placeName) implements RoutedQuestion {
+        public PlaceSynthesis {
+            Objects.requireNonNull(question, "question");
+            requireNonBlank(placeName, "placeName");
+        }
+
+        @Override
+        public QuestionRoute route() {
+            return QuestionRoute.PLACE_SYNTHESIS;
+        }
     }
 
-    static RoutedQuestion placeSynthesis(UserQuestion question, String placeName) {
-        return new RoutedQuestion(
-                question,
-                QuestionRoute.PLACE_SYNTHESIS,
-                Optional.of(placeName),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty());
+    record CdqProduct(UserQuestion question) implements RoutedQuestion {
+        public CdqProduct {
+            Objects.requireNonNull(question, "question");
+        }
+
+        @Override
+        public QuestionRoute route() {
+            return QuestionRoute.CDQ_PRODUCT;
+        }
     }
 
-    static RoutedQuestion cdqProduct(UserQuestion question) {
-        return new RoutedQuestion(
-                question,
-                QuestionRoute.CDQ_PRODUCT,
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty());
+    record Unsupported(UserQuestion question, String reason) implements RoutedQuestion {
+        public Unsupported {
+            Objects.requireNonNull(question, "question");
+            requireNonBlank(reason, "reason");
+        }
+
+        @Override
+        public QuestionRoute route() {
+            return QuestionRoute.UNSUPPORTED;
+        }
     }
 
-    static RoutedQuestion unsupported(UserQuestion question, String reason) {
-        return new RoutedQuestion(
-                question,
-                QuestionRoute.UNSUPPORTED,
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of(reason));
-    }
-
-    private static void validateRouteFields(
-            QuestionRoute route,
-            Optional<String> placeName,
-            Optional<Location> weatherLocation,
-            Optional<String> countryLookupKey) {
-        switch (route) {
-            case COUNTRY_CAPITAL, COUNTRY_THEN_WEATHER -> {
-                if (countryLookupKey.isEmpty()) {
-                    throw new IllegalArgumentException("countryLookupKey required for " + route);
-                }
-            }
-            case WEATHER_LOCATION -> {
-                if (weatherLocation.isEmpty()) {
-                    throw new IllegalArgumentException("weatherLocation required for WEATHER_LOCATION");
-                }
-            }
-            case PLACE_SYNTHESIS -> {
-                if (placeName.isEmpty() || placeName.get().isBlank()) {
-                    throw new IllegalArgumentException("placeName required for PLACE_SYNTHESIS");
-                }
-            }
-            case CDQ_PRODUCT, UNSUPPORTED -> {
-                // no required extracted fields
-            }
+    private static void requireNonBlank(String value, String name) {
+        Objects.requireNonNull(value, name);
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
         }
     }
 }

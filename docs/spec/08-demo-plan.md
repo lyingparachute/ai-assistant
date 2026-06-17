@@ -16,16 +16,32 @@ Final demo answers must be captured from the running assistant after implementat
 
 The final README must replace these high-level steps with exact verified commands after implementation.
 
+## Demo Verification Command
+
+The demo questions and source paths are verified by `RequiredDemoQuestionsIT` in the `e2e-tests`
+module. It is opt-in and runs only under a Maven profile so the default build stays hermetic:
+
+```bash
+./mvnw verify -P e2e
+```
+
+Without `-P e2e` the integration test does not run. With `-P e2e` it fails (it does not skip) when
+no assistant responds on the configured base URL (`assistant.e2e.base-url`, default
+`http://localhost:8080`). The demo questions are defined once in
+`e2e-tests/src/test/resources/demo-questions.json`; the capture script
+`scripts/capture-demo-answers.sh` and the integration test both read that file.
+
+Each captured file under `docs/demo/capture/` records the expected source-path key
+(`expectedSourcePathKey`, taken from `demo-questions.json`) alongside the assistant `response`, so
+the evidence shows which source path each question should exercise. The capture script fails
+non-zero if the question file is missing, malformed, or empty rather than capturing nothing.
+
 ## Required Questions
 
-The required demo questions are:
-
-- "What is the capital city of Germany?"
-- "What is the temperature currently in Munich?"
-- "What is the temperature of the capital of Germany currently?"
-- "What do you know about Berlin?"
-
-Additional showcase questions should demonstrate at least one of:
+The demo questions are defined once in `e2e-tests/src/test/resources/demo-questions.json`. The four
+required questions carry the keys `germany-capital`, `munich-weather`, `germany-capital-weather`, and
+`berlin-place`. The showcase questions (`cdq-product`, `source-unavailable-invalid-country`) cover at
+least one of:
 
 - CDQ Fraud Guard RAG retrieval;
 - multi-step country plus weather orchestration;
@@ -34,16 +50,18 @@ Additional showcase questions should demonstrate at least one of:
 
 ## Expected Source Path for Each Question
 
-| Demo question | Expected source path |
+Rows are keyed to `demo-questions.json` so the question wording is not duplicated here.
+
+| Question key | Expected source path |
 | --- | --- |
-| "What is the capital city of Germany?" | Chat UI -> Assistant API -> Assistant Application Service -> Countries Port -> Countries MCP client adapter -> custom countries MCP server -> REST Countries |
-| "What is the temperature currently in Munich?" | Chat UI -> Assistant API -> Assistant Application Service -> Weather Port -> weather MCP client adapter -> local weather MCP server |
-| "What is the temperature of the capital of Germany currently?" | Chat UI -> Assistant API -> Assistant Application Service -> Countries Port -> countries MCP path -> Weather Port -> weather MCP path -> Response Composer |
-| "What do you know about Berlin?" | Chat UI -> Assistant API -> Assistant Application Service -> Countries Port (resolves Berlin to Germany) -> LLM Port (synthesis) -> Response Composer. Weather Port and RAG Port do not fire. The answer states Berlin is the capital of Germany from the countries source and must not present unsourced specifics as verified facts or mislabel model synthesis as a tool result. |
+| `germany-capital` | Chat Interface -> Assistant API -> Assistant Application Service -> Countries Port -> Countries MCP client adapter -> custom countries MCP server -> REST Countries |
+| `munich-weather` | Chat Interface -> Assistant API -> Assistant Application Service -> Weather Port -> weather MCP client adapter -> local weather MCP server |
+| `germany-capital-weather` | Chat Interface -> Assistant API -> Assistant Application Service -> Countries Port -> countries MCP path -> Weather Port -> weather MCP path -> Response Composer |
+| `berlin-place` | Chat Interface -> Assistant API -> Assistant Application Service -> Countries Port (resolves Berlin to Germany) -> LLM Port (synthesis) -> Response Composer. Weather Port and RAG Port do not fire. The answer states Berlin is the capital of Germany from the countries source and must not present unsourced specifics as verified facts or mislabel model synthesis as a tool result. |
 
 ## Where to Save Final Answers
 
-Use a dedicated demo evidence location after implementation, for example:
+Use this dedicated demo evidence location after implementation:
 
 ```text
 docs/demo/final-answers.md
@@ -74,6 +92,14 @@ docs/demo/request-traces/
 
 `request-traces/` should contain one small trace or log excerpt per required question. Each excerpt should show selected route, tool calls, RAG retrieval count when applicable, and source-unavailable outcomes. It should not include secrets, local filesystem paths, or raw stack traces.
 
+Each trace excerpt must include:
+
+- correlation id;
+- selected route or sources;
+- tool calls, if any;
+- RAG retrieval count, including `0` when RAG does not fire;
+- source-unavailable marker, if any.
+
 ## Weather Answer Requirements
 
 Weather answers must include timestamp and location because current weather is volatile. A numeric temperature without those details is not enough evidence for a reviewer to understand what was measured.
@@ -85,7 +111,7 @@ Weather answers should include:
 - a timestamp labeled as either the observed time from the weather source or, when the source provides none, the adapter retrieval time. The two must not be conflated;
 - source status.
 
-For "What is the temperature of the capital of Germany currently?", the answer should also make clear that the capital was resolved through the countries capability before weather lookup.
+For the `germany-capital-weather` question, the answer should also make clear that the capital was resolved through the countries capability before weather lookup.
 
 ## Documenting Unavailable External Services
 
@@ -108,8 +134,10 @@ Examples:
 The demo is complete only when:
 
 - all required questions have captured answers from a running assistant;
+- at least one additional showcase answer has been captured from a running assistant;
 - source paths are documented for each answer;
 - trace or log evidence exists for each required question;
 - weather answers include location and timestamp;
+- at least one source-unavailable response has been captured or an explicit blocker is documented;
 - any unavailable source is documented honestly;
 - no final answer is fabricated in documentation.

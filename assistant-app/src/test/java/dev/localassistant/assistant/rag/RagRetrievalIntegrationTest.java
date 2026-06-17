@@ -1,8 +1,9 @@
 package dev.localassistant.assistant.rag;
 
 import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorSchemaInitializer;
 import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorTestConfiguration;
-import dev.localassistant.assistant.config.AssistantRagProperties;
+import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class, RagIngestionTestConfiguration.class})
+@org.springframework.test.context.ContextConfiguration(
+        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
 @Testcontainers
 class RagRetrievalIntegrationTest {
 
@@ -54,13 +57,17 @@ class RagRetrievalIntegrationTest {
     private RagKnowledgePort ragKnowledgePort;
 
     @Autowired
-    private AssistantRagProperties assistantRagProperties;
+    private AssistantRagRetrievalProperties retrievalProperties;
 
     @Autowired
     private JdbcTemplate ragJdbcTemplate;
 
+    @Autowired
+    private PgvectorSchemaInitializer pgvectorSchemaInitializer;
+
     @BeforeEach
     void resetDatabase() {
+        pgvectorSchemaInitializer.initializeSchema();
         ragJdbcTemplate.execute("TRUNCATE rag_chunks RESTART IDENTITY");
     }
 
@@ -71,7 +78,7 @@ class RagRetrievalIntegrationTest {
 
         RagRetrievalPolicy policy =
                 new RagRetrievalPolicy(
-                        assistantRagProperties.topK(), assistantRagProperties.relevanceThreshold());
+                        retrievalProperties.topK(), retrievalProperties.relevanceThreshold());
         RagRetrievalResult retrievalResult =
                 ragKnowledgePort.retrieve(
                         "How does Fraud Guard analyze transaction patterns and flag suspicious behavior before losses occur?",
@@ -96,9 +103,8 @@ class RagRetrievalIntegrationTest {
         assertThat(firstSnippet.sourceUrl()).isEqualTo(SOURCE_URL);
         assertThat(firstSnippet.contentHash()).isNotBlank();
         assertThat(firstSnippet.chunkIndex()).isGreaterThanOrEqualTo(0);
-        assertThat(firstSnippet.similarityScore()).isPresent();
-        assertThat(firstSnippet.similarityScore().orElseThrow())
-                .isGreaterThanOrEqualTo(assistantRagProperties.relevanceThreshold());
+        assertThat(firstSnippet.retrievalScore().value())
+                .isGreaterThanOrEqualTo(retrievalProperties.relevanceThreshold());
     }
 
     @Test
@@ -106,11 +112,11 @@ class RagRetrievalIntegrationTest {
         RagIngestionResult ingestionResult = ragIngestionUseCase.ingest(SOURCE_URL);
         assertThat(ingestionResult).isInstanceOf(RagIngestionResult.Success.class);
 
-        double configuredThreshold = assistantRagProperties.relevanceThreshold();
+        double configuredThreshold = retrievalProperties.relevanceThreshold();
         assertThat(configuredThreshold).isEqualTo(0.5);
 
         RagRetrievalPolicy policy =
-                new RagRetrievalPolicy(assistantRagProperties.topK(), configuredThreshold);
+                new RagRetrievalPolicy(retrievalProperties.topK(), configuredThreshold);
         RagRetrievalResult retrievalResult =
                 ragKnowledgePort.retrieve("What is the weather in Munich?", policy);
 

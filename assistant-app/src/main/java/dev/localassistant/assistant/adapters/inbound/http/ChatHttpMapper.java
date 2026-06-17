@@ -3,18 +3,18 @@ package dev.localassistant.assistant.adapters.inbound.http;
 import dev.localassistant.assistant.question.AnswerSource;
 import dev.localassistant.assistant.question.AssistantAnswer;
 import dev.localassistant.assistant.question.ConversationTurn;
-import dev.localassistant.assistant.question.SourceContributionStatus;
 import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.WeatherReport;
 import dev.localassistant.assistant.tools.WeatherTimestamp;
+import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+@Component
 final class ChatHttpMapper {
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
@@ -43,40 +43,69 @@ final class ChatHttpMapper {
     }
 
     private SourceResponse.CountriesFacts toCountriesFacts(AnswerSource.CountriesFacts source) {
-        CountryInfoResponse countryInfo =
-                source.countryInfo().map(this::toCountryInfoResponse).orElse(null);
-        String unavailableMessage = blankToNull(source.unavailableMessage());
-        String unavailableHint = blankToNull(source.unavailableHint());
-        return new SourceResponse.CountriesFacts(
-                source.status().name(), countryInfo, unavailableMessage, unavailableHint);
+        return switch (source) {
+            case AnswerSource.CountriesFacts.Used used ->
+                    new SourceResponse.CountriesFacts(
+                            used.status().name(),
+                            toCountryInfoResponse(used.resolvedCountryInfo()),
+                            null,
+                            null);
+            case AnswerSource.CountriesFacts.Unavailable unavailable ->
+                    new SourceResponse.CountriesFacts(
+                            unavailable.status().name(),
+                            null,
+                            unavailable.unavailability().message(),
+                            unavailable.unavailability().hint());
+        };
     }
 
     private SourceResponse.WeatherObservation toWeatherObservation(
             AnswerSource.WeatherObservation source) {
-        WeatherReportResponse weatherReport =
-                source.weatherReport().map(this::toWeatherReportResponse).orElse(null);
-        String unavailableMessage = blankToNull(source.unavailableMessage());
-        String unavailableHint = blankToNull(source.unavailableHint());
-        return new SourceResponse.WeatherObservation(
-                source.status().name(), weatherReport, unavailableMessage, unavailableHint);
+        return switch (source) {
+            case AnswerSource.WeatherObservation.Used used ->
+                    new SourceResponse.WeatherObservation(
+                            used.status().name(),
+                            toWeatherReportResponse(used.resolvedWeatherReport()),
+                            null,
+                            null);
+            case AnswerSource.WeatherObservation.Unavailable unavailable ->
+                    new SourceResponse.WeatherObservation(
+                            unavailable.status().name(),
+                            null,
+                            unavailable.unavailability().message(),
+                            unavailable.unavailability().hint());
+        };
     }
 
     private SourceResponse.RagKnowledge toRagKnowledge(AnswerSource.RagKnowledge source) {
-        List<KnowledgeSnippetResponse> snippets =
-                source.status() == SourceContributionStatus.USED
-                        ? source.snippets().stream().map(this::toSnippetResponse).toList()
-                        : null;
-        String unavailableMessage = blankToNull(source.unavailableMessage());
-        String unavailableHint = blankToNull(source.unavailableHint());
-        return new SourceResponse.RagKnowledge(
-                source.status().name(), snippets, unavailableMessage, unavailableHint);
+        return switch (source) {
+            case AnswerSource.RagKnowledge.Used used ->
+                    new SourceResponse.RagKnowledge(
+                            used.status().name(),
+                            used.snippets().stream().map(this::toSnippetResponse).toList(),
+                            null,
+                            null);
+            case AnswerSource.RagKnowledge.Insufficient insufficient ->
+                    new SourceResponse.RagKnowledge(insufficient.status().name(), null, null, null);
+            case AnswerSource.RagKnowledge.Unavailable unavailable ->
+                    new SourceResponse.RagKnowledge(
+                            unavailable.status().name(),
+                            null,
+                            unavailable.unavailability().message(),
+                            unavailable.unavailability().hint());
+        };
     }
 
     private SourceResponse.ModelSynthesis toModelSynthesis(AnswerSource.ModelSynthesis source) {
-        String unavailableMessage = blankToNull(source.unavailableMessage());
-        String unavailableHint = blankToNull(source.unavailableHint());
-        return new SourceResponse.ModelSynthesis(
-                source.status().name(), unavailableMessage, unavailableHint);
+        return switch (source) {
+            case AnswerSource.ModelSynthesis.Used used ->
+                    new SourceResponse.ModelSynthesis(used.status().name(), null, null);
+            case AnswerSource.ModelSynthesis.Unavailable unavailable ->
+                    new SourceResponse.ModelSynthesis(
+                            unavailable.status().name(),
+                            unavailable.unavailability().message(),
+                            unavailable.unavailability().hint());
+        };
     }
 
     private CountryInfoResponse toCountryInfoResponse(CountryInfo countryInfo) {
@@ -102,17 +131,11 @@ final class ChatHttpMapper {
     }
 
     private KnowledgeSnippetResponse toSnippetResponse(KnowledgeSnippet snippet) {
-        Double similarityScore =
-                snippet.similarityScore().map(Double::doubleValue).orElse(null);
         return new KnowledgeSnippetResponse(
                 snippet.chunkText(),
                 snippet.sourceUrl(),
                 snippet.contentHash(),
                 snippet.chunkIndex(),
-                similarityScore);
-    }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
+                snippet.retrievalScore().value());
     }
 }

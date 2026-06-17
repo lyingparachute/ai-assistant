@@ -72,6 +72,8 @@ import '../styles/chat.css';
         try {
           const response = await askQuestion(question);
           answerText.textContent = response.answerText;
+          // Trust boundary: the sole innerHTML sink. renderSources is the only permitted
+          // producer; every interpolated assistant value inside it must pass through escapeHtml.
           sources.innerHTML = renderSources(response.sources);
 
           if (response.traceCorrelationId) {

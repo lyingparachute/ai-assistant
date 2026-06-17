@@ -78,10 +78,12 @@ Adapters must not invent temperatures when the source is unavailable.
 | `command` | `ASSISTANT_MCP_WEATHER_COMMAND` | `mcp-weather` | MCP server launch command |
 | `args` | — | `[]` | Command arguments |
 | `env` | `WEATHER_API_KEY` | — | Provider credentials (not committed) |
-| `working-directory` | `ASSISTANT_MCP_WEATHER_WORKING_DIRECTORY` | `.` | Subprocess cwd |
 | `transport` | — | `stdio` | Only stdio supported in Phase 3 |
 | `timeout-seconds` | `ASSISTANT_MCP_WEATHER_TIMEOUT_SECONDS` | `60` | MCP request timeout |
 | `tool-name` | — | `get-weather` | Semantic tool name |
+
+Subprocess cwd is not configurable; see the shared note in
+[docs/spec/12](12-countries-mcp-client-contract.md#mcp-subprocess-cwd).
 
 `WEATHER_API_URL` must be supplied in subprocess `env` for a live run; document in README, never commit secrets.
 

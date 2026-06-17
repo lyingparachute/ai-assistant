@@ -12,7 +12,6 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,14 +22,14 @@ class RagIngestionUseCaseTest {
 
     private StubProductKnowledgePort productKnowledgePort;
     private StubRagKnowledgePort ragKnowledgePort;
-    private EmbeddingPort embeddingPort;
+    private CountingEmbeddingPort embeddingPort;
     private RagIngestionUseCase useCase;
 
     @BeforeEach
     void setUp() {
         productKnowledgePort = new StubProductKnowledgePort();
         ragKnowledgePort = new StubRagKnowledgePort();
-        embeddingPort = new DeterministicTestEmbeddingAdapter();
+        embeddingPort = new CountingEmbeddingPort(new DeterministicTestEmbeddingAdapter());
         useCase =
                 new RagIngestionUseCase(
                         embeddingPort,
@@ -60,6 +59,7 @@ class RagIngestionUseCaseTest {
                 "Fraud Guard monitors suspicious transactions and helps prevent chargebacks.";
         RagIngestionResult firstIngestion = useCase.ingest(SOURCE_URL);
         RagIngestionReport firstReport = ((RagIngestionResult.Success) firstIngestion).report();
+        int embedCallsAfterFirstIngestion = embeddingPort.documentEmbedCount();
 
         RagIngestionResult secondIngestion = useCase.ingest(SOURCE_URL);
         RagIngestionReport secondReport = ((RagIngestionResult.Success) secondIngestion).report();
@@ -68,6 +68,8 @@ class RagIngestionUseCaseTest {
         assertThat(secondReport.contentHash()).isEqualTo(firstReport.contentHash());
         assertThat(secondReport.chunkCount()).isEqualTo(firstReport.chunkCount());
         assertThat(ragKnowledgePort.storeInvocations).isEqualTo(1);
+        assertThat(embedCallsAfterFirstIngestion).isEqualTo(firstReport.chunkCount());
+        assertThat(embeddingPort.documentEmbedCount()).isEqualTo(embedCallsAfterFirstIngestion);
     }
 
     @Test
@@ -112,6 +114,31 @@ class RagIngestionUseCaseTest {
         assertThat(ragKnowledgePort.storeInvocations).isZero();
     }
 
+    private static final class CountingEmbeddingPort implements EmbeddingPort {
+
+        private final EmbeddingPort delegate;
+        private int documentEmbedCount;
+
+        private CountingEmbeddingPort(EmbeddingPort delegate) {
+            this.delegate = delegate;
+        }
+
+        private int documentEmbedCount() {
+            return documentEmbedCount;
+        }
+
+        @Override
+        public EmbeddingResult embedDocument(String text) {
+            documentEmbedCount++;
+            return delegate.embedDocument(text);
+        }
+
+        @Override
+        public EmbeddingResult embedQuery(String text) {
+            return delegate.embedQuery(text);
+        }
+    }
+
     private static final class SourceUnavailableEmbeddingPort implements EmbeddingPort {
 
         @Override
@@ -153,27 +180,27 @@ class RagIngestionUseCaseTest {
         }
 
         @Override
-        public RagIngestionResult storeChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
+        public ChunkStorageOutcome storeChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
+            boolean replacing = hashesBySource.containsKey(sourceUrl);
             storeInvocations++;
             storedChunks = List.copyOf(chunks);
             hashesBySource.put(sourceUrl, contentHash);
             chunksBySource.put(sourceUrl, List.copyOf(chunks));
             RagIngestionReport.Outcome outcome =
-                    storeInvocations == 1
-                            ? RagIngestionReport.Outcome.INGESTED
-                            : RagIngestionReport.Outcome.REPLACED;
-            return new RagIngestionResult.Success(
-                    new RagIngestionReport(sourceUrl, contentHash, chunks.size(), outcome));
+                    replacing
+                            ? RagIngestionReport.Outcome.REPLACED
+                            : RagIngestionReport.Outcome.INGESTED;
+            return new ChunkStorageOutcome.Stored(outcome);
         }
 
         @Override
-        public Optional<String> findContentHashForSource(String sourceUrl) {
-            return Optional.ofNullable(hashesBySource.get(sourceUrl));
-        }
-
-        @Override
-        public int countChunksForSource(String sourceUrl) {
-            return chunksBySource.getOrDefault(sourceUrl, List.of()).size();
+        public StoredSourceState findContentHashForSource(String sourceUrl) {
+            String hash = hashesBySource.get(sourceUrl);
+            if (hash == null) {
+                return new StoredSourceState.Absent();
+            }
+            return new StoredSourceState.Stored(
+                    hash, chunksBySource.getOrDefault(sourceUrl, List.of()).size());
         }
     }
 }
