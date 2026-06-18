@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-06-18 (M1 of `docs/plans/stream-chat-answers-and-source-usage-trace.md`).
+Accepted — 2026-06-18.
 
 ## Context
 
@@ -11,9 +11,8 @@ completion and the whole `ChatResponse` (`answerText`, `sources`, `traceCorrelat
 serialized at once. The Chat Interface renders the answer in one `textContent` assignment after
 a single `response.json()`, and shows source provenance only as a static list after the fact.
 
-Two improvements were designed (see
-`docs/plans/stream-chat-answers-and-source-usage-trace.md`): deliver the answer incrementally
-(Streamed Answer) and show each Knowledge Source's outcome as it is determined (live
+Two improvements were designed: deliver the answer incrementally (Streamed Answer) and show each
+Knowledge Source's outcome as it is determined (live
 Source-Usage Trace). Both are presentation changes; neither may alter a fact or weaken the
 honesty guarantees in `CLAUDE.md` §8.
 
@@ -87,6 +86,7 @@ Trade-offs:
 
 ## Verification
 
-- Live + tests per `docs/plans/stream-chat-answers-and-source-usage-trace.md` Definition of Done.
+- Live capture and tests are recorded in `docs/demo/final-answers.md` and
+  `docs/demo/clean-checkout-verification.md`.
 - Grep: no Spring AI / reactor / SSE in domain application packages.
 - `./mvnw -pl e2e-tests verify -P e2e` green; `capture-demo-answers.sh` extracts `final` JSON.

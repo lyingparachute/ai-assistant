@@ -1,1 +1,0 @@
-{"answerText":"The current temperature in Munich is 23.2°C. Retrieved: 2026-06-17T08:28:01.816584Z","sources":[{"type":"weather_observation","status":"USED","weatherReport":{"location":{"city":"Munich"},"temperature":{"celsius":23.2},"timestamp":{"kind":"retrieved","value":"2026-06-17T08:28:01.816584Z"}}}],"traceCorrelationId":"11be1652-0635-4412-b55e-f7695be53ca0"}
