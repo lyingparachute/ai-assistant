@@ -18,13 +18,13 @@ public final class LookupCountryUseCase {
     }
 
     public CountryLookupOutcome lookup(LookupPlace place) {
-        RestCountriesPort.RestCountriesQueryResult byName = restCountriesPort.findByName(place);
-        CountryLookupOutcome nameOutcome = resolveNameLookup(place, byName);
+        final var byName = restCountriesPort.findByName(place);
+        final var nameOutcome = resolveNameLookup(place, byName);
         if (!(nameOutcome instanceof CountryLookupOutcome.NotRecognized)) {
             return nameOutcome;
         }
 
-        RestCountriesPort.RestCountriesQueryResult byCapital = restCountriesPort.findByCapital(place);
+        final var byCapital = restCountriesPort.findByCapital(place);
         return resolveCapitalLookup(byCapital);
     }
 
@@ -33,7 +33,7 @@ public final class LookupCountryUseCase {
             RestCountriesPort.RestCountriesQueryResult byName
     ) {
         return resolve(byName, success -> {
-            Optional<CountryFacts> selected = selectSingleCountry(place.value(), success.countries());
+            final var selected = selectSingleCountry(place.value(), success.countries());
             return selected
                     .<CountryLookupOutcome>map(CountryLookupOutcome.Success::new)
                     .orElseGet(CountryLookupOutcome.NotRecognized::new);
@@ -42,14 +42,14 @@ public final class LookupCountryUseCase {
 
     private CountryLookupOutcome resolveCapitalLookup(RestCountriesPort.RestCountriesQueryResult byCapital) {
         return resolve(byCapital, success -> {
-            List<CountryFacts> countries = success.countries();
+            final var countries = success.countries();
             if (countries.isEmpty()) {
                 return new CountryLookupOutcome.NotRecognized();
             }
             if (countries.size() == 1) {
                 return new CountryLookupOutcome.Success(countries.getFirst());
             }
-            List<String> countryNames = countries.stream().map(CountryFacts::countryName).toList();
+            final var countryNames = countries.stream().map(CountryFacts::countryName).toList();
             return new CountryLookupOutcome.AmbiguousCapital(countryNames);
         });
     }

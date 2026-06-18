@@ -1,8 +1,9 @@
 package dev.localassistant.assistant.rag.infrastructure.config;
 
-import dev.localassistant.assistant.config.AssistantEmbeddingProperties;
 import dev.localassistant.assistant.rag.domain.port.outbound.EmbeddingPort;
+import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;
 import dev.localassistant.assistant.rag.infrastructure.OllamaEmbeddingAdapter;
+import dev.localassistant.assistant.rag.infrastructure.OllamaKnowledgeEmbedding;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -18,22 +19,27 @@ import org.springframework.context.annotation.Profile;
 class OllamaEmbeddingConfiguration {
 
     @Bean
-    EmbeddingModel ollamaEmbeddingModel(AssistantEmbeddingProperties assistantEmbeddingProperties) {
+    EmbeddingModel ollamaEmbeddingModel(final AssistantEmbeddingProperties assistantEmbeddingProperties) {
         final var ollamaApi = OllamaApi.builder()
-                .baseUrl(assistantEmbeddingProperties.ollamaBaseUrl())
-                .build();
+            .baseUrl(assistantEmbeddingProperties.ollamaBaseUrl())
+            .build();
         final var options = OllamaEmbeddingOptions.builder()
-                .model(assistantEmbeddingProperties.modelName())
-                .build();
+            .model(assistantEmbeddingProperties.modelName())
+            .build();
         return OllamaEmbeddingModel.builder()
-                .ollamaApi(ollamaApi)
-                .defaultOptions(options)
-                .build();
+            .ollamaApi(ollamaApi)
+            .defaultOptions(options)
+            .build();
     }
 
     @Bean
     EmbeddingPort ollamaEmbeddingPort(
-            EmbeddingModel ollamaEmbeddingModel, AssistantEmbeddingProperties assistantEmbeddingProperties) {
+        final EmbeddingModel ollamaEmbeddingModel, final AssistantEmbeddingProperties assistantEmbeddingProperties) {
         return new OllamaEmbeddingAdapter(ollamaEmbeddingModel, assistantEmbeddingProperties);
+    }
+
+    @Bean
+    KnowledgeEmbedding knowledgeEmbedding(final EmbeddingPort ollamaEmbeddingPort) {
+        return new OllamaKnowledgeEmbedding(ollamaEmbeddingPort);
     }
 }

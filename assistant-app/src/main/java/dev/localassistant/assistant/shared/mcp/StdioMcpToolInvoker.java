@@ -1,12 +1,11 @@
 package dev.localassistant.assistant.shared.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.localassistant.assistant.config.AssistantMcpProperties;
+import dev.localassistant.assistant.shared.mcp.infrastructure.config.AssistantMcpProperties;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
-import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -34,21 +32,21 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
 
     // Two constructors exist; the (Map) one is test-only. @Autowired tells Spring which to inject.
     @Autowired
-    StdioMcpToolInvoker(AssistantMcpProperties assistantMcpProperties, ObjectMapper objectMapper) {
+    StdioMcpToolInvoker(final AssistantMcpProperties assistantMcpProperties, final ObjectMapper objectMapper) {
         this(Map.of(
-                assistantMcpProperties.countries().toolName(),
-                createClient(assistantMcpProperties.countries(), objectMapper),
-                assistantMcpProperties.weather().toolName(),
-                createClient(assistantMcpProperties.weather(), objectMapper)
+            assistantMcpProperties.countries().toolName(),
+            createClient(assistantMcpProperties.countries(), objectMapper),
+            assistantMcpProperties.weather().toolName(),
+            createClient(assistantMcpProperties.weather(), objectMapper)
         ));
     }
 
-    StdioMcpToolInvoker(Map<String, McpSyncClient> clientsByToolName) {
+    StdioMcpToolInvoker(final Map<String, McpSyncClient> clientsByToolName) {
         this.clientsByToolName = Map.copyOf(clientsByToolName);
     }
 
     @Override
-    public McpToolResponse invoke(String toolName, Map<String, Object> arguments) {
+    public McpToolResponse invoke(final String toolName, final Map<String, Object> arguments) {
         final var client = clientsByToolName.get(toolName);
         if (client == null) {
             throw new McpToolInvocationException("no MCP client configured for tool " + toolName);
@@ -56,13 +54,13 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
 
         try {
             final var result = client.callTool(
-                    new McpSchema.CallToolRequest(toolName, arguments)
+                new McpSchema.CallToolRequest(toolName, arguments)
             );
             final var textContents = result.content().stream()
-                    .filter(McpSchema.TextContent.class::isInstance)
-                    .map(McpSchema.TextContent.class::cast)
-                    .map(McpSchema.TextContent::text)
-                    .toList();
+                .filter(McpSchema.TextContent.class::isInstance)
+                .map(McpSchema.TextContent.class::cast)
+                .map(McpSchema.TextContent::text)
+                .toList();
             // MCP spec: an absent isError field means the call was not an error.
             final var isError = Boolean.TRUE.equals(result.isError());
             return new McpToolResponse(textContents, isError);
@@ -74,7 +72,7 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
 
     @Override
     public void destroy() {
-        for (McpSyncClient client : distinctClients()) {
+        for (final McpSyncClient client : distinctClients()) {
             try {
                 client.closeGracefully();
             } catch (RuntimeException exception) {
@@ -89,7 +87,7 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
         return distinct;
     }
 
-    private static McpSyncClient createClient(AssistantMcpProperties.McpServer server, ObjectMapper objectMapper) {
+    private static McpSyncClient createClient(final AssistantMcpProperties.McpServer server, final ObjectMapper objectMapper) {
         if (!"stdio".equalsIgnoreCase(server.transport())) {
             throw new McpToolInvocationException("unsupported MCP transport: " + server.transport());
         }
@@ -98,22 +96,22 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
         }
 
         final var parameters = ServerParameters.builder(server.command())
-                .args(server.args().toArray(String[]::new))
-                .env(resolveProcessEnv(server, System::getenv))
-                .build();
+            .args(server.args().toArray(String[]::new))
+            .env(resolveProcessEnv(server, System::getenv))
+            .build();
         final var mcpJsonMapper = new JacksonMcpJsonMapper(objectMapper);
         final var transport = new StdioClientTransport(parameters, mcpJsonMapper);
         final var client = McpClient.sync(transport)
-                .requestTimeout(Duration.ofSeconds(server.timeoutSeconds()))
-                .initializationTimeout(Duration.ofSeconds(server.timeoutSeconds()))
-                .build();
+            .requestTimeout(Duration.ofSeconds(server.timeoutSeconds()))
+            .initializationTimeout(Duration.ofSeconds(server.timeoutSeconds()))
+            .build();
         client.initialize();
         return client;
     }
 
-    static Map<String, String> resolveProcessEnv(AssistantMcpProperties.McpServer server, Function<String, String> hostEnv) {
-        var env = new LinkedHashMap<>(server.env());
-        for (String key : server.envPassthrough()) {
+    static Map<String, String> resolveProcessEnv(final AssistantMcpProperties.McpServer server, final Function<String, String> hostEnv) {
+        final var env = new LinkedHashMap<>(server.env());
+        for (final String key : server.envPassthrough()) {
             final var configured = env.get(key);
             if (StringUtils.isNotBlank(configured)) {
                 continue;

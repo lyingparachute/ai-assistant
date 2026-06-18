@@ -1,13 +1,13 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
-import dev.localassistant.assistant.rag.infrastructure.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.domain.RagIngestionReport;
 import dev.localassistant.assistant.rag.domain.RagIngestionResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import dev.localassistant.assistant.rag.infrastructure.FixtureProductPageSource;
 import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
+import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
 import dev.localassistant.assistant.support.ChatPathPortStubs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

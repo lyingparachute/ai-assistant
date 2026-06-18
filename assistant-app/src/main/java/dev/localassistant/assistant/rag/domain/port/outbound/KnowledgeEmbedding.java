@@ -1,6 +1,7 @@
 package dev.localassistant.assistant.rag.domain.port.outbound;
 
 import dev.localassistant.assistant.rag.domain.EmbeddingResult;
+import org.apache.commons.lang3.StringUtils;
 
 public interface KnowledgeEmbedding {
 
@@ -11,7 +12,7 @@ public interface KnowledgeEmbedding {
     record DocumentCommand(String text) {
 
         public DocumentCommand {
-            if (text == null || text.isBlank()) {
+            if (StringUtils.isBlank(text)) {
                 throw new IllegalArgumentException("text must not be blank");
             }
         }
@@ -20,7 +21,7 @@ public interface KnowledgeEmbedding {
     record QueryCommand(String text) {
 
         public QueryCommand {
-            if (text == null || text.isBlank()) {
+            if (StringUtils.isBlank(text)) {
                 throw new IllegalArgumentException("text must not be blank");
             }
         }

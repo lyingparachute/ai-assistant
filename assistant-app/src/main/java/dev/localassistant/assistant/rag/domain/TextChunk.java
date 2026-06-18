@@ -2,9 +2,9 @@ package dev.localassistant.assistant.rag.domain;
 
 import java.util.Objects;
 
-public record TextChunk(int chunkIndex, String chunkText) {
+record TextChunk(int chunkIndex, String chunkText) {
 
-    public TextChunk {
+    TextChunk {
         Objects.requireNonNull(chunkText, "chunkText");
         if (chunkText.isBlank()) {
             throw new IllegalArgumentException("chunkText must not be blank");

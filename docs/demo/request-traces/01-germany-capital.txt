@@ -1,4 +1,11 @@
-event=assistant_request_started correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 questionLength=36
-event=assistant_route_selected correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 route=COUNTRY_CAPITAL
-event=assistant_port_invoked correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 port=CountriesPort invocationOrder=1
-event=assistant_request_completed correlationId=d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38 route=COUNTRY_CAPITAL portsInvoked=[CountriesPort] ragRetrievalCount=0 outcome=country_capital_answered_sources=1
+event=assistant_request_started correlationId=85172cb3-61f7-4866-b794-06afe66a3d17 questionLength=36
+event=assistant_route_selected correlationId=85172cb3-61f7-4866-b794-06afe66a3d17 route=COUNTRY_CAPITAL
+event=assistant_port_invoked correlationId=85172cb3-61f7-4866-b794-06afe66a3d17 port=CountriesPort invocationOrder=1
+event=assistant_request_completed correlationId=85172cb3-61f7-4866-b794-06afe66a3d17 route=COUNTRY_CAPITAL portsInvoked=[CountriesPort] ragRetrievalCount=0 outcome=country_capital_answered_sources=1
+
+SSE (deterministic route - trace + final, no token events):
+event:trace
+data:{"type":"countries_facts","status":"USED"}
+
+event:final
+data:{"answerText":"The capital of Germany is Berlin.","sources":[{"type":"countries_facts","status":"USED","countryInfo":{"countryName":"Germany","capital":"Berlin","region":"Europe","population":83497147}}],"traceCorrelationId":"85172cb3-61f7-4866-b794-06afe66a3d17"}

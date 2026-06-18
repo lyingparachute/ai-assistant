@@ -489,3 +489,48 @@ Execution order: 3a → 5a → 1 → 2 → 3b → 4 → 5b.
   `capture-demo-answers.sh` keeps python3 for correct JSON quoting but adds an explicit
   `require_command python3` (and `curl`) guard that fails loudly if the interpreter is missing
   (S-2: explicit guard chosen over a jq rewrite to avoid quoting-bug risk in payload construction).
+
+## M0 agentic tool-calling spike — green
+
+- Date: 2026-06-18.
+- Scope: throwaway spike for `docs/plans/improve-agentic-tool-orchestration.md` M0. No production loop
+  code added.
+- Local prerequisites verified:
+  - `ollama list` shows `qwen3:4b`.
+  - `curl -fsS http://localhost:11434/api/tags` reports `qwen3:4b` capabilities including `tools`.
+  - Project classpath resolves Spring AI `1.1.8`.
+- Spring AI API verified against the resolved jars:
+  - user-controlled tool execution lives under `org.springframework.ai.model.tool.*`;
+  - `OllamaChatOptions.Builder` supports `toolCallbacks(...)` and
+    `internalToolExecutionEnabled(false)`;
+  - `DefaultToolCallingManager` executes model-proposed tool calls.
+- Temporary spike file: `assistant-app/target/m0-spike/OllamaToolCallingM0.java` (ignored build
+  output). It registered a `country_lookup` `FunctionToolCallback`, called real `qwen3:4b`, executed
+  the proposed tool call once through `DefaultToolCallingManager`, then called the model again with the
+  tool-result conversation history.
+- Compile command:
+
+```text
+CP="assistant-app/target/classes:$(cat assistant-app/target/m0-spike-classpath.txt)"
+javac --release 21 -cp "$CP" -d assistant-app/target/m0-spike/classes assistant-app/target/m0-spike/OllamaToolCallingM0.java
+```
+
+- Run command:
+
+```text
+CP="assistant-app/target/m0-spike/classes:assistant-app/target/classes:$(cat assistant-app/target/m0-spike-classpath.txt)"
+java -cp "$CP" OllamaToolCallingM0
+```
+
+- Observed output:
+
+```text
+first.hasToolCalls=true
+tool.invocations=1
+final.hasToolCalls=false
+final.text=... The capital of France is Paris.
+M0_RESULT=GREEN
+```
+
+- Decision evidence: M0 gate is viable for one `country_lookup` round trip. This does not accept ADR
+  `0010` and does not prove full loop reliability; M1 remains blocked until ADR `0010` is accepted.

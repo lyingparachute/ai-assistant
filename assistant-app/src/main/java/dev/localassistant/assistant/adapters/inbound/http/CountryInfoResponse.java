@@ -1,6 +1,0 @@
-package dev.localassistant.assistant.adapters.inbound.http;
-
-// Wire-decoupling DTO: deliberately mirrors the domain CountryInfo 1:1 so domain types stay
-// off the HTTP contract and can evolve independently of the wire shape.
-public record CountryInfoResponse(
-        String countryName, String capital, String region, long population) {}

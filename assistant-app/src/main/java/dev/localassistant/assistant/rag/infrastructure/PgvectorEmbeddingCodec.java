@@ -13,10 +13,10 @@ final class PgvectorEmbeddingCodec {
     // literal without inflating the literal; pgvector parses it back into vector(768).
     private static final String VECTOR_COMPONENT_FORMAT = "%.8f";
 
-    static String toVectorLiteral(float[] embedding) {
+    static String toVectorLiteral(final float[] embedding) {
         EmbeddingDimensions.requireValidLength(embedding);
-        var joiner = new StringJoiner(",", "[", "]");
-        for (float value : embedding) {
+        final var joiner = new StringJoiner(",", "[", "]");
+        for (final float value : embedding) {
             joiner.add(String.format(Locale.ROOT, VECTOR_COMPONENT_FORMAT, value));
         }
         return joiner.toString();

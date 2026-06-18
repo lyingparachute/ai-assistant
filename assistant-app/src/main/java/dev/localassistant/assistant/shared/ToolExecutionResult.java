@@ -6,10 +6,8 @@ public sealed interface ToolExecutionResult<T> {
 
     default SourceUnavailability asUnavailability(final String fallbackLabel) {
         return switch (this) {
-            case final Success<T> ignored ->
-                    throw new IllegalStateException("asUnavailability requires a failed result");
-            case ToolError<T>(final var error, final var hint) ->
-                    new SourceUnavailability(fallbackLabel, error, hint);
+            case final Success<T> ignored -> throw new IllegalStateException("asUnavailability requires a failed result");
+            case ToolError<T>(final var error, final var hint) -> new SourceUnavailability(fallbackLabel, error, hint);
             case SourceUnavailable<T>(final var unavailability) -> unavailability;
         };
     }
@@ -31,7 +29,7 @@ public sealed interface ToolExecutionResult<T> {
     }
 
     record SourceUnavailable<T>(SourceUnavailability unavailability)
-            implements ToolExecutionResult<T> {
+        implements ToolExecutionResult<T> {
         public SourceUnavailable {
             Objects.requireNonNull(unavailability, "unavailability");
         }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
+import org.springframework.http.HttpStatus;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -45,7 +46,7 @@ class RestCountriesHttpAdapterTest {
     void nameLookupReturnsSuccessAndPicksPrimaryCapital() throws Exception {
         stub.stubNameLookup(
                 "Germany",
-                200,
+                HttpStatus.OK.value(),
                 StubRestCountriesServer.readFixture("/fixtures/restcountries/germany-by-name.json")
         );
 
@@ -63,7 +64,7 @@ class RestCountriesHttpAdapterTest {
     void nameLookupFallsBackToFirstCapitalWhenNoneMarkedPrimary() throws Exception {
         stub.stubNameLookup(
                 "Bolivia",
-                200,
+                HttpStatus.OK.value(),
                 StubRestCountriesServer.readFixture("/fixtures/restcountries/no-primary-capital.json")
         );
 
@@ -77,7 +78,7 @@ class RestCountriesHttpAdapterTest {
 
     @Test
     void emptyObjectsArrayReturnsNotFound() {
-        stub.stubNameLookup("Atlantis", 200, StubRestCountriesServer.EMPTY_BODY);
+        stub.stubNameLookup("Atlantis", HttpStatus.OK.value(), StubRestCountriesServer.EMPTY_BODY);
 
         RestCountriesQueryResult result = adapterWithKey("test-api-key").findByName(LookupPlace.of("Atlantis"));
 
@@ -86,7 +87,7 @@ class RestCountriesHttpAdapterTest {
 
     @Test
     void unauthorizedResponseReturnsSourceUnavailableWithAuthHint() {
-        stub.stubNameLookup("Germany", 401, UNAUTHORIZED_BODY);
+        stub.stubNameLookup("Germany", HttpStatus.UNAUTHORIZED.value(), UNAUTHORIZED_BODY);
 
         RestCountriesQueryResult result = adapterWithKey("wrong-key").findByName(LookupPlace.of("Germany"));
 
@@ -107,7 +108,7 @@ class RestCountriesHttpAdapterTest {
 
     @Test
     void malformedJsonBodyReturnsSourceUnavailable() {
-        stub.stubNameLookup("Germany", 200, MALFORMED_JSON_BODY);
+        stub.stubNameLookup("Germany", HttpStatus.OK.value(), MALFORMED_JSON_BODY);
 
         RestCountriesQueryResult result = adapterWithKey("test-api-key").findByName(LookupPlace.of("Germany"));
 
@@ -116,7 +117,7 @@ class RestCountriesHttpAdapterTest {
 
     @Test
     void wrongShapeBodyReturnsSourceUnavailable() {
-        stub.stubNameLookup("Germany", 200, WRONG_SHAPE_BODY);
+        stub.stubNameLookup("Germany", HttpStatus.OK.value(), WRONG_SHAPE_BODY);
 
         RestCountriesQueryResult result = adapterWithKey("test-api-key").findByName(LookupPlace.of("Germany"));
 

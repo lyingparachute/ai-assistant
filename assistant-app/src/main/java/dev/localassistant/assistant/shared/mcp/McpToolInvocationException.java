@@ -2,11 +2,11 @@ package dev.localassistant.assistant.shared.mcp;
 
 public final class McpToolInvocationException extends RuntimeException {
 
-    public McpToolInvocationException(String message) {
+    public McpToolInvocationException(final String message) {
         super(message);
     }
 
-    public McpToolInvocationException(String message, Throwable cause) {
+    public McpToolInvocationException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

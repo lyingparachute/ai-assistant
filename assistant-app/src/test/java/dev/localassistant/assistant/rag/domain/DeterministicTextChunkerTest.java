@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DeterministicTextChunkerTest {
 
-    private final DeterministicTextChunker chunker = new DeterministicTextChunker(40, 10);
+    private final DeterministicTextChunker chunker = new DeterministicTextChunker(ChunkingWindow.of(40, 10));
 
     @Test
     void normalizesWhitespace() {
@@ -36,13 +36,13 @@ class DeterministicTextChunkerTest {
 
     @Test
     void rejectsOverlapGreaterThanOrEqualToMaxSize() {
-        assertThatThrownBy(() -> new DeterministicTextChunker(100, 100))
+        assertThatThrownBy(() -> ChunkingWindow.of(100, 100))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void consecutiveChunksShareOverlapWindow() {
-        DeterministicTextChunker overlapChunker = new DeterministicTextChunker(10, 3);
+        DeterministicTextChunker overlapChunker = new DeterministicTextChunker(ChunkingWindow.of(10, 3));
         String text = "ABCDEFGHIJKLMNOPQRST";
 
         List<TextChunk> chunks = overlapChunker.chunk(text);
@@ -56,13 +56,51 @@ class DeterministicTextChunkerTest {
 
     @Test
     void exactMultipleLengthProducesNoTrailingEmptyChunk() {
-        DeterministicTextChunker exactChunker = new DeterministicTextChunker(10, 0);
+        DeterministicTextChunker exactChunker = new DeterministicTextChunker(ChunkingWindow.of(10, 0));
         String text = "ABCDEFGHIJKLMNOPQRST";
 
         List<TextChunk> chunks = exactChunker.chunk(text);
 
         assertThat(chunks).extracting(TextChunk::chunkText)
                 .containsExactly("ABCDEFGHIJ", "KLMNOPQRST");
+        assertThat(chunks).noneMatch(chunk -> chunk.chunkText().isEmpty());
+    }
+
+    @Test
+    void splitsAtSentenceBoundaryWithinMaxSize() {
+        DeterministicTextChunker sentenceChunker = new DeterministicTextChunker(ChunkingWindow.of(60, 0));
+        String text =
+                "Fraud Guard monitors suspicious transactions. It helps prevent chargebacks for merchants.";
+
+        List<TextChunk> chunks = sentenceChunker.chunk(text);
+
+        assertThat(chunks).extracting(TextChunk::chunkText)
+                .containsExactly(
+                        "Fraud Guard monitors suspicious transactions.",
+                        "It helps prevent chargebacks for merchants.");
+    }
+
+    @Test
+    void doesNotSplitMidSentenceWhenFullTextFitsWithinMaxSize() {
+        DeterministicTextChunker sentenceChunker = new DeterministicTextChunker(ChunkingWindow.of(80, 0));
+        String text = "Short intro. Fraud Guard monitors suspicious transactions and chargebacks.";
+
+        List<TextChunk> chunks = sentenceChunker.chunk(text);
+
+        assertThat(chunks).hasSize(1);
+        assertThat(chunks.getFirst().chunkText()).isEqualTo(text);
+    }
+
+    @Test
+    void hardCutsOversizedSentenceWhenNoEarlierBoundaryExists() {
+        DeterministicTextChunker smallChunker = new DeterministicTextChunker(ChunkingWindow.of(20, 0));
+        String text = "This single sentence exceeds the configured chunk window.";
+
+        List<TextChunk> chunks = smallChunker.chunk(text);
+
+        assertThat(chunks).extracting(chunk -> chunk.chunkText().length()).allMatch(length -> length <= 20);
+        assertThat(chunks).extracting(TextChunk::chunkText)
+                .containsExactly("This single sentence", "exceeds the configur", "ed chunk window.");
         assertThat(chunks).noneMatch(chunk -> chunk.chunkText().isEmpty());
     }
 }

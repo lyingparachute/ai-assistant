@@ -1,8 +1,11 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
+import dev.localassistant.assistant.rag.infrastructure.config.AssistantRagRetrievalProperties;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -19,30 +22,30 @@ final class ProductPageFetcher {
     private final HttpClient httpClient;
     private final Duration requestTimeout;
 
-    ProductPageFetcher(AssistantRagRetrievalProperties retrievalProperties) {
-        this.httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
-        this.requestTimeout = Duration.ofSeconds(retrievalProperties.fetchTimeoutSeconds());
+    ProductPageFetcher(final AssistantRagRetrievalProperties retrievalProperties) {
+        httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
+        requestTimeout = Duration.ofSeconds(retrievalProperties.fetchTimeoutSeconds());
     }
 
-    String fetchHtml(String sourceUrl) throws IOException, InterruptedException {
+    String fetchHtml(final String sourceUrl) throws IOException, InterruptedException {
         if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
 
         final var request =
-                HttpRequest.newBuilder()
-                        .uri(URI.create(sourceUrl))
-                        .timeout(requestTimeout)
-                        .header("Accept", "text/html")
-                        .GET()
-                        .build();
+            HttpRequest.newBuilder()
+                .uri(URI.create(sourceUrl))
+                .timeout(requestTimeout)
+                .header(HttpHeaders.ACCEPT, MediaType.TEXT_HTML_VALUE)
+                .GET()
+                .build();
 
         final var response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+        if (HttpStatus.Series.SUCCESSFUL != HttpStatus.Series.resolve(response.statusCode())) {
             throw new ProductPageFetchException(
-                    "Product page request failed with HTTP status " + response.statusCode());
+                "Product page request failed with HTTP status " + response.statusCode());
         }
 
         final var body = response.body();

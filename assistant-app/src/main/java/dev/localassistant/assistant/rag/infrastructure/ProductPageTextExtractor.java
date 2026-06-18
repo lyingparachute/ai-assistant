@@ -1,10 +1,8 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.safety.Safelist;
 import org.apache.commons.lang3.StringUtils;
-
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -13,11 +11,11 @@ import java.util.regex.Pattern;
 
 @Component
 @Profile("!test")
-public final class ProductPageTextExtractor {
+final class ProductPageTextExtractor {
 
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
-    public String extractPlainText(String html) {
+    public String extractPlainText(final String html) {
         Objects.requireNonNull(html, "html");
         if (StringUtils.isBlank(html)) {
             throw new IllegalArgumentException("html must not be blank");

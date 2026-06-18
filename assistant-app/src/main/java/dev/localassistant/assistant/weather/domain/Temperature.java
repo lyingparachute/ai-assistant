@@ -8,7 +8,7 @@ public record Temperature(double celsius) {
         }
     }
 
-    public static Temperature celsius(double value) {
+    public static Temperature celsius(final double value) {
         return new Temperature(value);
     }
 }

@@ -1,6 +1,7 @@
 package dev.localassistant.assistant.rag.domain.port.outbound;
 
 import dev.localassistant.assistant.rag.domain.ProductPageResult;
+import org.apache.commons.lang3.StringUtils;
 
 public interface ProductPageSource {
 
@@ -9,7 +10,7 @@ public interface ProductPageSource {
     record Command(String sourceUrl) {
 
         public Command {
-            if (sourceUrl == null || sourceUrl.isBlank()) {
+            if (StringUtils.isBlank(sourceUrl)) {
                 throw new IllegalArgumentException("sourceUrl must not be blank");
             }
         }

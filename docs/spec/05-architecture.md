@@ -332,6 +332,15 @@ MCP startup should be repeatable from declarative local configuration, such as a
 
 The assistant may keep a small tool registry at the infrastructure edge to map configured MCP tools to typed application ports. Source routing for the required demo questions remains deterministic in application code; the model should not run an unbounded autonomous tool loop. If a future tool loop is added, it must have a conservative max-turn limit, cancellation support, and typed `{ ok, error, hint }` tool results.
 
+**Bounded agentic orchestration (planned).** An opt-in tool-calling loop behind
+`assistant.orchestration.mode` (default `deterministic`) will let off-demo questions invoke
+`ResolveCountryFacts`, `ResolveWeatherObservation`, and `RetrieveRagKnowledge` through a bounded
+harness (`OrchestrateQuestionUseCase` facade in `answering`, `LlmToolCallPort` in `synthesis`).
+Required demo questions stay policy-routed in every mode. SSE streaming, `AssistantResponseSink`, and
+terminal `final` authority from ADR `0009` are unchanged. See ADR
+[`0010`](../adr/0010-bounded-agentic-tool-orchestration.md) and ExecPlan
+[`improve-agentic-tool-orchestration.md`](../plans/improve-agentic-tool-orchestration.md).
+
 ```mermaid
 sequenceDiagram
     participant App as Assistant Application Service

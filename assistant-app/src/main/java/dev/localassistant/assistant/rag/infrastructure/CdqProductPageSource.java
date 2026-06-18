@@ -19,7 +19,7 @@ final class CdqProductPageSource implements ProductPageSource {
     private final ProductPageTextExtractor productPageTextExtractor;
 
     @Override
-    public ProductPageResult fetchAndExtract(Command command) {
+    public ProductPageResult fetchAndExtract(final Command command) {
         final var sourceUrl = command.sourceUrl();
         try {
             final var html = productPageFetcher.fetchHtml(sourceUrl);
@@ -27,15 +27,16 @@ final class CdqProductPageSource implements ProductPageSource {
             return new ProductPageResult.Success(extractedText);
         } catch (ProductPageFetchException | ProductPageExtractionException exception) {
             return new ProductPageResult.SourceUnavailable(
-                    SOURCE_LABEL, exception.getMessage(), "Verify the configured CDQ product page URL is reachable");
-        } catch (IOException | InterruptedException exception) {
-            if (exception instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
+                SOURCE_LABEL, exception.getMessage(), "Verify the configured CDQ product page URL is reachable");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
             return new ProductPageResult.SourceUnavailable(
-                    SOURCE_LABEL,
-                    "Failed to fetch CDQ product page: " + exception.getMessage(),
-                    "Verify network connectivity and the configured source URL");
+                SOURCE_LABEL, exception.getMessage(), "Verify network connectivity and the configured source URL");
+        } catch (IOException exception) {
+            return new ProductPageResult.SourceUnavailable(
+                SOURCE_LABEL,
+                "Failed to fetch CDQ product page: " + exception.getMessage(),
+                "Verify network connectivity and the configured source URL");
         }
     }
 }

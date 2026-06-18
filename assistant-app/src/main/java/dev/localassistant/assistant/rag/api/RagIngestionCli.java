@@ -1,13 +1,12 @@
 package dev.localassistant.assistant.rag.api;
 
-import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
 import dev.localassistant.assistant.rag.domain.RagIngestionResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
+import dev.localassistant.assistant.rag.infrastructure.config.AssistantRagRetrievalProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Component;
 @Profile("ingest-rag")
 @Order(0)
 @RequiredArgsConstructor
-public class RagIngestionCli implements ApplicationRunner {
+class RagIngestionCli implements ApplicationRunner {
 
     private final ConfigurableApplicationContext applicationContext;
     private final IngestRag ingestRag;

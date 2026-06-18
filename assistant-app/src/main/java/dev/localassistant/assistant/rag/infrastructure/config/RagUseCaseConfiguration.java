@@ -1,8 +1,5 @@
 package dev.localassistant.assistant.rag.infrastructure.config;
 
-import dev.localassistant.assistant.config.AssistantRagChunkingProperties;
-import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
-import dev.localassistant.assistant.config.AssistantRagStorageProperties;
 import dev.localassistant.assistant.rag.domain.DeterministicTextChunker;
 import dev.localassistant.assistant.rag.domain.RagIngestion;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
@@ -11,26 +8,25 @@ import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;
 import dev.localassistant.assistant.rag.domain.port.outbound.ProductPageSource;
 import dev.localassistant.assistant.rag.infrastructure.RagRetrieval;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Clock;
 
 @Configuration
 @EnableConfigurationProperties({
-        AssistantRagStorageProperties.class,
-        AssistantRagRetrievalProperties.class,
-        AssistantRagChunkingProperties.class
+    AssistantRagStorageProperties.class,
+    AssistantRagRetrievalProperties.class,
+    AssistantRagChunkingProperties.class
 })
-public class RagUseCaseConfiguration {
+class RagUseCaseConfiguration {
 
     @Bean
-    DeterministicTextChunker deterministicTextChunker(AssistantRagChunkingProperties chunkingProperties) {
-        return new DeterministicTextChunker(
-                chunkingProperties.chunkMaxSize(), chunkingProperties.chunkOverlap());
+    DeterministicTextChunker deterministicTextChunker(final AssistantRagChunkingProperties chunkingProperties) {
+        return new DeterministicTextChunker(chunkingProperties.chunkingWindow());
     }
 
     @Bean
@@ -40,27 +36,27 @@ public class RagUseCaseConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean({KnowledgeEmbedding.class, KnowledgeChunkStore.class, ProductPageSource.class})
+    @Profile("ingest-rag")
     @ConditionalOnMissingBean(IngestRag.class)
     IngestRag ingestRag(
-            KnowledgeEmbedding knowledgeEmbedding,
-            KnowledgeChunkStore knowledgeChunkStore,
-            ProductPageSource productPageSource,
-            DeterministicTextChunker deterministicTextChunker,
-            Clock clock) {
+        final KnowledgeEmbedding knowledgeEmbedding,
+        final KnowledgeChunkStore knowledgeChunkStore,
+        final ProductPageSource productPageSource,
+        final DeterministicTextChunker deterministicTextChunker,
+        final Clock clock) {
         return new RagIngestion(
-                knowledgeEmbedding,
-                knowledgeChunkStore,
-                productPageSource,
-                deterministicTextChunker,
-                clock);
+            knowledgeEmbedding,
+            knowledgeChunkStore,
+            productPageSource,
+            deterministicTextChunker,
+            clock);
     }
 
     @Bean
-    @ConditionalOnBean({KnowledgeEmbedding.class, KnowledgeChunkStore.class})
+    @Profile("!ingest-rag")
     @ConditionalOnMissingBean(RetrieveRagKnowledge.class)
     RetrieveRagKnowledge retrieveRagKnowledge(
-            KnowledgeEmbedding knowledgeEmbedding, KnowledgeChunkStore knowledgeChunkStore) {
+        final KnowledgeEmbedding knowledgeEmbedding, final KnowledgeChunkStore knowledgeChunkStore) {
         return new RagRetrieval(knowledgeEmbedding, knowledgeChunkStore);
     }
 }

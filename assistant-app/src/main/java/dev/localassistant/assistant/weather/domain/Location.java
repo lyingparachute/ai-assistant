@@ -12,7 +12,7 @@ public record Location(String city) {
         }
     }
 
-    public static Location of(String city) {
+    public static Location of(final String city) {
         return new Location(city);
     }
 }

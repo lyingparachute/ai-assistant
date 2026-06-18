@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.rag.domain;
 
 public record KnowledgeSimilarityMatch(
-        String chunkText, String sourceUrl, String contentHash, int chunkIndex, double similarityScore) {
+    String chunkText, String sourceUrl, String contentHash, int chunkIndex, double similarityScore) {
 
     public KnowledgeSimilarityMatch {
         if (chunkText == null || chunkText.isBlank()) {
