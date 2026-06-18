@@ -1,6 +1,6 @@
 # ExecPlan — RAG ingestion & port redesign
 
-Status: draft — round-1 + round-2 critic reviewed; round-2 blockers resolved in the addendum below
+Status: landed — 601ed64
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (R-2..R-6, R-10..R-13, R-16..R-22)
 Scope module: `assistant-app` — `rag` package, `adapters/outbound/pgvector`, `adapters/outbound/ollama`
@@ -115,24 +115,27 @@ stored-hash read. Locked resolution:
 
 ## Definition of Done (binary)
 
-- [ ] `RagKnowledgePort` declares exactly `retrieve`, `storeChunks`, `findContentHashForSource`; `grep -n
+- [x] `RagKnowledgePort` declares exactly `retrieve`, `storeChunks`, `findContentHashForSource`; `grep -n
       countChunksForSource RagKnowledgePort.java` empty; no port method throws (all return a sealed result).
-- [ ] **Real failing-DB test** [R1: P2-8]: a Testcontainers test that stops the pgvector container (or drops the
-      `rag_chunks` table) then calls `RagIngestionUseCase.ingest`, asserting `RagIngestionResult.SourceUnavailable`
-      with `sourceLabel == "pgvector RAG"` and that no exception escapes. (A stub-port return does NOT satisfy
-      this bullet.)
-- [ ] `grep -rn "RagIngestionReport" adapters/` empty (report built only in application layer).
-- [ ] `replaceChunksForSource` returns the row count; `grep -n countChunksForSource adapters/` empty; the
+- [x] **Real failing-DB test** [R1: P2-8]: `RagIngestionSourceUnavailableIntegrationTest` stops the pgvector
+      container then calls `RagIngestionUseCase.ingest`, asserting `RagIngestionResult.SourceUnavailable`
+      with `sourceLabel == "pgvector RAG"` and no exception escapes (real container; ~3s with test-only fast-fail
+      Hikari timeout).
+- [x] `grep -rn "new RagIngestionReport" adapters/outbound/` empty (Round-2 [P2R2-C] corrected grep — report
+      built only in application layer; inbound CLI may read it).
+- [x] `replaceChunksForSource` returns the row count; `grep -n countChunksForSource adapters/` empty; the
       existence-check + replace are one `transactionTemplate.execute`.
-- [ ] `KnowledgeSnippet` has no `boolean has*` and no sentinel double; score is mandatory `RetrievalScore`
-      (or a sealed stored/retrieved split if `fromStoredChunk` is live — decision recorded in the slice).
-- [ ] `grep -n "\.length !=\|\.length ==" OllamaEmbeddingAdapter.java` empty; it calls
+- [x] `KnowledgeSnippet` has no `boolean has*` and no sentinel double; score is mandatory `RetrievalScore`
+      (`fromStoredChunk` grep-confirmed dead → stored shape deleted).
+- [x] `grep -n "\.length !=\|\.length ==" OllamaEmbeddingAdapter.java` empty; it calls
       `EmbeddingDimensions.matches`.
-- [ ] `reIngestUnchangedContentSkipsReEmbedding` still green and still asserts no re-embedding.
-- [ ] New tests present: chunker overlap + exact-multiple; retrieval SourceUnavailable (embedding fail + query
+- [x] `reIngestUnchangedContentSkipsReEmbedding` still green; the unit skip test now also asserts via an
+      `EmbeddingPort` spy that no re-embedding occurs.
+- [x] New tests present: chunker overlap + exact-multiple; retrieval SourceUnavailable (embedding fail + query
       throw); env-enabled `RagIngestionMode`; embedding prefix tests assert returned vector.
-- [ ] `PgvectorTestConfiguration` imports a shared profile-neutral config (no duplicated bean graph).
-- [ ] `./mvnw -o test` BUILD SUCCESS (Docker required).
+- [x] `PgvectorTestConfiguration` imports a shared profile-neutral config (`PgvectorBeansConfiguration`); the
+      DataSource is per-config (test overrides only DataSource + `@Primary` EmbeddingPort).
+- [x] `./mvnw -o test` BUILD SUCCESS (Docker).
 
 ## Round-2 critic resolutions (authoritative; supersede the body where in conflict)
 

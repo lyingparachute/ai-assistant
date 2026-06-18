@@ -1,180 +1,288 @@
 # ExecPlan — bounded agentic tool-calling orchestration
 
-Status: proposed — for review (no code until approved)
+Status: proposed — PLAN-READY pending approval (critic round folded in)
 Owner: TBD
-Source: limitation in `README.md` ("Source routing is deterministic … scoped to the fixed
-demo questions", `SourceRoutingPolicy`); honesty guardrails in `CLAUDE.md` §8; best-practice
-research from the `nlm` AI_DEVS notebook (Agent Harness; bounded tool loops).
-Scope module: `assistant-app` (orchestration + a new outbound LLM tool-calling capability).
+Source: `CLAUDE.md` §8 bounded tool-loop sentence; `docs/spec/05-architecture.md:295`;
+`SourceRoutingPolicy.java:9-11` (off-demo → `Unsupported`); AI_DEVS Agent Harness research.
+Scope module: `assistant-app` (orchestration facade, agentic loop, outbound tool-calling LLM port).
+`chat-ui` unchanged unless trace timeline needs a label tweak for agentic routes (defer).
+
+## Prerequisites
+
+- [`backend-hygiene.md`](backend-hygiene.md) **landed** — Boot `3.5.12`, Commons Lang, Lombok on
+  touched orchestration/adapter code.
+- [`stream-chat-answers-and-source-usage-trace.md`](stream-chat-answers-and-source-usage-trace.md)
+  **landed** — ADR `0009` Accepted; `POST /api/chat` is SSE; `AnswerQuestionUseCase.answer(
+  UserQuestion, AssistantResponseSink)`; `LlmPort.generate(PromptContext, TokenSink)`;
+  `AssistantChatProperties` + bounded executor + cancellation on worker thread. Agentic work
+  builds on this sink and executor — no parallel HTTP model.
+- Demo path still green after streaming (`docs/demo/final-answers.md`, `./mvnw verify -P e2e`).
+- **M0 spike green** (see Milestones) — `qwen3:4b` + post-hygiene Spring AI `1.1.x` completes at
+  least one tool-call round-trip (propose → execute → structured follow-up) before loop code.
+- ADR `docs/adr/0010-bounded-agentic-tool-orchestration.md` **Accepted** (documentation-first;
+  status moves from Proposed to Accepted in the same change that starts M1 implementation).
+- Re-verify Spring AI tool-calling API against the **post-hygiene** pinned version in M0.
 
 ## Why now
 
-Today the assistant answers only a fixed set of demo questions. `SourceRoutingPolicy`
-keyword-matches Germany and Munich literally; "capital of France" or "weather in Tokyo"
-fall through to `Unsupported` (verified: `SourceRoutingPolicy.java`, comment lines 9-11).
-This is correct and honest for the recruitment demo, but it is the assistant's most visible
-ceiling: a reviewer who types any off-script question gets a refusal.
+Today the assistant answers only demo-shaped questions. `SourceRoutingPolicy` keyword-matches
+Germany and Munich literally; "capital of France" or "weather in Tokyo" fall through to
+`Unsupported` (verified: `SourceRoutingPolicy.java:9-11,41`). That is correct for the
+recruitment demo, but it is the assistant's most visible ceiling.
 
-The deterministic policy was a deliberate, documented choice (`CLAUDE.md` §8): "The model
-does not run an unbounded autonomous tool loop. Any future tool loop needs a conservative
-max-turn limit, timeout, cancellation, and typed `{ ok, error, hint }` tool results." That
-sentence is a spec for this plan. The goal is to let the LLM select and call the existing
-tools (countries, weather, RAG) for arbitrary inputs, inside a strict, bounded harness that
-preserves every honesty invariant — never trading the project's core promise (no guessing
-presented as fact) for flexibility.
-
-This is a big-scope change. It is proposed as an opt-in capability behind a feature flag, so
-the deterministic path remains the default and the demo stays reproducible.
+`CLAUDE.md` §8 already specifies the future harness: conservative max-turn limit, timeout,
+cancellation, typed `{ ok, error, hint }` tool results. This plan implements that sentence as an
+**opt-in** capability behind a config flag. The deterministic path stays default so demo
+reproducibility and `RequiredDemoQuestionsIT` stay stable.
 
 ## Target state
 
-A new `AGENTIC` route handles questions the deterministic policy does not recognise (and,
-behind a flag, can become the primary path). The LLM runs a **bounded function-calling loop**
-over the existing capabilities, exposed as tools with clear schemas. Every tool returns a
-typed result; the model self-corrects from recovery hints; the loop cannot run away. The
-final answer still carries the same `AnswerSource` provenance the deterministic path produces
-(`countries_facts`, `weather_observation`, `rag_knowledge`, `model_synthesis`), so the
-honesty/trace contract (`docs/spec`, `AssistantRequestTrace`) is unchanged for callers and
-the UI.
+A new **`OrchestrateQuestionUseCase` facade** is the sole inbound application entry point
+(`ChatController` stops calling `AnswerQuestionUseCase` directly). It selects:
 
-Concretely: ask "What is the capital of France, and the weather there?" → the model calls
-`country_lookup(France)` → gets Paris → calls `weather_current(Paris)` → composes a grounded
-answer with both sources marked USED. Ask about an unknown country → a tool returns a typed
-not-found with a hint → the model stops and returns a source-unavailable answer, never a
-fabricated fact.
+| `assistant.orchestration.mode` | Behaviour |
+| --- | --- |
+| `deterministic` (default) | Today — `AnswerQuestionUseCase` only |
+| `agentic-fallback` | Deterministic when `SourceRoutingPolicy` matches; **only** `Unsupported` → agentic loop |
+| `agentic` | Agentic loop for non-demo-shaped questions; **demo-shaped routes still deterministic** (policy match wins first) |
+
+The agentic path runs a **bounded function-calling loop** over three LLM-facing capabilities
+(mapped to existing ports). Every capability returns a model-facing DTO derived from sealed
+`ToolExecutionResult`; the harness records Knowledge Source consultations; **`ResponseComposer`**
+assembles the same four `AnswerSource` types as today. The model never supplies provenance.
+
+Concretely: ask "What is the capital of France, and the weather there?" in `agentic-fallback`
+→ `country_lookup(France)` → Paris → `get-weather(Paris)` → grounded answer with
+`countries_facts` + `weather_observation` both `USED`. Unknown country → typed not-found with
+hint → loop stops → source-unavailable, never a fabricated fact.
+
+With streaming landed, agentic routes emit **Source-Usage Trace** events via
+`AssistantResponseSink.recordSourceOutcome` as each Knowledge Source resolves; final synthesis
+tokens stream through `LlmPort.generate(..., TokenSink)`; terminal `final` remains authoritative.
 
 ## Design (locked decisions)
 
-Patterns below are grounded in the AI_DEVS "Agent Harness" guidance; citations are to that
-notebook's research.
+1. **Documentation-first.** ADR `0010` Accepted + `docs/spec/05-architecture.md` §9 note
+   **before** production loop code. ADR scopes the deviation from deterministic routing to
+   opt-in modes only; required demo questions stay policy-routed in all modes.
 
-1. **Agent Harness, not raw SDK calls.** The loop is orchestrated in application code (a new
-   `AgenticAnswerUseCase` alongside the existing `AnswerQuestionUseCase`), which owns the
-   turn budget, timeouts, cancellation, and provenance assembly. The LLM only proposes tool
-   calls; application code executes them and decides when to stop. Dependencies still point
-   inward; the LLM tool-calling client is an outbound adapter behind a new port
-   (`LlmToolCallPort` or an extension of `LlmPort`), keeping Spring AI / Ollama types out of
-   the domain (ADR `0001`).
+2. **Facade wiring — `OrchestrateQuestionUseCase`.** Single constructor-injected bean:
 
-2. **Bounded loop.** Hard cap on iterations — default **8** (research range 5-15). On reaching
-   the cap without a final answer, return a typed "could not complete" answer, never a guess.
+   ```text
+   ConversationTurn answer(UserQuestion question, AssistantResponseSink sink)
+   ```
 
-3. **Timeouts + cancellation.** A per-tool timeout (reuse existing MCP `timeout-seconds`) and
-   a whole-request deadline. The HTTP request is cancellable; the loop checks for cancellation
-   between turns. No unbounded blocking.
+   - Always starts `AssistantRequestTrace`.
+   - Calls `sourceRoutingPolicy.route(question)`.
+   - If mode is `deterministic` **or** route is not `Unsupported` **or** question matches a
+     demo-shaped policy arm → delegate to existing `AnswerQuestionUseCase.answer(question, sink)`
+     unchanged.
+   - Else → `AgenticAnswerUseCase.answer(question, sink, trace)`.
+   - `ChatController` injects only the facade.
 
-4. **Typed tool results with recovery hints.** Every tool returns the project's existing
-   `ToolExecutionResult` shape, surfaced to the model as `{ ok, data?, error?, hint? }`.
-   Errors are semantic, not raw HTTP: e.g. unknown country → `{ ok:false, error:"country not
-   found", hint:"check spelling or try the English country name" }`, so the model can
-   self-correct within the budget rather than dead-ending. This mirrors the MCP tool-result
-   discipline already in `.agents/skills/mcp`.
+3. **Separate ports — do not extend `LlmPort`.**
+   - **`LlmToolCallPort`** — multi-turn propose: input = conversation + tool results; output =
+     sealed `ToolCallStep` (`ProposeCalls`, `FinalStructuredAnswer`, `SourceUnavailable`).
+     Lives in `llm` package; implemented in `adapters/outbound/ollama`.
+   - **`LlmPort`** — unchanged role: single-shot synthesis with `TokenSink` (ADR `0009`).
+     Agentic loop calls `LlmPort` only for the **final** grounded synthesis after tools succeed.
 
-5. **Reasoning-first, honesty-preserving schema.** The model's structured output places a
-   short `reasoning` field before any tool call or final answer. The final-answer schema
-   forces each claim to be attributed to a tool result; the system prompt forbids answering
-   country/weather/product facts from model memory. RAG stays grounding-only: if retrieval
-   returns nothing relevant, the model must report insufficient product knowledge (existing
-   rule, unchanged).
+4. **Provenance via `ResponseComposer` only.** The harness records `RecordedConsultation`
+   entries (source type, port outcome variant, grounded payload refs). It does **not** trust
+   model JSON for `AnswerSource`. New package-private composer entry:
 
-6. **Tool schema hygiene (signal-to-noise).** Tools are named and described for the model
-   (`country_lookup`, `weather_current`, `product_knowledge_search`) with compact descriptions
-   and minimal outputs — no internal hashes/IDs in what the model sees. Static system prompt
-   and tool definitions (prompt-cache friendly); dynamic data (the user question) injected
-   last.
+   ```text
+   AssistantAnswer composeAgentic(
+       List<RecordedConsultation> consultations,
+       LlmResult synthesisResult,
+       String traceCorrelationId)
+   ```
 
-7. **Deterministic path preserved.** `SourceRoutingPolicy` stays. A config flag
-   (`assistant.orchestration.mode = deterministic | agentic | agentic-fallback`) selects
-   behaviour; default `deterministic`. `agentic-fallback` uses the policy first and only
-   invokes the loop when the policy returns `Unsupported`. The required demo questions keep
-   their deterministic, reproducible path.
+   Maps consultations → `countries_facts | weather_observation | rag_knowledge` cards; synthesis
+   → `model_synthesis` only when `LlmResult.Success` and grounding exists. Same honesty rules
+   as deterministic routes.
 
-8. **Irreversible-action gating (forward-looking).** All current tools are read-only. The
-   harness still routes any future state-changing tool through explicit gating (no
-   autonomous irreversible actions), per AI_DEVS guidance — documented now so the boundary
-   exists before such a tool is added.
+5. **Model-facing tool DTO ≠ `ToolExecutionResult`.** Adapter-layer `ModelToolResultPresenter`
+   maps sealed variants to JSON the model sees:
+
+   | `ToolExecutionResult` | Model DTO |
+   | --- | --- |
+   | `Success<T>` | `{ "ok": true, "data": {…} }` |
+   | `ToolError<T>` | `{ "ok": false, "error": "…", "hint": "…" }` |
+   | `SourceUnavailable<T>` | `{ "ok": false, "error": "…", "hint": "…" }` |
+
+   Domain/application never serializes tool results for the model directly.
+
+6. **LLM-facing capability names (locked to runtime).**
+
+   | Capability name | Backing | Notes |
+   | --- | --- | --- |
+   | `country_lookup` | `CountriesPort` | Matches `application.yml` `tool-name` |
+   | `get-weather` | `WeatherPort` | Matches `application.yml` `tool-name` — **not** `weather_current` |
+   | `product_knowledge_search` | `RagKnowledgePort` | **Knowledge Source**, not an MCP tool |
+
+   Internal docs/traces use **Knowledge Source** / **Source-Usage Trace** vocabulary
+   (`CONTEXT.md`). Do not call trace events "tool-call trace".
+
+7. **Bounded loop (`AgenticAnswerUseCase`).** Application-owned harness:
+   - Hard cap **`max-turns`** default **8** (`@Positive` on config record).
+   - Whole-request **`request-deadline-seconds`** distinct from `assistant.llm.timeout-seconds`
+     and MCP `timeout-seconds`.
+   - Per-tool execution reuses existing port timeouts.
+   - Cancellation: check worker-thread interrupt / streaming cancellation handle between turns
+     (inherits streaming executor from ADR `0009`).
+   - On cap/deadline/cancel without grounded answer → `ResponseComposer.composeAgenticIncomplete`
+     (typed refusal, not a guess).
+
+8. **Config record — `AssistantOrchestrationProperties` (`assistant.orchestration.*`).**
+
+   | Property | Default | Purpose |
+   | --- | --- | --- |
+   | `mode` | `deterministic` | `deterministic \| agentic \| agentic-fallback` |
+   | `max-turns` | `8` | Loop iteration cap |
+   | `request-deadline-seconds` | `120` | Whole agentic request budget |
+
+   `@ConfigurationProperties` record + binding test (refactor-3b pattern). No scattered
+   `@Value`.
+
+9. **Reasoning-first structured step schema.** `LlmToolCallPort` prompts require a short
+   `reasoning` field before tool proposals or final structured answer. System prompt forbids
+   country/weather/product facts from model memory. RAG stays grounding-only: empty retrieval
+   → insufficient product knowledge path, unchanged.
+
+10. **Tracing extension.** `AssistantRequestTrace` gains agentic turn markers (turn index,
+    capability name, ok/error) for logs and optional debug. **UI-facing** events use
+    `sink.recordSourceOutcome(SourceType, status)` — same four types as streaming plan. Internal
+    `Port` names never appear in SSE.
+
+11. **Irreversible-action gating (forward-looking).** All current capabilities are read-only.
+    Future state-changing tools require explicit harness gating — documented in ADR `0010`.
+
+12. **Demo + e2e stability.** `mode=deterministic` (default) → byte-for-byte behaviour vs
+    pre-agentic baseline. `RequiredDemoQuestionsIT` runs with default config — no assertion
+    changes. Agentic live verification uses **off-demo** questions only in paste evidence.
 
 ## Scope
 
-- New `AgenticAnswerUseCase` (orchestration): the bounded loop, turn budget, deadline,
-  cancellation, provenance assembly into the existing `AssistantAnswer` / `AnswerSource`.
-- New outbound port + Ollama adapter for tool-calling (function calling via Spring AI /
-  Ollama), behind the architecture boundary.
-- Tool descriptors mapping the existing `CountriesPort`, `WeatherPort`, `RagKnowledgePort`
-  to model-facing tool schemas with recovery hints.
-- A typed `mode` config (`@ConfigurationProperties`), default `deterministic`.
-- Tracing: extend `AssistantRequestTrace` with per-turn tool-call events (tool, ok/error,
-  turn index) and a final turn count, so the loop is observable and demo-provable.
-- Tests: deterministic unit tests of the loop with a controlled (stubbed) tool-call LLM —
-  multi-tool happy path, not-found self-correction, max-turn termination, timeout,
-  cancellation, and honesty (no fabrication when a tool fails). Plus a controlled adapter
-  contract test.
+- ADR `0010` + spec `05` §9 note.
+- `AssistantOrchestrationProperties` + binding test.
+- `LlmToolCallPort` + `OllamaToolCallAdapter` + `ToolCallStep` sealed types.
+- `ModelToolDescriptor` registry (three capabilities) + `ModelToolResultPresenter`.
+- `AgenticAnswerUseCase` — loop, `RecordedConsultation` collector, deadline/cancel checks.
+- `ResponseComposer.composeAgentic` (+ incomplete variant).
+- `OrchestrateQuestionUseCase` facade; `ChatController` wiring swap.
+- `AssistantRequestTrace` agentic turn logging.
+- Per-route `recordSourceOutcome` emissions in agentic path (streaming prerequisite).
+- Tests: stubbed-LLM loop matrix (happy, not-found, max-turn, deadline, cancel, no-fabrication);
+  facade routing tests (`deterministic` / `agentic-fallback` / demo-shaped override);
+  `OllamaToolCallAdapter` contract test behind M0 assumptions; boundary grep.
+- `docs/ai/` entry; README limitations update (`mode` flag, opt-in).
 
 ## Out of scope / non-goals
 
-- Conversational memory across requests (ADR `0006` — still out).
-- Parallel/multi-agent orchestration, sandboxed code execution, long-running background
-  jobs, heartbeats (AI_DEVS mentions these; not needed here).
-- Replacing the deterministic demo path as default (it stays default; agentic is opt-in).
-- New external tools or providers beyond the existing three capabilities.
-- Streaming responses (can be a later enhancement).
+- Conversational memory across requests (ADR `0006`).
+- Parallel/multi-agent orchestration, sandboxed code execution, background jobs.
+- Replacing deterministic routing as default or changing required demo question behaviour.
+- New external tools/providers beyond the three existing Knowledge Sources.
+- `chat-ui` feature work beyond optional trace label copy.
+- Making agentic the default without eval note recommendation.
 
 ## Invariants (must hold)
 
-- Honesty: no country/weather/product fact is ever answered from model memory; every fact
-  traces to a tool result; RAG remains grounding-only. A failed/again-uncertain source →
-  source-unavailable, never a fabricated value (`CLAUDE.md` §8).
-- Boundedness: the loop always terminates within the turn cap and the deadline; it can be
-  cancelled; it never blocks unbounded.
-- Architecture: domain/application never import Spring AI / Ollama / HTTP types; the
-  tool-calling LLM lives in an outbound adapter behind a port (ADR `0001`, `0005`).
-- Backward compatibility: the `/api/chat` request/response contract and `AnswerSource`
-  provenance shape are unchanged; the deterministic path is byte-for-byte preserved when
-  `mode=deterministic`.
+- Honesty: no country/weather/product fact from model memory; every fact traces to port
+  consultation recorded in harness; failed source → source-unavailable, never fabrication.
+- Boundedness: loop terminates within `max-turns`, `request-deadline-seconds`, or cancellation.
+- Architecture: domain/application/orchestration (except outbound port interfaces) never import
+  Spring AI, Ollama, MCP SDK, HTTP, or reactor types.
+- Provenance: only `ResponseComposer` builds `AnswerSource` / `AssistantAnswer`.
+- Backward compatibility: `mode=deterministic` → existing suite green unchanged; `/api/chat`
+  SSE contract unchanged; `final` payload shape unchanged.
+- Glossary: traces/docs say **Source-Usage Trace** and **Knowledge Source**, not "tool-call trace"
+  or "memory".
 
 ## Risks and open questions
 
-- **Small-model tool-calling reliability.** `qwen3:4b` may select tools imperfectly. Mitigations:
-  reasoning-first schema, tight tool descriptions, low turn cap, and `agentic-fallback` mode
-  so the proven deterministic path still serves the demo. OPEN: measure qwen3:4b function-call
-  accuracy on a small eval set before making agentic the default.
-- **Latency/cost.** Multiple LLM round-trips per question. Mitigation: turn cap, prompt
-  caching of static system/tools, deadline.
-- **Honesty regressions.** A tool loop is a new surface for fabrication. Mitigation: the
-  honesty invariant is enforced in application code (provenance required) and covered by
-  explicit "no fabrication on tool failure" tests, not left to the prompt alone.
-- **Scope creep into a general agent framework.** Mitigation: this plan builds the smallest
-  harness for the three existing capabilities; the non-goals fence off the rest.
+- **Small-model tool-calling reliability.** `qwen3:4b` may propose wrong tools/args. Mitigations:
+  M0 spike gate, reasoning-first schema, tight descriptions, low turn cap, default
+  `deterministic`, eval note in M6. OPEN: eval set size (recommend ≥10 off-demo questions).
+- **Latency.** Multiple LLM round-trips. Mitigation: turn cap, deadline, prompt-cache-friendly
+  static system/tools block.
+- **Honesty regressions.** Mitigation: provenance in composer from recorded consultations;
+  explicit "no fabrication on tool failure" tests.
+- **Scope creep into general agent framework.** Mitigation: three capabilities only; non-goals fence.
 
 ## Definition of Done
 
-- [ ] With `mode=deterministic` (default), behaviour is identical to today (demo questions
-      unchanged; full existing suite green).
-- [ ] With `mode=agentic`/`agentic-fallback`, "capital of France" returns Paris via a live
-      `country_lookup` tool call, and "weather in Tokyo" returns a live observation — both
-      with USED provenance and a trace showing the tool calls (paste live output).
-- [ ] A multi-tool question (capital + weather of an arbitrary country) composes both sources
-      in one answer.
-- [ ] Unknown country → the loop self-corrects or stops and returns source-unavailable with
-      no fabricated fact (test + live).
-- [ ] The loop terminates at the turn cap and at the deadline, and is cancellable — each
-      proven by a deterministic test.
-- [ ] No Spring AI / Ollama / HTTP type appears in domain or application packages (grep clean).
-- [ ] Tracing shows per-turn tool-call events and a final turn count.
-- [ ] An eval note records qwen3:4b tool-selection accuracy on a small question set, with a
-      recommendation on whether agentic can be the default.
+- [ ] ADR `0010` **Accepted**; spec `05` §9 note current.
+- [ ] M0 spike paste: `qwen3:4b` one tool-call round-trip green on post-hygiene Spring AI.
+- [ ] `mode=deterministic` (default): full existing suite green; demo questions unchanged (paste
+      `./mvnw test` totals).
+- [ ] `mode=agentic-fallback`: "capital of France" → live `country_lookup`, Paris, `countries_facts`
+      USED (paste live SSE `final` + trace).
+- [ ] `mode=agentic-fallback`: "weather in Tokyo" → live `get-weather`, observation, `weather_observation`
+      USED (paste).
+- [ ] Multi-capability off-demo question composes ≥2 Knowledge Sources in one answer (test + paste).
+- [ ] Unknown country → self-correct or source-unavailable with **no** fabricated fact (test + paste).
+- [ ] Loop hits `max-turns` → typed incomplete answer, not guess (deterministic test).
+- [ ] Request exceeds `request-deadline-seconds` → typed incomplete answer (deterministic test).
+- [ ] Cancellation between turns → stream ends without hang (test; uses streaming executor).
+- [ ] Demo-shaped questions (`Germany`, `Munich`, CDQ, etc.) stay deterministic even when
+      `mode=agentic` (facade unit test).
+- [ ] Boundary grep: no Spring AI / Ollama / HTTP in `orchestration` domain packages (pattern from
+      streaming plan).
+- [ ] `RequiredDemoQuestionsIT` green with default config (paste `./mvnw verify -P e2e`).
+- [ ] Eval note `docs/demo/agentic-tool-selection-eval.md` (or section in implementation-notes):
+      qwen3:4b accuracy on small set + default-mode recommendation.
+- [ ] README documents `assistant.orchestration.mode`; limitations state opt-in agentic.
 
 ## Milestones
 
-- [ ] M1 — Port + Ollama tool-calling adapter + tool descriptors (controlled contract tests).
-- [ ] M2 — `AgenticAnswerUseCase` bounded loop (budget/deadline/cancellation/provenance) with
-      deterministic stubbed-LLM tests for every termination and honesty path.
-- [ ] M3 — Config `mode` flag + wiring + `agentic-fallback`; deterministic path untouched.
-- [ ] M4 — Tracing extension + live verification + qwen3:4b eval note + README/ADR update.
+- [ ] **M0 — Ollama tool-call spike (gate).** Minimal standalone test or scratch adapter:
+      `country_lookup` propose → execute → model receives result. **Stop if red** — do not start
+      loop. Paste output in plan commit or `implementation-notes.md`.
+- [ ] **M1 — ADR `0010` Accepted + `AssistantOrchestrationProperties`.** Spec note; binding test;
+      default `mode=deterministic` verified in config test.
+- [ ] **M2 — `LlmToolCallPort` + `OllamaToolCallAdapter` + descriptors + `ModelToolResultPresenter`.**
+      Contract test with stubbed `ChatModel` tool response; three capability schemas locked.
+- [ ] **M3 — `AgenticAnswerUseCase` loop.** Stubbed `LlmToolCallPort` tests: happy, not-found,
+      max-turn, deadline, cancel, no-fabrication; `RecordedConsultation` collector.
+- [ ] **M4 — `ResponseComposer.composeAgentic` + `OrchestrateQuestionUseCase` facade + controller
+      wiring.** Facade routing matrix tests; `ChatController` injects facade only.
+- [ ] **M5 — Sink/trace integration + live verification.** Agentic SSE trace emissions; off-demo
+      live pastes; `./mvnw test` green (paste totals).
+- [ ] **M6 — Eval note + README + `docs/ai/`.** `agentic-tool-selection-eval.md`; limitations;
+      mark plan landed.
 
 ## Documentation impact
 
-- New ADR (next number) recording the decision to add a bounded agentic loop as an opt-in
-  capability, the harness constraints, and why the deterministic demo path remains default.
-- README: document the `mode` flag and the agentic capability.
-- `docs/spec`: note the new orchestration mode and its honesty/boundedness guarantees.
+- **New:** `docs/adr/0010-bounded-agentic-tool-orchestration.md` — harness, opt-in modes, demo
+  routing preserved, honesty/boundedness, deviation from spec `05:295`.
+- `docs/spec/05-architecture.md` §9 — agentic mode paragraph + link ADR `0010`.
+- `README.md` — `assistant.orchestration.mode`; limitations (opt-in; demo stays deterministic).
+- `docs/ai/agentic-orchestration.md` — material AI-assisted implementation entry.
+
+## Round-1 critic resolutions (authoritative; supersede body on conflict)
+
+- **[A1R1-1]** Prerequisites: hygiene → streaming (`0009`) → **M0 spike** → ADR `0010` Accepted.
+- **[A1R1-2]** ADR `0010` before code — not deferred to M4.
+- **[A1R1-3]** `OrchestrateQuestionUseCase` facade; `ChatController` stops calling
+  `AnswerQuestionUseCase` directly.
+- **[A1R1-4]** Separate **`LlmToolCallPort`**; keep **`LlmPort`** for synthesis/streaming only.
+- **[A1R1-5]** Provenance locked to **`ResponseComposer.composeAgentic`** from
+  `RecordedConsultation` — model JSON never trusted.
+- **[A1R1-6]** Weather capability = **`get-weather`** (matches `application.yml:42`).
+- **[A1R1-7]** RAG = **`product_knowledge_search`** Knowledge Source, not MCP tool name.
+- **[A1R1-8]** Model DTO `{ ok, error, hint }` via **`ModelToolResultPresenter`** — not raw
+  `ToolExecutionResult` serialization.
+- **[A1R1-9]** Trace vocabulary = **Source-Usage Trace** / Knowledge Source (`CONTEXT.md`).
+- **[A1R1-10]** Demo-shaped questions **always deterministic** even in `mode=agentic`.
+- **[A1R1-11]** `AssistantOrchestrationProperties` record (`mode`, `max-turns`,
+  `request-deadline-seconds`).
+- **[A1R1-12]** Cancellation DoD depends on streaming executor (ADR `0009` prerequisite).
+- **[A1R1-13]** Source citation: off-demo behaviour documented in **`SourceRoutingPolicy.java`**, not README.
+
+## Follow-ups (separate plans)
+
+- Agentic as default (only after eval note + explicit ADR amendment).
+- Boot 4 / Spring AI 2 platform migration.
+- Package restructure (`domain`/`infrastructure` per feature).

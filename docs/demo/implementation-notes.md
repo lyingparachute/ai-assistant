@@ -128,3 +128,33 @@ tool-calling loop (Agent Harness, max 5–15 iterations, per-tool timeouts +
 cancellation, typed `{result, recovery_hints, diagnostics}`, reasoning-first schemas,
 deterministic gating for irreversible actions, when to keep deterministic routing).
 Captured in the improvement plan `docs/plans/improve-agentic-tool-orchestration.md`.
+
+### 2026-06-17 — next "wow" chosen: streaming + live source-usage trace (planned)
+
+User picked streaming responses + per-turn trace over the agentic plan (which stays
+proposed). Brainstormed + grilled against the glossary; key decisions:
+
+- **Terminology fix (glossary).** "tool-call trace" mislabels half of what it shows —
+  per `CONTEXT.md`, a Tool is MCP-exposed only, so RAG (pgvector) and Ollama synthesis
+  are NOT tools. Renamed to **Source-Usage Trace** (Knowledge Sources + USED/UNAVAILABLE/
+  INSUFFICIENT). Added `Source-Usage Trace` and `Streamed Answer` to `CONTEXT.md`.
+- **Independent subagent verification (source + context7 for Spring AI 1.1.2):** LLM runs
+  on only 2 of 6 routes; RAG grounding precedes synthesis; `LlmResult` validation in
+  `OllamaLlmAdapter`; `ChatModel extends StreamingChatModel` (`Flux<ChatResponse>
+  stream(Prompt)`, Ollama-supported, delta = `getOutput().getText()`); `/api/chat`'s only
+  consumers are the Chat Interface, the e2e client, and the demo curl. All claims PASS.
+- **Decisions locked:** SSE-only `POST /api/chat` (no orphan JSON endpoint — user noted the
+  JSON path would have no consumer); terminal `final` event = today's authoritative
+  `ChatResponse`; four events `trace|token|final|error`; application output port
+  `AssistantResponseSink` + narrow domain `TokenSink` on `LlmPort` with reactor confined to
+  the Ollama adapter via `flux.toStream()`; bounded async `SseEmitter`; trace events fire at
+  outcome time (no in-progress noise, no `Port` leak). Honesty: additive observation only,
+  authoritative final wins, no fabrication.
+- **Scope split (user-directed):** streaming first in the **current** package structure; a
+  separate later plan does the `domain`/`infrastructure` per-feature restructure (own ADR
+  amending `0005` + rewrite of spec 05 §4 + hexagonal skill).
+- **User Java micro-style (apply in all slices):** `final var`, no empty-string literals
+  (named constants / `StringUtils`), `StringUtils` for string checks, `Objects.isNull/
+  nonNull` for null checks.
+- Artifacts: plan `docs/plans/stream-chat-answers-and-source-usage-trace.md`, ADR
+  `0009-stream-assistant-api-over-sse.md` (Proposed).

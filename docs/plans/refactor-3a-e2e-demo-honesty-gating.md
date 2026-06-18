@@ -1,6 +1,6 @@
 # ExecPlan — e2e demo verification honesty gating
 
-Status: draft — round-1 + round-2 critic reviewed; round-2 blockers resolved in the addendum below
+Status: landed — 39b65df
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (E-1, B-2, X-M-1)
 Scope: `e2e-tests` module + `pom.xml` (reactor) + `scripts/capture-demo-answers.sh` + a shared demo-question
@@ -60,14 +60,14 @@ the captured run showed 5 tests, 0 skipped, 60.7s — i.e. it only "passes" when
 
 ## Definition of Done (binary)
 
-- [ ] `mvn test` (no running server) does **not** execute `RequiredDemoQuestions*` (grep surefire report / module
+- [x] `mvn test` (no running server) does **not** execute `RequiredDemoQuestions*` (grep surefire report / module
       not in the default reactor test phase).
-- [ ] `grep -rn "assumeTrue" e2e-tests/src` is empty; running the demo IT with no server up **fails** (non-zero
+- [x] `grep -rn "assumeTrue" e2e-tests/src` is empty; running the demo IT with no server up **fails** (non-zero
       exit), proven by an actual no-server run captured in the PR.
-- [ ] Demo questions exist in exactly one file; `capture-demo-answers.sh` and the IT both read it; `grep` shows
+- [x] Demo questions exist in exactly one file; `capture-demo-answers.sh` and the IT both read it; `grep` shows
       no inline question-string literals duplicated across the two.
-- [ ] The deliberate demo-verification command is documented in README + docs/spec/08.
-- [ ] `./mvnw -o test` BUILD SUCCESS and hermetic.
+- [x] The deliberate demo-verification command is documented in README + docs/spec/08.
+- [x] `./mvnw -o test` BUILD SUCCESS and hermetic.
 
 ## Round-2 critic resolutions (authoritative)
 
