@@ -3,6 +3,7 @@ package dev.localassistant.assistant.adapters.outbound.ollama;
 import dev.localassistant.assistant.llm.LlmPort;
 import dev.localassistant.assistant.llm.LlmResult;
 import dev.localassistant.assistant.llm.PromptContext;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -34,8 +35,8 @@ public final class OllamaLlmAdapter implements LlmPort {
         try {
             Prompt prompt = new Prompt(List.of(new UserMessage(buildPromptText(context))));
             ChatResponse response = chatModel.call(prompt);
-            String text = extractAssistantText(response);
-            if (text.isBlank()) {
+            final var text = extractAssistantText(response);
+            if (StringUtils.isBlank(text)) {
                 return new LlmResult.SourceUnavailable(
                         SOURCE_LABEL, EMPTY_COMPLETION_MESSAGE, UNAVAILABLE_HINT);
             }
@@ -43,7 +44,7 @@ public final class OllamaLlmAdapter implements LlmPort {
         } catch (Exception exception) {
             return new LlmResult.SourceUnavailable(
                     SOURCE_LABEL,
-                    exception.getMessage() == null ? REQUEST_FAILED_MESSAGE : exception.getMessage(),
+                    StringUtils.defaultIfBlank(exception.getMessage(), REQUEST_FAILED_MESSAGE),
                     UNAVAILABLE_HINT);
         }
     }
@@ -65,7 +66,7 @@ public final class OllamaLlmAdapter implements LlmPort {
         if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
             return "";
         }
-        String text = response.getResult().getOutput().getText();
-        return text == null ? "" : text.trim();
+        final var text = response.getResult().getOutput().getText();
+        return StringUtils.trimToEmpty(text);
     }
 }

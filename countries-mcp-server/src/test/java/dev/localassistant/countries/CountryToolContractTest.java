@@ -141,6 +141,24 @@ class CountryToolContractTest {
     }
 
     @Test
+    void unicodeWhitespaceNameReturnsValidationErrorEnvelope() {
+        CountryLookupTool countryLookupTool = new CountryLookupTool(
+                mock(dev.localassistant.countries.application.LookupCountryUseCase.class),
+                objectMapper
+        );
+
+        McpSchema.CallToolResult result = countryLookupTool.handle(
+                null,
+                new McpSchema.CallToolRequest(CountryToolSchemas.TOOL_NAME, java.util.Map.of("name", "\u2003"))
+        );
+
+        assertThat(result.isError()).isTrue();
+        String json = ((McpSchema.TextContent) result.content().getFirst()).text();
+        assertThat(json).contains("\"ok\":false");
+        assertThat(json).contains(CountryToolErrors.ERROR_NAME_REQUIRED);
+    }
+
+    @Test
     void blankNameReturnsValidationErrorEnvelope() {
         CountryLookupTool countryLookupTool = new CountryLookupTool(
                 mock(dev.localassistant.countries.application.LookupCountryUseCase.class),

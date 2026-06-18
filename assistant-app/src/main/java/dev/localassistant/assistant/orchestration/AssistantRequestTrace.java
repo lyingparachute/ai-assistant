@@ -1,17 +1,15 @@
 package dev.localassistant.assistant.orchestration;
 
 import dev.localassistant.assistant.question.UserQuestion;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+@Slf4j
 public final class AssistantRequestTrace {
-
-    private static final Logger log = LoggerFactory.getLogger(AssistantRequestTrace.class);
 
     private static final String OUTCOME_PENDING = "pending";
     private static final String OUTCOME_ANSWERED_FORMAT = "%s_answered_sources=%d";

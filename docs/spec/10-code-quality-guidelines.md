@@ -17,6 +17,36 @@ Scope note: this is documentation. The short snippets below are illustrative pat
 - Code self-documents. Comment only hidden invariants, framework or protocol constraints, and genuinely complex flow.
 - Delete dead code. No commented-out blocks, unused imports, or unreachable branches.
 
+### Apache Commons Lang 3
+
+Use Commons Lang at **adapter, MCP mapper, REST, config guard, and tool boundaries** where input is nullable or external. Do not replace `isBlank()` on already-validated domain strings (for example `UserQuestion` after construction).
+
+| Situation | Use |
+| --- | --- |
+| Nullable external / adapter input, blank means invalid | `StringUtils.isBlank(s)` |
+| Normalize user or tool input before validation | `StringUtils.stripToNull(s)` then validate |
+| Required non-null parameter / record component | `Objects.requireNonNull(x, "name")` |
+| Optional readability for null checks on non-strings | `Objects.isNull` / `Objects.nonNull` where it clarifies control flow |
+| Required non-blank after trim (domain boundary) | trim via `StringUtils`, then `isNotBlank` or throw — do not mix `isBlank` on untrimmed user text |
+| Deliberate empty-string fallback for nullable external text | `StringUtils.defaultString` or `trimToEmpty` + blank check |
+
+### Lombok (backend modules only)
+
+`lombok.config` at the repo root sets `lombok.addLombokGeneratedAnnotation = true`. Lombok is `provided` + `optional`; compilation requires the annotation processor configured in the parent POM.
+
+**Allowed:**
+
+- `@Slf4j` — replaces hand-written `LoggerFactory.getLogger` fields.
+- `@RequiredArgsConstructor` — Spring `@Component` / `@Configuration` types that inject **final** dependencies only via constructor. Keep explicit constructors when validation, normalization, or multiple constructors are required (for example `StdioMcpToolInvoker`).
+- `@Builder` — immutable classes (not records) where staged construction is clearer than a long constructor; invariants must hold on the built object.
+- `@UtilityClass` — types whose API is entirely static (replaces `final class` + private empty constructor).
+
+**Forbidden:**
+
+- `@Data`, `@Setter`, `@AllArgsConstructor` on domain, application, or `@ConfigurationProperties` types.
+- Lombok on **records** (redundant).
+- `@Builder` + `@Setter` together, or any pattern that allows a partially-built invalid object to escape.
+
 Allowed:
 
 ```java

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
+import org.apache.commons.lang3.StringUtils;
 
 @Validated
 @ConfigurationProperties(prefix = "countries.mcp")
@@ -25,6 +26,6 @@ public record CountriesMcpConfiguration(
     }
 
     public boolean hasRestCountriesApiKey() {
-        return !restCountriesApiKey.isBlank();
+        return StringUtils.isNotBlank(restCountriesApiKey);
     }
 }

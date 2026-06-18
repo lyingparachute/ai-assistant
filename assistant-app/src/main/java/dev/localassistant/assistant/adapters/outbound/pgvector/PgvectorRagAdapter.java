@@ -11,6 +11,7 @@ import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
 import dev.localassistant.assistant.rag.StoredSourceState;
 import dev.localassistant.assistant.tools.SourceUnavailability;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -33,7 +34,7 @@ public final class PgvectorRagAdapter implements RagKnowledgePort {
     public RagRetrievalResult retrieve(String questionText, RagRetrievalPolicy policy) {
         Objects.requireNonNull(questionText, "questionText");
         Objects.requireNonNull(policy, "policy");
-        if (questionText.isBlank()) {
+        if (StringUtils.isBlank(questionText)) {
             throw new IllegalArgumentException("questionText must not be blank");
         }
 
@@ -76,10 +77,10 @@ public final class PgvectorRagAdapter implements RagKnowledgePort {
         Objects.requireNonNull(sourceUrl, "sourceUrl");
         Objects.requireNonNull(contentHash, "contentHash");
         Objects.requireNonNull(chunks, "chunks");
-        if (sourceUrl.isBlank()) {
+        if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
-        if (contentHash.isBlank()) {
+        if (StringUtils.isBlank(contentHash)) {
             throw new IllegalArgumentException("contentHash must not be blank");
         }
         if (chunks.isEmpty()) {
@@ -102,7 +103,7 @@ public final class PgvectorRagAdapter implements RagKnowledgePort {
 
     @Override
     public StoredSourceState findContentHashForSource(String sourceUrl) {
-        if (sourceUrl == null || sourceUrl.isBlank()) {
+        if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
         try {

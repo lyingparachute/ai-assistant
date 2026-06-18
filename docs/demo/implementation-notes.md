@@ -158,3 +158,67 @@ proposed). Brainstormed + grilled against the glossary; key decisions:
   nonNull` for null checks.
 - Artifacts: plan `docs/plans/stream-chat-answers-and-source-usage-trace.md`, ADR
   `0009-stream-assistant-api-over-sse.md` (Proposed).
+
+### 2026-06-18 — backend hygiene (M2–M5)
+
+Local hygiene pass on `assistant-app` and `countries-mcp-server` — behaviour, routing, honesty,
+and `/api/chat` contract unchanged. Plan: `docs/plans/backend-hygiene.md` (completed locally,
+uncommitted).
+
+#### M1 dependency bumps (`docs/plans/backend-hygiene-versions.md`)
+
+| Dependency | Before | After |
+| --- | --- | --- |
+| Spring Boot parent | `3.5.9` | `3.5.15` |
+| Spring AI BOM | `1.1.2` | `1.1.8` |
+| MCP SDK BOM | `1.0.0` | `1.0.2` |
+| jsoup | `1.19.1` | `1.22.2` |
+
+**Deferred:** Spring Boot 4, Spring AI 2, MCP SDK 2, Jackson 3.
+
+#### Commons Lang + Lombok policy
+
+- `commons-lang3` and Lombok (`provided`/`optional`) in both Java modules; `lombok.config` at
+  repo root; parent `maven-compiler-plugin` annotation processor path.
+- `StringUtils` at adapter/MCP/REST/config/tool boundaries; no sweep of already-validated domain
+  strings.
+- Lombok allowlist: `@Slf4j`, `@RequiredArgsConstructor`, `@Builder`, `@UtilityClass`. Denylist:
+  `@Data`, `@Setter`, `@AllArgsConstructor`, Lombok on records.
+
+#### M3 class changes
+
+- `@Slf4j`: `HttpExceptionHandler`, `AssistantRequestTrace`, `StdioMcpToolInvoker`,
+  `CountryLookupTool`, `CountriesMcpServerAdapter`.
+- `@UtilityClass`: `ContentHasher`, `EmbeddingDimensions`, `PgvectorEmbeddingCodec`,
+  `PgvectorChunkColumns`, `RagIngestionMode`, `CountryToolErrors`, `CountryToolSchemas`,
+  `CountryToolResult`.
+- `@RequiredArgsConstructor`: `CountriesMcpServerAdapter`, `CountryLookupTool`.
+- **No `@Builder` site:** `SuccessfulLookupFixture` was removed during hygiene review — it was
+  single-use and did not justify a builder (see plan DoD deviation note).
+- `StdioMcpToolInvoker` keeps explicit `@Autowired` constructor.
+
+#### M4 boundary spot-check decisions
+
+| Class | Decision |
+| --- | --- |
+| `CountryLookupTool` | `stripToNull` on MCP `name` argument |
+| `CountriesMcpResponseMapper` | `isBlank` / `isAnyBlank` on payload and JSON text |
+| `WeatherMcpResponseMapper` | `isBlank` on payload; `trim` + `equalsIgnoreCase` for provider error |
+| `RestCountriesHttpAdapter` | `trimToNull` in `textValue` |
+| `StdioMcpToolInvoker` | `isBlank`/`isNotBlank` on command and env passthrough |
+| `CountryFacts` | `isBlank` in compact constructor |
+| `LookupPlace` | `stripToNull` then throw |
+
+Also touched: `CountriesMcpClientAdapter`, `WeatherMcpClientAdapter`, `CountriesMcpConfiguration`,
+`OllamaLlmAdapter`, `OllamaEmbeddingAdapter`, `ProductPageFetcher`, `CdqProductKnowledgeAdapter`,
+`ProductPageTextExtractor`, `PgvectorRagAdapter`, `ContentHasher`.
+
+**JDK-only left:** domain/application value objects after construction (`UserQuestion`, routing).
+
+#### Verification
+
+| Command | Result |
+| --- | --- |
+| `./mvnw test` | **PASS** — `assistant-app` 223, `countries-mcp-server` 30 |
+| `./mvnw -pl e2e-tests verify -P e2e` | **Skipped** — no assistant on `localhost:8080` |
+| Boundary import grep | **Clean** — no Spring AI / MCP SDK / JDBC in domain/application packages |
