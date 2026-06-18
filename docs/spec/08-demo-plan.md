@@ -11,7 +11,7 @@ Final demo answers must be captured from the running assistant after implementat
 5. Run CDQ Fraud Guard RAG ingestion.
 6. Start `assistant-app`.
 7. Open the Chat Interface.
-8. Ask the required demo questions exactly as written below.
+8. Ask the required demo questions exactly as written below. Optionally use the **demo question chips** in the Chat Interface to fill the composer (click does not auto-submit).
 9. Save the assistant responses and verification notes under the final demo evidence location.
 
 The final README must replace these high-level steps with exact verified commands after implementation.

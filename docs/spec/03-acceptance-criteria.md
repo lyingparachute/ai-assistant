@@ -5,6 +5,8 @@
 - A reviewer can start the assistant locally using documented commands.
 - A reviewer can submit a natural-language question through the chat interface.
 - The chat interface displays the assistant response and clear error messages when a required dependency is unavailable.
+- The Chat Interface keeps a **session display**: prior questions and answers remain visible in the browser for the current session. Refresh clears the display. Each API request still sends only the current question — no prior-turn payload (ADR `0006`).
+- Demo question chips in the Chat Interface load from the shared `demo-questions.json` fixture; clicking a chip fills the composer without auto-submit.
 - The chat path is covered by at least one automated test or documented repeatable verification.
 
 ## Ollama Integration

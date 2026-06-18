@@ -307,6 +307,7 @@ Provide a local chat interface for reviewers to ask questions and see assistant 
 - Implement typed `ChatRequest` and `ChatResponse` DTOs that map to and from `UserQuestion` and `AssistantAnswer`.
 - Keep the controller thin: parse the request, call one application service, and map the result. No routing, source selection, or port decisions in the controller.
 - Implement a simple single-turn local Chat Interface as a separate Astro frontend (`chat-ui/`). Each request sends only the current question; no server-side chat history and no prior-turn payload.
+- **Supersession (Chat Interface improvements):** the Phase 6 out-of-scope item “no client-side turn history” is superseded by a browser-only **session display** — prior turns stay visible in the Chat Interface for the current session but are not sent to the Assistant API. See [docs/ai/chat-interface-improvements.md](../ai/chat-interface-improvements.md).
 - Keep `assistant-app` API-only (JSON REST). Do not serve HTML from Spring; the Chat Interface calls the Assistant API over HTTP with CORS configured for the local Astro dev origin.
 - Display assistant responses, source metadata, and source-unavailable messages clearly in the Astro UI.
 - Avoid exposing stack traces, secrets, or local environment details in normal responses.
