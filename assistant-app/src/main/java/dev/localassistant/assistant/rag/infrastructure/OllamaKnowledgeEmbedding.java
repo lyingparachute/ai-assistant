@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.llm.EmbeddingPort;
-import dev.localassistant.assistant.llm.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.port.outbound.EmbeddingPort;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

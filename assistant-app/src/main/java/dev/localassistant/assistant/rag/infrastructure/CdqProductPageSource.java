@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.rag.ProductPageResult;
+import dev.localassistant.assistant.rag.domain.ProductPageResult;
 import dev.localassistant.assistant.rag.domain.port.outbound.ProductPageSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;

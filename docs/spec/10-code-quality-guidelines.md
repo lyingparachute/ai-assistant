@@ -83,7 +83,7 @@ public class WeatherReport {
 - Use constructor injection. No field injection (`@Autowired` on fields) and no setter injection in production code.
 - Bind configuration with typed `@ConfigurationProperties` classes (for example `AssistantProperties`, `CountriesMcpProperties`). Avoid scattered `@Value`.
 - Controllers are inbound adapters: parse the request, call one application service, map the result to a response. No routing decisions, no source selection, no orchestration.
-- Spring AI and Ollama usage is allowed only in outbound adapters and configuration, behind `LlmPort` (ADR `0001`). Spring AI types must not appear in domain or application code.
+- Spring AI and Ollama usage is allowed only in feature infrastructure and configuration, behind `LlmPort` for synthesis or the RAG embedding port (ADR `0001`). Spring AI types must not appear in domain or application code.
 - Use profiles for local runtime variants. Keep secrets and machine-specific values out of committed property files.
 
 Disallowed:
@@ -91,8 +91,8 @@ Disallowed:
 ```java
 @RestController
 class ChatController {
-    @Autowired CountriesPort countries;   // field injection
-    @Autowired WeatherPort weather;
+    @Autowired ResolveCountryFacts countryFacts;   // field injection
+    @Autowired ResolveWeatherObservation weather;
 
     @PostMapping("/chat")
     String chat(@RequestBody String q) {
@@ -106,7 +106,7 @@ class ChatController {
 Follow the module and package structure in `docs/spec/05-architecture.md`.
 
 - Modules: `assistant-app`, `countries-mcp-server`, `e2e-tests`, and `shared-kernel` only when a concrete cross-module type exists.
-- Package by business capability first (`question`, `orchestration`, `rag`, `tools`, `llm`), then by adapter (`adapters/inbound/http`, `adapters/outbound/ollama`).
+- Package by business capability first (`question`, `orchestration`, `rag`, `countryfacts`, `weather`, `synthesis`, `shared`), then by slice boundary (`domain`, `domain.port.inbound`, `domain.port.outbound`, `infrastructure`, `api`).
 - Dependency direction points inward:
   - inbound adapter -> application service -> port (interface owned by the application);
   - outbound adapter implements a port and is wired by configuration.
@@ -114,7 +114,7 @@ Follow the module and package structure in `docs/spec/05-architecture.md`.
 - `assistant-app` may depend on `shared-kernel` when that conditional module exists. It must not depend on `countries-mcp-server` internals.
 - `shared-kernel` is conditional and stays small: created only when a concrete cross-module type exists, holding only concepts stable across modules.
 
-Allowed dependency: `OllamaLlmAdapter implements LlmPort`, with all Spring AI types confined to that adapter.
+Allowed dependency: `synthesis.infrastructure.OllamaLlmAdapter implements LlmPort`, with all Spring AI chat types confined to synthesis infrastructure.
 
 Disallowed dependency: a domain `AssistantAnswer` importing a Spring AI or HTTP response type.
 
@@ -171,7 +171,7 @@ Follow `docs/spec/05-architecture.md` section 9 and ADR `0004`.
 - Recovery hints state what can be done next: available options, corrected ranges, or a "did you mean" suggestion for likely typos.
 - The countries MCP server uses a small layered structure: core server factory, one tool class per semantic tool, schema definitions, REST Countries service classes, typed error helpers, configuration from environment or local profile.
 - Lifecycle: initialize before emitting MCP notifications or logs, handle SIGINT/SIGTERM cleanly, and apply call timeouts. Local startup is declarative (for example a `.mcp.json` entry with command, args, env, and working directory).
-- MCP SDK types stay inside adapters. The assistant application sees only `CountriesPort` and `WeatherPort`.
+- MCP SDK types stay inside adapters. The assistant application sees only `ResolveCountryFacts` and `ResolveWeatherObservation`.
 - Source routing for required demo questions is deterministic in application code. Any future tool loop needs a max-turn limit, timeout, cancellation, and typed `{ ok, error, hint }` results.
 
 ## 9. Testing Rules

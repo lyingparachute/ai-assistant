@@ -1,8 +1,8 @@
 package dev.localassistant.assistant.support;
 
-import dev.localassistant.assistant.llm.LlmPort;
-import dev.localassistant.assistant.rag.RagRetrievalPolicy;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.synthesis.domain.port.outbound.LlmPort;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;

@@ -1,6 +1,6 @@
 # Weather MCP Tool Contract
 
-Captured from `semdin/mcp-weather` (`src/index.ts` on GitHub `main` as of Phase 3). The assistant consumes this server through `WeatherMcpClientAdapter` behind `WeatherPort`.
+Captured from `semdin/mcp-weather` (`src/index.ts` on GitHub `main` as of Phase 3). The assistant consumes this server through `WeatherMcpClientAdapter` behind `ResolveWeatherObservation`.
 
 ## MCP Transport
 
@@ -48,7 +48,7 @@ Transport or tool exceptions may surface as MCP tool errors.
 
 | Port | Method | Input | Output |
 | --- | --- | --- | --- |
-| `WeatherPort` | `currentWeather` | Non-blank city/location name | `ToolExecutionResult<WeatherReport>` |
+| `ResolveWeatherObservation` | `execute(Command)` | Non-blank `Location` | `ToolExecutionResult<WeatherReport>` |
 
 ### Value object: `WeatherReport`
 
@@ -58,7 +58,7 @@ Transport or tool exceptions may surface as MCP tool errors.
 | `temperature` | `Temperature` | Celsius from parsed text |
 | `timestamp` | `WeatherTimestamp` | `Retrieved` for this server contract |
 
-Blank location → `ToolError` (`location is required`) without MCP call.
+Blank location is rejected by `Location` before the MCP adapter is called.
 
 ### Outcome mapping
 
@@ -95,4 +95,4 @@ Subprocess cwd is not configurable; see the shared note in
 
 ## Test fixtures
 
-Controlled fixtures under `assistant-app/src/test/resources/fixtures/mcp/weather/`. Automated tests stub `McpToolInvoker` responses; they do not call live weather APIs.
+Controlled fixtures under `assistant-app/src/test/resources/fixtures/mcp/weather/`. Automated tests stub `shared.mcp.McpToolInvoker` responses; they do not call live weather APIs.

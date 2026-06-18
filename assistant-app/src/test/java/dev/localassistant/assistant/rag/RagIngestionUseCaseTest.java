@@ -1,10 +1,17 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.adapters.outbound.pgvector.support.DeterministicTestEmbeddingAdapter;
-import dev.localassistant.assistant.llm.EmbeddingPort;
-import dev.localassistant.assistant.llm.EmbeddingResult;
+import dev.localassistant.assistant.rag.infrastructure.support.DeterministicTestEmbeddingAdapter;
+import dev.localassistant.assistant.rag.domain.port.outbound.EmbeddingPort;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.ChunkStorageOutcome;
+import dev.localassistant.assistant.rag.domain.DeterministicTextChunker;
 import dev.localassistant.assistant.rag.domain.RagIngestion;
 import dev.localassistant.assistant.rag.domain.KnowledgeSimilarityMatch;
+import dev.localassistant.assistant.rag.domain.ProductPageResult;
+import dev.localassistant.assistant.rag.domain.RagChunk;
+import dev.localassistant.assistant.rag.domain.RagIngestionReport;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.StoredSourceState;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;

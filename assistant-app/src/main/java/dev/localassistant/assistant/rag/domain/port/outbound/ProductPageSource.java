@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.rag.domain.port.outbound;
 
-import dev.localassistant.assistant.rag.ProductPageResult;
+import dev.localassistant.assistant.rag.domain.ProductPageResult;
 
 public interface ProductPageSource {
 

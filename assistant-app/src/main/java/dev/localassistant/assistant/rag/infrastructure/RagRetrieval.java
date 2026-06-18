@@ -1,8 +1,8 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.llm.EmbeddingResult;
-import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;

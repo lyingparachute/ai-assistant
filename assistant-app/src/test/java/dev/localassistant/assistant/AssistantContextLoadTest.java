@@ -1,7 +1,7 @@
 package dev.localassistant.assistant;
 
 import dev.localassistant.assistant.adapters.inbound.http.ChatController;
-import dev.localassistant.assistant.adapters.outbound.mcp.McpToolInvoker;
+import dev.localassistant.assistant.shared.mcp.McpToolInvoker;
 import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
 import dev.localassistant.assistant.support.ChatPathPortStubs;
 import org.junit.jupiter.api.Test;

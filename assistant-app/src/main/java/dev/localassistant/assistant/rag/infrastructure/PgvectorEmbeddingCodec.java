@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.rag.EmbeddingDimensions;
+import dev.localassistant.assistant.rag.domain.EmbeddingDimensions;
 import lombok.experimental.UtilityClass;
 
 import java.util.Locale;

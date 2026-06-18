@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.rag.RagChunk;
-import dev.localassistant.assistant.rag.StoredSourceState;
+import dev.localassistant.assistant.rag.domain.RagChunk;
+import dev.localassistant.assistant.rag.domain.StoredSourceState;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 

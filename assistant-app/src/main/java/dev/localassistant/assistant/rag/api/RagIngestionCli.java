@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.rag.api;
 
 import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
-import dev.localassistant.assistant.rag.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;

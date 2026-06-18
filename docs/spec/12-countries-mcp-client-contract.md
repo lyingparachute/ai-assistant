@@ -6,9 +6,9 @@ Assistant-side mapping for the `country_lookup` tool defined in `docs/spec/11-co
 
 | Port | Method | Input | Output |
 | --- | --- | --- | --- |
-| `CountriesPort` | `lookupCountry` | Non-blank English country or capital name | `ToolExecutionResult<CountryInfo>` |
+| `ResolveCountryFacts` | `execute(Command)` | Non-blank English country or capital name | `ToolExecutionResult<CountryInfo>` |
 
-Blank input is rejected at the port boundary as `ToolError` with category `name is required` (no MCP call).
+Blank input is rejected by `ResolveCountryFacts.Command` before the MCP adapter is called.
 
 ## Value object: `CountryInfo`
 
@@ -67,7 +67,7 @@ Constructed only from a successful tool envelope. Population must be non-negativ
 
 ## Adapter behavior
 
-1. Validate non-blank `name` before MCP call.
+1. Validate and normalize non-blank `Command.name` before MCP call.
 2. Invoke `country_lookup` through `McpToolInvoker`.
 3. Parse the first text content block as JSON.
 4. When `ok` is true, require all `data` fields; missing fields → `SourceUnavailable` (`malformed countries tool payload`).
@@ -101,4 +101,4 @@ Secrets must not be committed. Assignment defaults may live in `application.yml`
 
 ## Test fixtures
 
-Controlled fixtures live under `assistant-app/src/test/resources/fixtures/mcp/countries/`. Tests use `McpToolInvoker` stubs; they do not spawn the countries server or call REST Countries.
+Controlled fixtures live under `assistant-app/src/test/resources/fixtures/mcp/countries/`. Tests use `shared.mcp.McpToolInvoker` stubs; they do not spawn the countries server or call REST Countries.

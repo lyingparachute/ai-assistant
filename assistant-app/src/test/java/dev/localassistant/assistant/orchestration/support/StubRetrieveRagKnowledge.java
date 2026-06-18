@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.orchestration.support;
 
-import dev.localassistant.assistant.rag.RagRetrievalPolicy;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
 
 import java.util.Objects;

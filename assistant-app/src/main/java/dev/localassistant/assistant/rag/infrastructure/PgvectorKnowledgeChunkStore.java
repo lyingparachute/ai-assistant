@@ -1,11 +1,11 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.rag.ChunkStorageOutcome;
-import dev.localassistant.assistant.rag.RagIngestionReport;
-import dev.localassistant.assistant.rag.StoredSourceState;
+import dev.localassistant.assistant.rag.domain.ChunkStorageOutcome;
+import dev.localassistant.assistant.rag.domain.RagIngestionReport;
+import dev.localassistant.assistant.rag.domain.StoredSourceState;
 import dev.localassistant.assistant.rag.domain.KnowledgeSimilarityMatch;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;
-import dev.localassistant.assistant.tools.SourceUnavailability;
+import dev.localassistant.assistant.shared.SourceUnavailability;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;

@@ -1,14 +1,18 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
-import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
-import dev.localassistant.assistant.support.LlmPortStub;
-import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
-import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorTestConfiguration;
+import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.rag.infrastructure.PgvectorTestConfiguration;
 import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
+import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
+import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
+import dev.localassistant.assistant.support.LlmPortStub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

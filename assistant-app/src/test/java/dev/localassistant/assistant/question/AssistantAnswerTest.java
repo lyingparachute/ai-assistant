@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.question;
 
-import dev.localassistant.assistant.tools.CountryInfo;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

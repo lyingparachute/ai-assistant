@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.rag.domain.port.outbound;
 
-import dev.localassistant.assistant.llm.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
 
 public interface KnowledgeEmbedding {
 

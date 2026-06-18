@@ -1,12 +1,12 @@
 package dev.localassistant.assistant.question;
 
-import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.tools.CountryInfo;
-import dev.localassistant.assistant.tools.Location;
-import dev.localassistant.assistant.tools.SourceUnavailability;
-import dev.localassistant.assistant.tools.Temperature;
-import dev.localassistant.assistant.tools.WeatherReport;
-import dev.localassistant.assistant.tools.WeatherTimestamp;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
+import dev.localassistant.assistant.weather.domain.Location;
+import dev.localassistant.assistant.shared.SourceUnavailability;
+import dev.localassistant.assistant.weather.domain.Temperature;
+import dev.localassistant.assistant.weather.domain.WeatherReport;
+import dev.localassistant.assistant.weather.domain.WeatherTimestamp;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

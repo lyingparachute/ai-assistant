@@ -4,10 +4,10 @@ import dev.localassistant.assistant.question.AnswerSource;
 import dev.localassistant.assistant.question.ConversationTurn;
 import dev.localassistant.assistant.question.SourceContributionStatus;
 import dev.localassistant.assistant.question.UserQuestion;
-import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.tools.CountryInfo;
-import dev.localassistant.assistant.tools.WeatherReport;
-import dev.localassistant.assistant.tools.WeatherTimestamp;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
+import dev.localassistant.assistant.weather.domain.WeatherReport;
+import dev.localassistant.assistant.weather.domain.WeatherTimestamp;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
