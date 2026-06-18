@@ -1,22 +1,23 @@
 package dev.localassistant.assistant.orchestration;
 
-import dev.localassistant.assistant.llm.LlmPort;
-import dev.localassistant.assistant.llm.LlmResult;
-import dev.localassistant.assistant.llm.PromptContext;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
+import dev.localassistant.assistant.countryfacts.domain.port.inbound.ResolveCountryFacts;
+import dev.localassistant.assistant.synthesis.domain.port.outbound.LlmPort;
+import dev.localassistant.assistant.synthesis.domain.LlmResult;
+import dev.localassistant.assistant.synthesis.domain.PromptContext;
 import dev.localassistant.assistant.question.AssistantAnswer;
 import dev.localassistant.assistant.question.ConversationTurn;
 import dev.localassistant.assistant.question.SourceContributionStatus;
 import dev.localassistant.assistant.question.UserQuestion;
-import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.rag.RagRetrievalPolicy;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
-import dev.localassistant.assistant.tools.CountriesPort;
-import dev.localassistant.assistant.tools.CountryInfo;
-import dev.localassistant.assistant.tools.SourceUnavailability;
-import dev.localassistant.assistant.tools.ToolExecutionResult;
-import dev.localassistant.assistant.tools.WeatherPort;
-import dev.localassistant.assistant.tools.WeatherReport;
+import dev.localassistant.assistant.shared.SourceUnavailability;
+import dev.localassistant.assistant.shared.ToolExecutionResult;
+import dev.localassistant.assistant.weather.domain.Location;
+import dev.localassistant.assistant.weather.domain.WeatherReport;
+import dev.localassistant.assistant.weather.domain.port.inbound.ResolveWeatherObservation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +37,8 @@ public final class AnswerQuestionUseCase {
             "Answer using only the grounded product knowledge snippets. "
                     + "Do not invent product features not supported by the snippets.";
 
-    private final CountriesPort countriesPort;
-    private final WeatherPort weatherPort;
+    private final ResolveCountryFacts resolveCountryFacts;
+    private final ResolveWeatherObservation resolveWeatherObservation;
     private final RetrieveRagKnowledge retrieveRagKnowledge;
     private final LlmPort llmPort;
     private final SourceRoutingPolicy sourceRoutingPolicy;
@@ -45,15 +46,15 @@ public final class AnswerQuestionUseCase {
     private final RagRetrievalPolicy ragRetrievalPolicy;
 
     public AnswerQuestionUseCase(
-            CountriesPort countriesPort,
-            WeatherPort weatherPort,
+            ResolveCountryFacts resolveCountryFacts,
+            ResolveWeatherObservation resolveWeatherObservation,
             RetrieveRagKnowledge retrieveRagKnowledge,
             LlmPort llmPort,
             SourceRoutingPolicy sourceRoutingPolicy,
             ResponseComposer responseComposer,
             RagRetrievalPolicy ragRetrievalPolicy) {
-        this.countriesPort = countriesPort;
-        this.weatherPort = weatherPort;
+        this.resolveCountryFacts = resolveCountryFacts;
+        this.resolveWeatherObservation = resolveWeatherObservation;
         this.retrieveRagKnowledge = retrieveRagKnowledge;
         this.llmPort = llmPort;
         this.sourceRoutingPolicy = sourceRoutingPolicy;
@@ -103,9 +104,9 @@ public final class AnswerQuestionUseCase {
 
     private AssistantAnswer handleWeatherLocation(
             RoutedQuestion.WeatherOnly routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
-        final var location = routed.weatherLocation().city();
         trace.portInvoked(WEATHER_PORT_NAME);
-        final var result = weatherPort.currentWeather(location);
+        final var result = resolveWeatherObservation.execute(
+                new ResolveWeatherObservation.Command(routed.weatherLocation()));
         recordWeatherOutcome(sink, result);
         return switch (result) {
             case ToolExecutionResult.Success<WeatherReport>(var weatherReport) ->
@@ -133,7 +134,8 @@ public final class AnswerQuestionUseCase {
     private AssistantAnswer continueWithWeather(
             CountryInfo countryInfo, AssistantRequestTrace trace, AssistantResponseSink sink) {
         trace.portInvoked(WEATHER_PORT_NAME);
-        final var weatherResult = weatherPort.currentWeather(countryInfo.capital());
+        final var weatherResult = resolveWeatherObservation.execute(
+                new ResolveWeatherObservation.Command(Location.of(countryInfo.capital())));
         recordWeatherOutcome(sink, weatherResult);
         return switch (weatherResult) {
             case ToolExecutionResult.Success<WeatherReport>(var weatherReport) ->
@@ -253,7 +255,7 @@ public final class AnswerQuestionUseCase {
     private ToolExecutionResult<CountryInfo> lookupCountry(
             String lookupKey, AssistantRequestTrace trace, AssistantResponseSink sink) {
         trace.portInvoked(COUNTRIES_PORT_NAME);
-        final var result = countriesPort.lookupCountry(lookupKey);
+        final var result = resolveCountryFacts.execute(new ResolveCountryFacts.Command(lookupKey));
         sink.recordSourceOutcome(SourceType.COUNTRIES_FACTS, statusFor(result));
         return result;
     }

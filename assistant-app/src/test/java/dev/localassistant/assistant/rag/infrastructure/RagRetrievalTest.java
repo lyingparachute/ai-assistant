@@ -1,9 +1,9 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.llm.EmbeddingResult;
-import dev.localassistant.assistant.rag.EmbeddingDimensions;
-import dev.localassistant.assistant.rag.RagRetrievalPolicy;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.EmbeddingDimensions;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.KnowledgeSimilarityMatch;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;

@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.orchestration;
 
 import dev.localassistant.assistant.question.UserQuestion;
-import dev.localassistant.assistant.tools.Location;
+import dev.localassistant.assistant.weather.domain.Location;
 import java.util.Locale;
 
 public final class SourceRoutingPolicy {

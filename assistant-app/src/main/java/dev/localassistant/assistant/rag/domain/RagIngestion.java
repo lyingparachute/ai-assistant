@@ -1,15 +1,6 @@
 package dev.localassistant.assistant.rag.domain;
 
-import dev.localassistant.assistant.llm.EmbeddingResult;
-import dev.localassistant.assistant.rag.ChunkStorageOutcome;
-import dev.localassistant.assistant.rag.ContentHasher;
-import dev.localassistant.assistant.rag.DeterministicTextChunker;
-import dev.localassistant.assistant.rag.ProductPageResult;
-import dev.localassistant.assistant.rag.RagChunk;
-import dev.localassistant.assistant.rag.RagIngestionReport;
-import dev.localassistant.assistant.rag.RagIngestionResult;
-import dev.localassistant.assistant.rag.StoredSourceState;
-import dev.localassistant.assistant.rag.TextChunk;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;

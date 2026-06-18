@@ -1,14 +1,14 @@
 package dev.localassistant.assistant.orchestration;
 
-import dev.localassistant.assistant.llm.LlmResult;
+import dev.localassistant.assistant.synthesis.domain.LlmResult;
 import dev.localassistant.assistant.question.AnswerSource;
 import dev.localassistant.assistant.question.AssistantAnswer;
-import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.tools.CountryInfo;
-import dev.localassistant.assistant.tools.SourceUnavailability;
-import dev.localassistant.assistant.tools.Temperature;
-import dev.localassistant.assistant.tools.WeatherReport;
-import dev.localassistant.assistant.tools.WeatherTimestamp;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
+import dev.localassistant.assistant.shared.SourceUnavailability;
+import dev.localassistant.assistant.weather.domain.Temperature;
+import dev.localassistant.assistant.weather.domain.WeatherReport;
+import dev.localassistant.assistant.weather.domain.WeatherTimestamp;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;

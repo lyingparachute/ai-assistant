@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.rag.domain.port.inbound;
 
-import dev.localassistant.assistant.rag.RagRetrievalPolicy;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 
 import java.util.Objects;
 

@@ -1,14 +1,14 @@
 package dev.localassistant.assistant.orchestration.support;
 
-import dev.localassistant.assistant.tools.CountriesPort;
-import dev.localassistant.assistant.tools.CountryInfo;
-import dev.localassistant.assistant.tools.ToolExecutionResult;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
+import dev.localassistant.assistant.countryfacts.domain.port.inbound.ResolveCountryFacts;
+import dev.localassistant.assistant.shared.ToolExecutionResult;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public final class StubCountriesPort implements CountriesPort {
+public final class StubCountriesPort implements ResolveCountryFacts {
 
     private final Map<String, ToolExecutionResult<CountryInfo>> responses = new HashMap<>();
     private int invocationCount;
@@ -19,8 +19,9 @@ public final class StubCountriesPort implements CountriesPort {
     }
 
     @Override
-    public ToolExecutionResult<CountryInfo> lookupCountry(String name) {
+    public ToolExecutionResult<CountryInfo> execute(ResolveCountryFacts.Command command) {
         invocationCount++;
+        final var name = command.name();
         ToolExecutionResult<CountryInfo> result = responses.get(name);
         if (result == null) {
             return new ToolExecutionResult.SourceUnavailable<>(

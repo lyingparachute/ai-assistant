@@ -11,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
  * Deterministic chunking window bound from {@code assistant.rag}.
  * <p>
  * The cross-field invariant is validated at the config boundary so a misconfiguration fails
- * context startup with a key-named message. {@link dev.localassistant.assistant.rag.DeterministicTextChunker}
+ * context startup with a key-named message. {@link dev.localassistant.assistant.rag.domain.DeterministicTextChunker}
  * keeps the same invariant as a value-object constructor guard (defense in depth): it is also
  * constructed directly in tests, so it must stay valid by construction.
  */

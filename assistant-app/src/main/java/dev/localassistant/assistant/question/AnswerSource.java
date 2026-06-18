@@ -1,9 +1,9 @@
 package dev.localassistant.assistant.question;
 
-import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.tools.CountryInfo;
-import dev.localassistant.assistant.tools.SourceUnavailability;
-import dev.localassistant.assistant.tools.WeatherReport;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
+import dev.localassistant.assistant.shared.SourceUnavailability;
+import dev.localassistant.assistant.weather.domain.WeatherReport;
 
 import java.util.List;
 import java.util.Objects;

@@ -1,8 +1,8 @@
 package dev.localassistant.assistant.rag.domain.port.outbound;
 
-import dev.localassistant.assistant.rag.ChunkStorageOutcome;
-import dev.localassistant.assistant.rag.RagChunk;
-import dev.localassistant.assistant.rag.StoredSourceState;
+import dev.localassistant.assistant.rag.domain.ChunkStorageOutcome;
+import dev.localassistant.assistant.rag.domain.RagChunk;
+import dev.localassistant.assistant.rag.domain.StoredSourceState;
 import dev.localassistant.assistant.rag.domain.KnowledgeSimilarityMatch;
 
 import java.util.List;

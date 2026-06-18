@@ -3,7 +3,7 @@ package dev.localassistant.assistant.rag.infrastructure.config;
 import dev.localassistant.assistant.config.AssistantRagChunkingProperties;
 import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
 import dev.localassistant.assistant.config.AssistantRagStorageProperties;
-import dev.localassistant.assistant.rag.DeterministicTextChunker;
+import dev.localassistant.assistant.rag.domain.DeterministicTextChunker;
 import dev.localassistant.assistant.rag.domain.RagIngestion;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;

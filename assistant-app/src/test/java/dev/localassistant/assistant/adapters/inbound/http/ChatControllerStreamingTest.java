@@ -9,7 +9,7 @@ import dev.localassistant.assistant.question.AnswerSource;
 import dev.localassistant.assistant.question.AssistantAnswer;
 import dev.localassistant.assistant.question.ConversationTurn;
 import dev.localassistant.assistant.question.UserQuestion;
-import dev.localassistant.assistant.tools.CountryInfo;
+import dev.localassistant.assistant.countryfacts.domain.CountryInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

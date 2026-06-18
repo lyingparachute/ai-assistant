@@ -4,7 +4,7 @@ Local-first AI Assistant: an Astro Chat Interface calls a Spring Boot API that c
 
 ## Architecture
 
-The backend follows Hexagonal Architecture as described in [docs/spec/05-architecture.md](docs/spec/05-architecture.md) and ADR `0005`. The Assistant API maps HTTP SSE requests into an application use case. The application depends on ports (`LlmPort`, `RagKnowledgePort`, `CountriesPort`, `WeatherPort`), while adapters hide Ollama, pgvector, REST Countries, WeatherAPI, and MCP runtime details. The Chat Interface talks to `POST /api/chat` over Server-Sent Events; the terminal `final` event is the authoritative answer.
+The backend follows Hexagonal Architecture as described in [docs/spec/05-architecture.md](docs/spec/05-architecture.md) and ADR `0005`. The Assistant API maps HTTP SSE requests into an application use case. The application depends on feature ports (`LlmPort`, `RetrieveRagKnowledge`, `ResolveCountryFacts`, `ResolveWeatherObservation`), while adapters hide Ollama, pgvector, REST Countries, WeatherAPI, and MCP runtime details. The Chat Interface talks to `POST /api/chat` over Server-Sent Events; the terminal `final` event is the authoritative answer.
 
 Modules:
 

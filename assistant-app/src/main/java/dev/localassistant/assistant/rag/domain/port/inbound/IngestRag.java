@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.rag.domain.port.inbound;
 
-import dev.localassistant.assistant.rag.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
 
 public interface IngestRag {
 
