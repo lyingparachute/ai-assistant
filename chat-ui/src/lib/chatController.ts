@@ -44,6 +44,8 @@ export interface ChatController {
   getTurnStatus(index: number): TurnStatus | undefined;
 }
 
+const TERMINAL_TURN_STATUSES: readonly TurnStatus[] = ['complete', 'aborted', 'error'];
+
 export function createChatController(callbacks: ChatControllerCallbacks = {}): ChatController {
   const session = createSession();
   let activeTurnIndex: number | null = null;
@@ -54,6 +56,17 @@ export function createChatController(callbacks: ChatControllerCallbacks = {}): C
     if (turn) {
       callbacks.onTurnUpdated?.(turn, index);
     }
+  };
+
+  const shouldIgnoreStreamEvent = (index: number): boolean => {
+    if (index !== activeTurnIndex) {
+      return true;
+    }
+    const turn = getTurns(session)[index];
+    if (!turn) {
+      return true;
+    }
+    return TERMINAL_TURN_STATUSES.includes(turn.status);
   };
 
   const clearActiveStream = (): void => {
@@ -105,6 +118,9 @@ export function createChatController(callbacks: ChatControllerCallbacks = {}): C
     },
 
     handleTrace(index: number, payload: TraceEventPayload): void {
+      if (shouldIgnoreStreamEvent(index)) {
+        return;
+      }
       const turn = getTurns(session)[index];
       if (!turn) {
         return;
@@ -117,6 +133,9 @@ export function createChatController(callbacks: ChatControllerCallbacks = {}): C
     },
 
     handleToken(index: number, payload: TokenEventPayload): void {
+      if (shouldIgnoreStreamEvent(index)) {
+        return;
+      }
       const turn = getTurns(session)[index];
       if (!turn) {
         return;
@@ -130,6 +149,9 @@ export function createChatController(callbacks: ChatControllerCallbacks = {}): C
     },
 
     handleFinal(index: number, response: ChatResponse): void {
+      if (shouldIgnoreStreamEvent(index)) {
+        return;
+      }
       updateTurn(session, index, {
         status: 'complete',
         finalResponse: response,
@@ -143,6 +165,9 @@ export function createChatController(callbacks: ChatControllerCallbacks = {}): C
     },
 
     handleStreamError(index: number, payload: ApiErrorResponse): void {
+      if (shouldIgnoreStreamEvent(index)) {
+        return;
+      }
       updateTurn(session, index, {
         status: 'error',
         errorKind: 'stream-error',
@@ -156,6 +181,9 @@ export function createChatController(callbacks: ChatControllerCallbacks = {}): C
     },
 
     handleConnectionError(index: number, message: string): void {
+      if (shouldIgnoreStreamEvent(index)) {
+        return;
+      }
       updateTurn(session, index, {
         status: 'error',
         errorKind: 'connection-error',

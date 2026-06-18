@@ -103,11 +103,7 @@ import { demoQuestions } from '../lib/demoQuestions';
       });
 
       const controller = createChatController({
-        onTurnUpdated: (_turn, index) => {
-          const turn = controller.session.turns[index];
-          if (turn?.status === 'error' && turn.errorKind === 'validation-error') {
-            return;
-          }
+        onTurnUpdated: () => {
           dom.renderSession(controller.session, controller.activeTurnIndex);
         },
         onValidationError: (message) => {

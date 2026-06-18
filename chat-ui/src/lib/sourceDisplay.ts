@@ -1,5 +1,5 @@
 import { escapeHtml } from './htmlEscape';
-import { SOURCE_LABELS } from './sourceLabels';
+import { resolveSourceLabel } from './sourceLabels';
 import { statusBadgeClass } from './statusBadge';
 import type { SourceResponse } from './types';
 
@@ -76,12 +76,23 @@ export function renderSources(sources: SourceResponse[]): string {
             return renderRagKnowledge(source);
           case 'model_synthesis':
             return renderModelSynthesis(source);
+          default: {
+            const message =
+              'unavailableMessage' in source && typeof source.unavailableMessage === 'string'
+                ? source.unavailableMessage
+                : 'Source details unavailable';
+            const hint =
+              'unavailableHint' in source && typeof source.unavailableHint === 'string'
+                ? source.unavailableHint
+                : undefined;
+            return unavailableBlock(message, hint);
+          }
         }
       })();
 
       return `<article class="source-card">
         <header>
-          <h3>${escapeHtml(SOURCE_LABELS[source.type])}</h3>
+          <h3>${escapeHtml(resolveSourceLabel(source.type))}</h3>
           <span class="${statusBadgeClass(source.status)}">${escapeHtml(source.status)}</span>
         </header>
         ${body}

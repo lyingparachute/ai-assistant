@@ -154,4 +154,48 @@ describe('chatController', () => {
     expect(signal?.aborted).toBe(true);
     expect(controller.getStreamAbortSignal()).toBeUndefined();
   });
+
+  it('ignores late SSE events after user abort', () => {
+    const controller = createChatController();
+
+    const index = controller.submitQuestion('Abort then linger');
+    controller.markStreaming(index);
+    controller.handleTrace(index, { type: 'countries_facts', status: 'USED' });
+    controller.handleToken(index, { text: 'Partial ' });
+    controller.stopActiveTurn();
+
+    controller.handleTrace(index, { type: 'weather_observation', status: 'USED' });
+    controller.handleToken(index, { text: 'late token' });
+    controller.handleFinal(index, finalResponse);
+    controller.handleStreamError(index, { error: 'source_unavailable', message: 'Too late.' });
+    controller.handleConnectionError(index, 'Too late.');
+
+    const turn = controller.session.turns[index];
+    expect(turn?.status).toBe('aborted');
+    expect(turn?.traceSteps).toHaveLength(1);
+    expect(turn?.provisionalAnswerText).toBe('Partial ');
+  });
+
+  it('ignores late SSE events after supersede by a new question', () => {
+    const controller = createChatController();
+
+    const firstIndex = controller.submitQuestion('First');
+    controller.markStreaming(firstIndex);
+    controller.handleToken(firstIndex, { text: 'First ' });
+
+    const secondIndex = controller.submitQuestion('Second');
+    controller.markStreaming(secondIndex);
+
+    controller.handleToken(firstIndex, { text: 'stale token' });
+    controller.handleFinal(firstIndex, finalResponse);
+    controller.handleStreamError(firstIndex, {
+      error: 'source_unavailable',
+      message: 'Stale error.',
+    });
+
+    const firstTurn = controller.session.turns[firstIndex];
+    expect(firstTurn?.status).toBe('aborted');
+    expect(firstTurn?.provisionalAnswerText).toBe('First ');
+    expect(controller.activeTurnIndex).toBe(secondIndex);
+  });
 });

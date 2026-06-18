@@ -1,5 +1,5 @@
 import { escapeHtml } from './htmlEscape';
-import { SOURCE_LABELS } from './sourceLabels';
+import { resolveSourceLabel } from './sourceLabels';
 import { statusBadgeClass } from './statusBadge';
 import type { SourceContributionStatus, SourceType } from './types';
 
@@ -12,7 +12,7 @@ export interface TraceStep {
 
 export function renderTraceStep(step: TraceStep): string {
   return `<li class="trace-step">
-    <span class="trace-step-label">${escapeHtml(SOURCE_LABELS[step.type])}</span>
+    <span class="trace-step-label">${escapeHtml(resolveSourceLabel(step.type))}</span>
     <span class="trace-step-badge ${statusBadgeClass(step.status)}">${escapeHtml(step.status)}</span>
   </li>`;
 }

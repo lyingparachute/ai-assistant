@@ -205,4 +205,26 @@ describe('domAdapter', () => {
       response.answerText,
     );
   });
+
+  it('renders validation-error label in the thread', () => {
+    const elements = mountScaffold();
+    const dom = createDomAdapter(elements);
+    const controller = createChatController({
+      onTurnUpdated: () => {
+        dom.renderSession(controller.session, controller.activeTurnIndex);
+      },
+      onValidationError: (message) => {
+        dom.showValidationStatus(message);
+      },
+    });
+
+    const index = controller.submitQuestion('x'.repeat(5000));
+    controller.markStreaming(index);
+    controller.handleValidationError('Question is too long.', index);
+
+    expect(elements.messageThread.querySelectorAll('.turn')).toHaveLength(1);
+    expect(elements.messageThread.querySelector('.forming-hint')?.textContent).toBe(
+      'Question is too long.',
+    );
+  });
 });

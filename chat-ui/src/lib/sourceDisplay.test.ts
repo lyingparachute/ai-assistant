@@ -15,6 +15,33 @@ function assertNoExecutableMarkup(html: string): void {
   expect(html).toContain('&amp;');
 }
 
+describe('renderSources unknown types', () => {
+  it('falls back to the escaped raw type when no label exists', () => {
+    const html = renderSources([
+      {
+        type: 'future_source' as SourceResponse['type'],
+        status: 'UNAVAILABLE',
+        unavailableMessage: 'Not wired yet.',
+      } as SourceResponse,
+    ]);
+
+    expect(html).toContain('future_source');
+    expect(html).toContain('Not wired yet.');
+    expect(html).not.toContain('undefined');
+  });
+
+  it('falls back to Unknown source when type is empty', () => {
+    const html = renderSources([
+      {
+        type: '' as SourceResponse['type'],
+        status: 'UNAVAILABLE',
+      } as SourceResponse,
+    ]);
+
+    expect(html).toContain('Unknown source');
+  });
+});
+
 describe('renderSources escaping', () => {
   it('escapes a used countries_facts payload', () => {
     const sources: SourceResponse[] = [

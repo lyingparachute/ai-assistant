@@ -6,3 +6,11 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   rag_knowledge: 'RAG knowledge',
   model_synthesis: 'Model synthesis',
 };
+
+export function resolveSourceLabel(type: string): string {
+  const known = SOURCE_LABELS[type as SourceType];
+  if (known) {
+    return known;
+  }
+  return type.length > 0 ? type : 'Unknown source';
+}

@@ -53,6 +53,27 @@ describe('renderTraceTimeline badges', () => {
   });
 });
 
+describe('renderTraceTimeline unknown types', () => {
+  it('falls back to the escaped raw type when no label exists', () => {
+    const html = renderTraceStep({
+      type: 'future_source' as SourceType,
+      status: 'USED',
+    });
+
+    expect(html).toContain('future_source');
+    expect(html).not.toContain('undefined');
+  });
+
+  it('falls back to Unknown source when type is empty', () => {
+    const html = renderTraceStep({
+      type: '' as SourceType,
+      status: 'USED',
+    });
+
+    expect(html).toContain('Unknown source');
+  });
+});
+
 describe('renderTraceTimeline collapse', () => {
   it('collapses timelines longer than four steps', () => {
     const steps = Array.from({ length: 6 }, (_, index) => ({
