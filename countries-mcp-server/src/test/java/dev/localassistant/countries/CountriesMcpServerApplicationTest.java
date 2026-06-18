@@ -13,7 +13,7 @@ class CountriesMcpServerApplicationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(TestApplication.class)
             .withPropertyValues(
-                    "countries.mcp.rest-countries-base-url=https://restcountries.com/v3.1",
+                    "countries.mcp.rest-countries-base-url=https://api.restcountries.com/countries/v5",
                     "countries.mcp.rest-countries-timeout-seconds=10",
                     "countries.mcp.server-name=countries-mcp-server",
                     "countries.mcp.server-version=0.1.0-SNAPSHOT",
@@ -45,7 +45,7 @@ class CountriesMcpServerApplicationTest {
         new ApplicationContextRunner()
                 .withUserConfiguration(TestApplication.class)
                 .withPropertyValues(
-                        "countries.mcp.rest-countries-base-url=https://restcountries.com/v3.1",
+                        "countries.mcp.rest-countries-base-url=https://api.restcountries.com/countries/v5",
                         "countries.mcp.rest-countries-timeout-seconds=0",
                         "countries.mcp.server-name=countries-mcp-server",
                         "countries.mcp.server-version=0.1.0-SNAPSHOT",

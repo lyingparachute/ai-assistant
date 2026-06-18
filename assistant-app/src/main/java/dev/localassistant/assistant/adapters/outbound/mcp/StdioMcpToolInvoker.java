@@ -12,15 +12,18 @@ import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 @Component
 @Profile("!test & !ingest-rag")
@@ -28,10 +31,10 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(StdioMcpToolInvoker.class);
 
-    private static final List<String> WEATHER_ENV_PASSTHROUGH = List.of("WEATHER_API_KEY", "WEATHER_API_URL");
-
     private final Map<String, McpSyncClient> clientsByToolName;
 
+    // Two constructors exist; the (Map) one is test-only. @Autowired tells Spring which to inject.
+    @Autowired
     StdioMcpToolInvoker(AssistantMcpProperties assistantMcpProperties, ObjectMapper objectMapper) {
         this(Map.of(
                 assistantMcpProperties.countries().toolName(),
@@ -61,8 +64,11 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
                     .map(McpSchema.TextContent.class::cast)
                     .map(McpSchema.TextContent::text)
                     .toList();
-            return new McpToolResponse(textContents, result.isError());
+            // MCP spec: an absent isError field means the call was not an error.
+            boolean isError = Boolean.TRUE.equals(result.isError());
+            return new McpToolResponse(textContents, isError);
         } catch (RuntimeException exception) {
+            log.warn("MCP tool call failed for {}", toolName, exception);
             throw new McpToolInvocationException("MCP tool call failed for " + toolName, exception);
         }
     }
@@ -94,7 +100,7 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
 
         ServerParameters parameters = ServerParameters.builder(server.command())
                 .args(server.args().toArray(String[]::new))
-                .env(resolveProcessEnv(server))
+                .env(resolveProcessEnv(server, System::getenv))
                 .build();
         McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(objectMapper);
         StdioClientTransport transport = new StdioClientTransport(parameters, mcpJsonMapper);
@@ -106,22 +112,18 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
         return client;
     }
 
-    private static Map<String, String> resolveProcessEnv(AssistantMcpProperties.McpServer server) {
-        Map<String, String> env = new java.util.LinkedHashMap<>(server.env());
-        if (assistantMcpWeatherTool(server)) {
-            for (String key : WEATHER_ENV_PASSTHROUGH) {
-                if (!env.containsKey(key) || env.get(key).isBlank()) {
-                    String hostValue = System.getenv(key);
-                    if (hostValue != null && !hostValue.isBlank()) {
-                        env.put(key, hostValue);
-                    }
-                }
+    static Map<String, String> resolveProcessEnv(AssistantMcpProperties.McpServer server, Function<String, String> hostEnv) {
+        Map<String, String> env = new LinkedHashMap<>(server.env());
+        for (String key : server.envPassthrough()) {
+            String configured = env.get(key);
+            if (configured != null && !configured.isBlank()) {
+                continue;
+            }
+            String hostValue = hostEnv.apply(key);
+            if (hostValue != null && !hostValue.isBlank()) {
+                env.put(key, hostValue);
             }
         }
         return Map.copyOf(env);
-    }
-
-    private static boolean assistantMcpWeatherTool(AssistantMcpProperties.McpServer server) {
-        return "get-weather".equals(server.toolName());
     }
 }

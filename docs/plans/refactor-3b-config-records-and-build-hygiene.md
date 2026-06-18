@@ -1,6 +1,6 @@
 # ExecPlan — Config records, properties consolidation & build/script hygiene
 
-Status: draft — round-1 + round-2 critic reviewed; round-2 blockers resolved in the addendum below
+Status: landed — 2523554
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (R-9, X-C-3, X-C-4, X-C-5, X-C-6, X-C-7, M-3, M-4, S-1, S-2, S-3)
 Scope: `assistant-app` config package + resources; parent pom; `scripts/`; the dead MCP `working-directory`
@@ -95,19 +95,21 @@ unpinned remote repo and hardcode a versioned jar name in two places. None large
 
 ## Definition of Done (binary)
 
-- [ ] Every assistant-app `@ConfigurationProperties` is a constructor-bound record with `@DefaultValue`
+- [x] Every assistant-app `@ConfigurationProperties` is a constructor-bound record with `@DefaultValue`
       defaults; no setter-based config bean remains; each has a passing binding test (defaults + populated
-      round-trip, incl. nested `McpServer.args`/`env`).
-- [ ] `AssistantRagProperties` (or its split records) is `@EnableConfigurationProperties`-d in exactly one place.
-- [ ] `grep -c 11434 application.yml` ≤ 1 and `grep -rc 11434 assistant-app/src/main/java` ≤ 1; both embedding
-      and chat resolve the single value.
-- [ ] A misconfigured `chunk-overlap >= chunk-max-size` fails context startup with a message naming both keys
-      (binding test); `DeterministicTextChunker` no longer re-validates it.
-- [ ] `working-directory` removed from `AssistantMcpProperties`, both docs/spec sites, and all four yml lines;
-      `grep -rn "working-directory\|workingDirectory" assistant-app docs` returns only the new explanatory note.
-- [ ] `scripts/mcp-weather` pins an exact ref; `start-assistant.sh` + `application.yml` no longer both hardcode
-      the jar version string; `capture-demo-answers.sh` has no bare `python3` JSON dependency.
-- [ ] `./mvnw -o test` BUILD SUCCESS and hermetic.
+      round-trip + negative cases, incl. nested `McpServer.args`/`env`).
+- [x] `AssistantRagProperties` (split into Storage/Retrieval/Chunking records) is `@EnableConfigurationProperties`-d
+      in exactly one place (`RagApplicationConfiguration`).
+- [x] `grep -c 11434 application.yml` ≤ 1 and `grep -rc 11434 assistant-app/src/main/java` == 0; both embedding
+      and chat resolve the single `assistant.ollama.base-url` value via `${...}` placeholder.
+- [x] A misconfigured `chunk-overlap >= chunk-max-size` fails context startup with a message naming both keys
+      (binding test); per Round-2 [R2-3b-1] `DeterministicTextChunker` KEEPS its constructor guard (defense in depth).
+- [x] `working-directory` removed from `AssistantMcpProperties`, both docs/spec sites, and all four yml lines;
+      `grep -rn "working-directory\|workingDirectory" assistant-app docs/spec` clean (only the new explanatory note).
+- [x] `scripts/mcp-weather` pins an exact SHA; `start-assistant.sh` exports `COUNTRIES_MCP_JAR` (glob newest jar) and
+      `application.yml` uses `${COUNTRIES_MCP_JAR:...}` — version not double-hardcoded; `capture-demo-answers.sh`
+      guards `python3`/`curl` via `require_command` (no bare dependency).
+- [x] `./mvnw -o test` BUILD SUCCESS and hermetic (assistant-app 212, countries-mcp 18).
 
 ## Round-2 critic resolutions (authoritative; supersede the body where in conflict)
 

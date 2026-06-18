@@ -1,7 +1,5 @@
-correlationId=7b30e13e-5ad7-49f0-b357-05c3b34e5269
-route=COUNTRY_THEN_WEATHER
-portsInvoked=[CountriesPort]
-ragRetrievalCount=0
-outcome=country_then_weather_answered_sources=1
-sourceStatus=countries_facts:UNAVAILABLE
-note=WeatherPort not invoked because capital resolution failed
+event=assistant_request_started correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 questionLength=60
+event=assistant_route_selected correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 route=COUNTRY_THEN_WEATHER
+event=assistant_port_invoked correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 port=CountriesPort invocationOrder=1
+event=assistant_port_invoked correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 port=WeatherPort invocationOrder=2
+event=assistant_request_completed correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 route=COUNTRY_THEN_WEATHER portsInvoked=[CountriesPort, WeatherPort] ragRetrievalCount=0 outcome=country_then_weather_answered_sources=2

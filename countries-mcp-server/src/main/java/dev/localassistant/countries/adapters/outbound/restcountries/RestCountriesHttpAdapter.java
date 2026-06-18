@@ -21,7 +21,18 @@ import java.util.Optional;
 
 public final class RestCountriesHttpAdapter implements RestCountriesPort {
 
-    private static final String FIELDS_QUERY = "fields=name,capital,region,population";
+    private static final String NAME_PATH_PREFIX = "/names.common/";
+    private static final String CAPITAL_PATH_PREFIX = "/capitals/";
+    private static final String QUERY_SEPARATOR = "?";
+    private static final String FIELDS_QUERY = "response_fields=names.common,capitals,region,population";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final int HTTP_UNAUTHORIZED = 401;
+    private static final int HTTP_FORBIDDEN = 403;
+    private static final String MISSING_API_KEY_REASON =
+            "REST Countries API key is not configured; set REST_COUNTRIES_API_KEY";
+    private static final String UNAUTHORIZED_REASON =
+            "REST Countries rejected the API key (HTTP %d); check REST_COUNTRIES_API_KEY";
 
     private final CountriesMcpConfiguration configuration;
     private final HttpClient httpClient;
@@ -39,18 +50,23 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
 
     @Override
     public RestCountriesQueryResult findByName(LookupPlace place) {
-        return query("/name/" + encodePathSegment(place.value()));
+        return query(NAME_PATH_PREFIX + encodePathSegment(place.value()));
     }
 
     @Override
     public RestCountriesQueryResult findByCapital(LookupPlace place) {
-        return query("/capital/" + encodePathSegment(place.value()));
+        return query(CAPITAL_PATH_PREFIX + encodePathSegment(place.value()));
     }
 
     private RestCountriesQueryResult query(String path) {
-        URI uri = URI.create(trimTrailingSlash(configuration.restCountriesBaseUrl()) + path + "?" + FIELDS_QUERY);
+        if (!configuration.hasRestCountriesApiKey()) {
+            return new RestCountriesQueryResult.SourceUnavailable(MISSING_API_KEY_REASON);
+        }
+        URI uri = URI.create(
+                trimTrailingSlash(configuration.restCountriesBaseUrl()) + path + QUERY_SEPARATOR + FIELDS_QUERY);
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(configuration.restCountriesTimeoutSeconds()))
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + configuration.restCountriesApiKey())
                 .GET()
                 .build();
         try {
@@ -65,22 +81,22 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
     }
 
     private RestCountriesQueryResult mapResponse(int statusCode, String body) {
-        if (statusCode == 404) {
-            return new RestCountriesQueryResult.NotFound();
+        if (statusCode == HTTP_UNAUTHORIZED || statusCode == HTTP_FORBIDDEN) {
+            return new RestCountriesQueryResult.SourceUnavailable(UNAUTHORIZED_REASON.formatted(statusCode));
         }
         if (statusCode < 200 || statusCode >= 300) {
             return new RestCountriesQueryResult.SourceUnavailable("HTTP " + statusCode);
         }
         try {
-            JsonNode root = objectMapper.readTree(body);
-            if (!root.isArray()) {
-                return new RestCountriesQueryResult.SourceUnavailable("expected JSON array");
+            JsonNode objects = objectMapper.readTree(body).path("data").path("objects");
+            if (!objects.isArray()) {
+                return new RestCountriesQueryResult.SourceUnavailable("expected data.objects array");
             }
-            if (root.isEmpty()) {
+            if (objects.isEmpty()) {
                 return new RestCountriesQueryResult.NotFound();
             }
             List<CountryFacts> countries = new ArrayList<>();
-            for (JsonNode node : root) {
+            for (JsonNode node : objects) {
                 mapCountry(node).ifPresent(countries::add);
             }
             if (countries.isEmpty()) {
@@ -93,16 +109,33 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
     }
 
     private Optional<CountryFacts> mapCountry(JsonNode node) {
-        String countryName = node.path("name").path("common").asText(null);
-        JsonNode capitalNode = node.path("capital");
-        String capital = capitalNode.isArray() && !capitalNode.isEmpty()
-                ? capitalNode.get(0).asText(null)
-                : null;
-        String region = node.path("region").asText(null);
-        if (countryName == null || capital == null || region == null || !node.hasNonNull("population")) {
+        Optional<String> countryName = textValue(node.path("names").path("common"));
+        Optional<String> capital = selectCapital(node.path("capitals"));
+        Optional<String> region = textValue(node.path("region"));
+        if (countryName.isEmpty() || capital.isEmpty() || region.isEmpty() || !node.hasNonNull("population")) {
             return Optional.empty();
         }
-        return Optional.of(new CountryFacts(countryName, capital, region, node.path("population").asLong()));
+        return Optional.of(new CountryFacts(
+                countryName.get(), capital.get(), region.get(), node.path("population").asLong()));
+    }
+
+    private static Optional<String> selectCapital(JsonNode capitals) {
+        if (!capitals.isArray() || capitals.isEmpty()) {
+            return Optional.empty();
+        }
+        for (JsonNode capital : capitals) {
+            if (capital.path("attributes").path("primary").asBoolean(false)) {
+                return textValue(capital.path("name"));
+            }
+        }
+        return textValue(capitals.get(0).path("name"));
+    }
+
+    private static Optional<String> textValue(JsonNode node) {
+        if (node.isMissingNode() || node.isNull() || !node.isTextual()) {
+            return Optional.empty();
+        }
+        return Optional.of(node.asText());
     }
 
     private static String encodePathSegment(String value) {

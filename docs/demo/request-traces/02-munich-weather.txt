@@ -1,6 +1,4 @@
-correlationId=2758fef9-2b87-4144-8958-2f7b1e615c1e
-route=WEATHER_LOCATION
-portsInvoked=[WeatherPort]
-ragRetrievalCount=0
-outcome=weather_location_answered_sources=1
-sourceStatus=weather_observation:UNAVAILABLE
+event=assistant_request_started correlationId=11be1652-0635-4412-b55e-f7695be53ca0 questionLength=44
+event=assistant_route_selected correlationId=11be1652-0635-4412-b55e-f7695be53ca0 route=WEATHER_LOCATION
+event=assistant_port_invoked correlationId=11be1652-0635-4412-b55e-f7695be53ca0 port=WeatherPort invocationOrder=1
+event=assistant_request_completed correlationId=11be1652-0635-4412-b55e-f7695be53ca0 route=WEATHER_LOCATION portsInvoked=[WeatherPort] ragRetrievalCount=0 outcome=weather_location_answered_sources=1

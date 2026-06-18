@@ -1,6 +1,7 @@
 countries:
   mcp:
-    rest-countries-base-url: https://restcountries.com/v3.1
+    rest-countries-base-url: https://api.restcountries.com/countries/v5
+    rest-countries-api-key: ${REST_COUNTRIES_API_KEY:}
     rest-countries-timeout-seconds: 10
     request-timeout-seconds: 20
     server-name: countries-mcp-server

@@ -1,6 +1,6 @@
 # ExecPlan — countries-mcp-server structural cleanup
 
-Status: draft — round-1 + round-2 critic reviewed; round-2 blockers resolved in the addendum below
+Status: landed — 1efb9d9
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (C-1..C-8, C-10, C-11, C-12)
 Scope module: `countries-mcp-server` only. The MCP tool name (`country_lookup`), input schema, and output JSON
@@ -104,21 +104,21 @@ wrong-direction dependency. Behavior is covered by `CountryToolContractTest` (6)
 
 ## Definition of Done (binary)
 
-- [ ] `CountryLookupHints` deleted; `grep -rn "CountryLookupHints" countries-mcp-server/src` (whole src, not just
+- [x] `CountryLookupHints` deleted; `grep -rn "CountryLookupHints" countries-mcp-server/src` (whole src, not just
       main) returns nothing; hint strings declared once in `CountryToolErrors`.
-- [ ] `CountryLookupOutcome` variants carry no `hint` field.
-- [ ] `grep -rn "application\." countries-mcp-server/src/main/java/.../support` empty (no reach-up).
-- [ ] `CountriesApplicationService` deleted; `CountryLookupTool` depends on `LookupCountryUseCase`; the
+- [x] `CountryLookupOutcome` variants carry no `hint` field.
+- [x] `grep -rn "application\." countries-mcp-server/src/main/java/.../support` empty (no reach-up).
+- [x] `CountriesApplicationService` deleted; `CountryLookupTool` depends on `LookupCountryUseCase`; the
       duplicated NotFound/SourceUnavailable arms exist once. Affected tests updated and green.
-- [ ] `CountryToolContractTest` asserts the five hint/message strings by exact equality at their unchanged
+- [x] `CountryToolContractTest` asserts the five hint/message strings by exact equality at their unchanged
       literal values; `CountryLookupIntegrationTest` green.
-- [ ] `CountryToolResult` switches the outcome exactly once; no separate `isErrorOutcome` instanceof pass.
-- [ ] JSON-failure path is non-recursive and logs the cause to stderr.
-- [ ] `grep -n "\* 2L\|\* 2 " core/CountriesMcpServerFactory.java` empty; `countries.mcp.request-timeout-seconds`
-      exists (default 20, `@Positive`); docs/spec/11 config table updated.
-- [ ] A test asserts a country node missing `population` maps to source-unavailable, not a 0-population success.
-- [ ] assistant-app countries client contract test still passes (non-regression smoke).
-- [ ] `./mvnw -o -pl countries-mcp-server test` BUILD SUCCESS.
+- [x] `CountryToolResult` switches the outcome exactly once (via `ToolEnvelope`); no separate `isErrorOutcome` instanceof pass.
+- [x] JSON-failure path is non-recursive and logs the cause to stderr via SLF4J (logback STDERR appender).
+- [x] `grep -n "\* 2L\|\* 2 " core/CountriesMcpServerFactory.java` empty; `countries.mcp.request-timeout-seconds`
+      exists (default 20, `@Positive`, 5th component on `CountriesMcpConfiguration`); docs/spec/11 config table updated.
+- [x] A test asserts a country node missing `population` maps to source-unavailable, not a 0-population success.
+- [x] assistant-app countries client contract test still passes (non-regression smoke).
+- [x] `./mvnw -o -pl countries-mcp-server test` BUILD SUCCESS (21 tests); full reactor green.
 
 ## Tracked follow-up (out of scope here)
 

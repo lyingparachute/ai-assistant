@@ -56,6 +56,14 @@ _Avoid_: Model answer, generated result
 An assistant response that names an unavailable required source and refuses to invent the missing fact.
 _Avoid_: Fallback answer, best effort answer
 
+**Streamed Answer**:
+A Demo Answer delivered incrementally to the Chat Interface as Server-Sent Events while it is produced. The authoritative answer is the stream's terminal event; earlier token events are progressive and never stand as the final answer.
+_Avoid_: Chunked response, partial answer as final, typewriter effect
+
+**Source-Usage Trace**:
+A live, ordered account of which Knowledge Sources the assistant consulted for one request and each source's outcome (USED, UNAVAILABLE, INSUFFICIENT), surfaced to the Chat Interface as it happens.
+_Avoid_: Tool-call trace (RAG knowledge and Ollama synthesis are not tools), thinking, debug log, internal port names
+
 **RAG**:
 Retrieval-Augmented Generation using retrieved RAG knowledge as grounding context for model output.
 _Avoid_: Search, fine-tuning

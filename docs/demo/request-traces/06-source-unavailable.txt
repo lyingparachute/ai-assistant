@@ -1,0 +1,3 @@
+event=assistant_request_started correlationId=8cd26883-721c-4b7c-b54f-0b68b3519eb6 questionLength=37
+event=assistant_route_selected correlationId=8cd26883-721c-4b7c-b54f-0b68b3519eb6 route=UNSUPPORTED
+event=assistant_request_completed correlationId=8cd26883-721c-4b7c-b54f-0b68b3519eb6 route=UNSUPPORTED portsInvoked=[] ragRetrievalCount=0 outcome=unsupported_answered_sources=0

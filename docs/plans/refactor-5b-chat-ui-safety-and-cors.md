@@ -1,6 +1,6 @@
 # ExecPlan — Chat UI escaping safety, CORS typing & env documentation
 
-Status: draft — round-1 + round-2 critic reviewed; round-2 blocker resolved in the addendum below
+Status: landed — 34cbe46
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (H-9, H-10, H-8, H-11)
 Scope: `chat-ui/` (index.astro, sourceDisplay.ts, api.ts, .env.example) + `assistant-app`
@@ -66,13 +66,14 @@ literal. These are contained, frontend-leaning hygiene items with a small Java-c
 
 ## Definition of Done (binary)
 
-- [ ] `escapeHtml` escapes `&`, `<`, `>`, `"`, `'`; a test feeds an XSS payload through every render function and
-      asserts the output contains no executable markup.
-- [ ] `AssistantCorsProperties` has typed `allowedMethods`/`allowedHeaders`; `HttpInboundConfiguration` has no
-      inline method/header literals; CORS yields POST+OPTIONS, not GET (asserted).
-- [ ] `DEFAULT_API_URL` documented in `.env.example`; response-DTO indirection decision recorded in a comment/ADR.
-- [ ] `cd chat-ui && npm run build` succeeds. [R1: P5-9] (No `astro check` — the project has no such script/dep.)
-- [ ] `./mvnw -o test` BUILD SUCCESS.
+- [x] `escapeHtml` escapes `&`, `<`, `>`, `"`, `'`; a vitest payload test drives `renderSources` across every
+      source variant + the unavailable path, asserting no executable markup and `'`→`&#39;`.
+- [x] `AssistantCorsProperties` has typed `allowedMethods`/`allowedHeaders` (built on refactor-3b's record);
+      `HttpInboundConfiguration` has no inline method/header literals; a MockMvc preflight test proves the bound
+      policy yields POST+OPTIONS, rejects GET (403), headers tightened to `Content-Type`.
+- [x] `DEFAULT_API_URL` documented in `.env.example` + `api.ts`; response-DTO indirection decision recorded in comments.
+- [x] `cd chat-ui && npm run build` succeeds. (No `astro check` — the project has no such script/dep.)
+- [x] `./mvnw -o test` BUILD SUCCESS (assistant-app 214, countries-mcp 21).
 
 ## Round-2 critic resolutions (authoritative)
 

@@ -9,6 +9,14 @@ BACKEND_URL="http://localhost:${BACKEND_PORT}"
 FRONTEND_URL="http://localhost:${FRONTEND_PORT}"
 COUNTRIES_TARGET_DIR="$REPO_ROOT/countries-mcp-server/target"
 
+# Load local secrets (gitignored) so keys reach the assistant JVM and the MCP subprocesses.
+if [[ -f "$REPO_ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/.env"
+  set +a
+fi
+
 BACKEND_PID=""
 FRONTEND_PID=""
 

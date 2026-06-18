@@ -1,7 +1,5 @@
-correlationId=04e52a3e-a117-45cd-9ee8-117fef8b30c3
-route=PLACE_SYNTHESIS
-portsInvoked=[CountriesPort]
-ragRetrievalCount=0
-outcome=place_synthesis_answered_sources=1
-sourceStatus=countries_facts:UNAVAILABLE
-note=LlmPort not invoked because countries lookup failed
+event=assistant_request_started correlationId=1c148f67-bb93-44de-b8d4-f5f7a3bebaf3 questionLength=30
+event=assistant_route_selected correlationId=1c148f67-bb93-44de-b8d4-f5f7a3bebaf3 route=PLACE_SYNTHESIS
+event=assistant_port_invoked correlationId=1c148f67-bb93-44de-b8d4-f5f7a3bebaf3 port=CountriesPort invocationOrder=1
+event=assistant_port_invoked correlationId=1c148f67-bb93-44de-b8d4-f5f7a3bebaf3 port=LlmPort invocationOrder=2
+event=assistant_request_completed correlationId=1c148f67-bb93-44de-b8d4-f5f7a3bebaf3 route=PLACE_SYNTHESIS portsInvoked=[CountriesPort, LlmPort] ragRetrievalCount=0 outcome=place_synthesis_answered_sources=2

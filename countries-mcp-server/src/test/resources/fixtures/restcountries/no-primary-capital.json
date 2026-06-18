@@ -3,24 +3,21 @@
     "objects": [
       {
         "names": {
-          "common": "Germany"
+          "common": "Bolivia"
         },
         "capitals": [
           {
-            "name": "Bonn",
+            "name": "Sucre",
             "attributes": {
               "primary": false
             }
           },
           {
-            "name": "Berlin",
-            "attributes": {
-              "primary": true
-            }
+            "name": "La Paz"
           }
         ],
-        "region": "Europe",
-        "population": 83240525
+        "region": "Americas",
+        "population": 11673021
       }
     ],
     "meta": {

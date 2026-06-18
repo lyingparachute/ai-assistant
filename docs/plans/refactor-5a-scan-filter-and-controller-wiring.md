@@ -1,6 +1,6 @@
 # ExecPlan — Component-scan filter, controller wiring & context smoke test
 
-Status: draft — round-1 + round-2 critic reviewed; PLAN-READY (low-severity sharpenings folded below)
+Status: landed — 0f9922b
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (H-1, SP-1)
 Scope: `assistant-app` — `AssistantApplication` (`@ComponentScan`/`@Import`), `adapters/inbound/http`
@@ -78,14 +78,14 @@ contraption that motivates the exclude filter is itself fragile.
 
 ## Definition of Done (binary)
 
-- [ ] `AssistantApplication` has no direct `@ComponentScan`; `grep -n "excludeFilters\|FilterType" AssistantApplication.java`
+- [x] `AssistantApplication` has no direct `@ComponentScan`; `grep -n "excludeFilters\|FilterType" AssistantApplication.java`
       empty; `ChatWebConfiguration.java` deleted; `grep -rn "ChatWebConfiguration" assistant-app/src` empty.
-- [ ] Exactly one `ChatController` bean (`@RestController`, constructor-injected); no `@ConditionalOnBean` gates
+- [x] Exactly one `ChatController` bean (`@RestController`, constructor-injected); no `@ConditionalOnBean` gates
       the endpoint.
-- [ ] A `@SpringBootTest` that imports no `@TestConfiguration` boots, finds `ChatController` +
+- [x] A `@SpringBootTest` that imports no `@TestConfiguration` boots, finds `ChatController` +
       `AnswerQuestionUseCase`, and asserts exactly one `Clock` bean (`systemClock`). The PR notes this test fails
       on the pre-fix tree (demonstrating the leak) and passes post-fix.
-- [ ] `./mvnw -o test` BUILD SUCCESS and hermetic; no new context failures (or any surfaced are fixed, not
+- [x] `./mvnw -o test` BUILD SUCCESS and hermetic; no new context failures (or any surfaced are fixed, not
       re-masked).
 
 ## Round-2 critic resolutions (PLAN-READY; sharpenings)

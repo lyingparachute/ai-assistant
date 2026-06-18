@@ -1,6 +1,28 @@
 # Demo Run Log
 
-Capture session: **2026-06-16** (local machine)
+## Capture session 2: **2026-06-17** (local machine) — fully grounded
+
+All three 2026-06-16 blockers resolved; every required question now answered from a live
+source. Curated answers: `final-answers.md`. Per-question traces: `request-traces/`. Raw
+JSON: `capture/`.
+
+| Prior blocker | Resolution |
+| --- | --- |
+| REST Countries v3.1 deprecated | Migrated countries-mcp-server to REST Countries **v5** (ADR `0008`, commit `57fbd9b`). `country_lookup` returns Germany→Berlin, region Europe, population 83,497,147. |
+| `WEATHER_API_KEY` not configured | Key configured via gitignored `.env` (sourced by `start-assistant.sh`). Munich 23.2°C, Berlin 19.1°C, real retrieval times. |
+| RAG not ingested | `rag_chunks` populated from the CDQ Fraud Guard page; CDQ showcase returns `rag_knowledge: USED` with 5 snippets (top similarity 0.87). |
+
+Two latent runtime bugs were also found and fixed during live verification (both invisible to
+unit tests because `StdioMcpToolInvoker` is `@Profile("!test")`): a Spring two-constructor
+startup failure, and a null-`isError()` NPE that turned successful MCP calls into failures.
+See `implementation-notes.md`.
+
+E2E demo verification against the live stack: `./mvnw -pl e2e-tests verify -P e2e` →
+`RequiredDemoQuestionsIT` Tests run: 5, Failures: 0, Errors: 0, BUILD SUCCESS.
+
+---
+
+## Capture session 1: **2026-06-16** (local machine) — blocked (historical)
 
 ## Dependencies started
 

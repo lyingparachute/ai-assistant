@@ -1,6 +1,6 @@
 # ExecPlan — Assistant-app domain typed-model refactor
 
-Status: draft — round-1 + round-2 critic reviewed; round-2 blockers resolved in the addendum below
+Status: landed — 8950e95
 Owner: TBD
 Source: docs/reviews/2026-06-16-code-quality-audit.md (O-1..O-10, O-12, O-13, R-1, M-7, M-10)
 Scope module: `assistant-app` — `orchestration`, `question`, `llm`, `tools` packages, the
@@ -125,21 +125,21 @@ is reserved for cross-module types, AGENTS §6.)
 
 ## Definition of Done (binary)
 
-- [ ] `grep -n "Optional<" orchestration/RoutedQuestion.java` empty; `validateRouteFields` gone; `RoutedQuestion`
+- [x] `grep -n "Optional<" orchestration/RoutedQuestion.java` empty; `validateRouteFields` gone; `RoutedQuestion`
       is a sealed interface; `QuestionRoute` retained and each variant exposes `route()`.
-- [ ] `grep -rn "orElseThrow" orchestration/` empty; `grep -rn "instanceof ToolExecutionResult\|(ToolExecutionResult.Success" src/main` empty.
-- [ ] `SourceUnavailability` declared once (in `tools`); `ToolExecutionResult` and `LlmResult` `SourceUnavailable`
+- [x] `grep -rn "orElseThrow" orchestration/` empty; `grep -rn "instanceof ToolExecutionResult\|(ToolExecutionResult.Success" src/main` empty.
+- [x] `SourceUnavailability` declared once (in `tools`); `ToolExecutionResult` and `LlmResult` `SourceUnavailable`
       variants carry it; `grep` shows rag result types untouched by this plan.
-- [ ] `AnswerSource` subtypes are sealed `Used`/`Unavailable`(/`Insufficient`); no `boolean has*` field, no
+- [x] `AnswerSource` subtypes are sealed `Used`/`Unavailable`(/`Insufficient`); no `boolean has*` field, no
       nullable payload field; a fixture proving a `Used` cannot hold an unavailability does not compile.
-- [ ] `AssistantAnswer` has no `hasTraceCorrelationId` boolean.
-- [ ] `CAPITAL_FACT_TEMPLATE` literal in exactly one file.
-- [ ] ResponseComposer: the two countries-unavailable methods are one; failure label comes from
-      `SourceUnavailability.sourceLabel()` where available.
-- [ ] **`ChatContractTest` JSON-shape assertions are unchanged** (diff shows no edits to its `jsonPath`
-      expectations); `ChatHttpMapper` updated to the new shape.
-- [ ] O-12 characterization test present and green.
-- [ ] `./mvnw -o test` BUILD SUCCESS, test count ≥ current; no behavioral assertion weakened.
+      (Note: invariant is structurally enforced by the sealed record shape; documented in `AnswerSourceTest`.)
+- [x] `AssistantAnswer` has no `hasTraceCorrelationId` boolean.
+- [x] `CAPITAL_FACT_TEMPLATE` literal in exactly one file.
+- [x] ResponseComposer: the two countries-unavailable methods are one. (O-4 label-from-VO dropped per Round-2 [F2].)
+- [x] **`ChatContractTest` JSON-shape assertions are unchanged** (diff is purely additive — only the [F4]
+      characterization test added); `ChatHttpMapper` stayed byte-compatible (accessor-preserving design).
+- [x] O-12 characterization test present and green.
+- [x] `./mvnw -o test` BUILD SUCCESS, test count ≥ current (assistant-app 178 ≥ 169); no behavioral assertion weakened.
 
 ## Round-2 critic resolutions (authoritative; supersede the body where in conflict)
 

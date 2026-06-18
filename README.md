@@ -6,7 +6,21 @@ Local-first AI assistant: Astro Chat Interface, Spring Boot API, Ollama synthesi
 
 - Java 21, Node.js ≥ 22.12, Docker (for pgvector)
 - [Ollama](https://ollama.com/) with `qwen3:4b` and `nomic-embed-text`
-- Optional for live weather: `WEATHER_API_KEY` and `WEATHER_API_URL` (for example `https://api.weatherapi.com/v1/current.json`)
+- Live country facts: `REST_COUNTRIES_API_KEY` — a free [REST Countries](https://restcountries.com/) v5 key (500 req/month). REST Countries v3.1 is deprecated; the server targets v5 (ADR `0008`).
+- Live weather: `WEATHER_API_KEY` and `WEATHER_API_URL` — a free [WeatherAPI.com](https://www.weatherapi.com/) key (for example `https://api.weatherapi.com/v1/current.json`)
+
+### Local secrets
+
+Copy the template and fill in your own keys; `.env` is gitignored and never committed.
+`scripts/start-assistant.sh` sources it on startup so keys reach the assistant and the MCP
+subprocesses.
+
+```bash
+cp .env.example .env
+# edit .env: REST_COUNTRIES_API_KEY, WEATHER_API_KEY, WEATHER_API_URL
+```
+
+Without a key, the matching source returns a source-unavailable answer (no fabricated facts).
 
 ```bash
 ollama pull qwen3:4b

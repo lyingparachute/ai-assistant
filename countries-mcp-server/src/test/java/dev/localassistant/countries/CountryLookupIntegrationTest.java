@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CountryLookupIntegrationTest {
 
+    private static final String EMPTY_V5_BODY = StubRestCountriesServer.EMPTY_BODY;
+
     private StubRestCountriesServer stubRestCountriesServer;
     private CountryLookupTool countryLookupTool;
     private ObjectMapper objectMapper;
@@ -31,6 +33,7 @@ class CountryLookupIntegrationTest {
         stubRestCountriesServer = new StubRestCountriesServer();
         CountriesMcpConfiguration configuration = new CountriesMcpConfiguration(
                 stubRestCountriesServer.baseUrl(),
+                "test-api-key",
                 2,
                 "countries-mcp-server-test",
                 "test",
@@ -72,7 +75,7 @@ class CountryLookupIntegrationTest {
 
     @Test
     void berlinLookupThroughMcpToolResolvesGermany() throws Exception {
-        stubRestCountriesServer.stubNameLookup("Berlin", 404, "[]");
+        stubRestCountriesServer.stubNameLookup("Berlin", 200, EMPTY_V5_BODY);
         stubRestCountriesServer.stubCapitalLookup(
                 "Berlin",
                 200,
@@ -94,8 +97,8 @@ class CountryLookupIntegrationTest {
 
     @Test
     void unrecognizedInputReturnsStructuredToolError() throws Exception {
-        stubRestCountriesServer.stubNameLookup("Atlantis", 404, "[]");
-        stubRestCountriesServer.stubCapitalLookup("Atlantis", 404, "[]");
+        stubRestCountriesServer.stubNameLookup("Atlantis", 200, EMPTY_V5_BODY);
+        stubRestCountriesServer.stubCapitalLookup("Atlantis", 200, EMPTY_V5_BODY);
 
         McpSchema.CallToolResult result = countryLookupTool.handle(
                 null,
@@ -147,7 +150,7 @@ class CountryLookupIntegrationTest {
 
     @Test
     void ambiguousCapitalReturnsStructuredToolError() throws Exception {
-        stubRestCountriesServer.stubNameLookup("Shared City", 404, "[]");
+        stubRestCountriesServer.stubNameLookup("Shared City", 200, EMPTY_V5_BODY);
         stubRestCountriesServer.stubCapitalLookup(
                 "Shared City",
                 200,
@@ -169,7 +172,8 @@ class CountryLookupIntegrationTest {
     @Test
     void missingPopulationMapsToSourceUnavailableNotZeroPopulationSuccess() throws Exception {
         String bodyMissingPopulation = """
-                [{"name":{"common":"Germany"},"capital":["Berlin"],"region":"Europe"}]
+                {"data":{"objects":[{"names":{"common":"Germany"},\
+                "capitals":[{"name":"Berlin","attributes":{"primary":true}}],"region":"Europe"}]}}
                 """;
         stubRestCountriesServer.stubNameLookup("Germany", 200, bodyMissingPopulation);
         stubRestCountriesServer.stubCapitalLookup("Germany", 200, bodyMissingPopulation);
