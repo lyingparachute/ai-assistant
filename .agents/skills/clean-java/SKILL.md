@@ -22,6 +22,18 @@ Use whenever you write or review Java in `assistant-app`, `countries-mcp-server`
 - Comment only hidden invariants, framework or protocol constraints, and genuinely complex flow. No narration, no removal markers, no obvious docstrings.
 - Use the language from `CONTEXT.md` for type and method names.
 
+## Apache Commons Lang 3
+
+- Use at adapter, MCP mapper, REST, config guard, and tool boundaries for nullable or external input.
+- `StringUtils.isBlank` / `stripToNull` / `defaultString` per `docs/spec/10-code-quality-guidelines.md` §1.
+- Do not sweep already-validated domain strings for style.
+
+## Lombok (backend modules)
+
+- Allowed: `@Slf4j`, `@RequiredArgsConstructor` (final deps only), `@Builder` (immutable non-records, valid when built), `@UtilityClass` (all-static types).
+- Forbidden: `@Data`, `@Setter`, `@AllArgsConstructor`; Lombok on records; `@Builder` + `@Setter`.
+- Keep explicit constructors when validation or multiple constructors are required (`StdioMcpToolInvoker`).
+
 ## Patterns to Prefer
 
 - `record` value objects with validation in the compact constructor.

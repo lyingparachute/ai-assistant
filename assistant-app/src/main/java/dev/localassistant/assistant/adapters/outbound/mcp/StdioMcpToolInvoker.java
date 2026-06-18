@@ -9,8 +9,8 @@ import io.modelcontextprotocol.client.transport.StdioClientTransport;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
@@ -27,9 +27,8 @@ import java.util.function.Function;
 
 @Component
 @Profile("!test & !ingest-rag")
+@Slf4j
 final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
-
-    private static final Logger log = LoggerFactory.getLogger(StdioMcpToolInvoker.class);
 
     private final Map<String, McpSyncClient> clientsByToolName;
 
@@ -94,7 +93,7 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
         if (!"stdio".equalsIgnoreCase(server.transport())) {
             throw new McpToolInvocationException("unsupported MCP transport: " + server.transport());
         }
-        if (server.command().isBlank()) {
+        if (StringUtils.isBlank(server.command())) {
             throw new McpToolInvocationException("MCP server command is not configured");
         }
 
@@ -115,12 +114,12 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
     static Map<String, String> resolveProcessEnv(AssistantMcpProperties.McpServer server, Function<String, String> hostEnv) {
         Map<String, String> env = new LinkedHashMap<>(server.env());
         for (String key : server.envPassthrough()) {
-            String configured = env.get(key);
-            if (configured != null && !configured.isBlank()) {
+            final var configured = env.get(key);
+            if (StringUtils.isNotBlank(configured)) {
                 continue;
             }
-            String hostValue = hostEnv.apply(key);
-            if (hostValue != null && !hostValue.isBlank()) {
+            final var hostValue = hostEnv.apply(key);
+            if (StringUtils.isNotBlank(hostValue)) {
                 env.put(key, hostValue);
             }
         }

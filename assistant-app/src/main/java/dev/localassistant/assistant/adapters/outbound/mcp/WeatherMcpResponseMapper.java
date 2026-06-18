@@ -10,6 +10,7 @@ import dev.localassistant.assistant.tools.Temperature;
 import dev.localassistant.assistant.tools.ToolExecutionResult;
 import dev.localassistant.assistant.tools.WeatherReport;
 import dev.localassistant.assistant.tools.WeatherTimestamp;
+import org.apache.commons.lang3.StringUtils;
 
 final class WeatherMcpResponseMapper {
 
@@ -38,16 +39,17 @@ final class WeatherMcpResponseMapper {
     }
 
     ToolExecutionResult<WeatherReport> mapResponse(String requestedLocation, McpToolInvoker.McpToolResponse response) {
-        String payload = response.firstTextContent();
-        if (payload.isBlank()) {
+        final var payload = response.firstTextContent();
+        if (StringUtils.isBlank(payload)) {
             return sourceUnavailable("weather MCP returned empty tool content");
         }
 
-        if (PROVIDER_ERROR_TEXT.equalsIgnoreCase(payload.trim())) {
+        final var trimmedPayload = StringUtils.trim(payload);
+        if (StringUtils.equalsIgnoreCase(trimmedPayload, PROVIDER_ERROR_TEXT)) {
             return sourceUnavailable("weather provider returned an error");
         }
 
-        Matcher matcher = SUCCESS_PATTERN.matcher(payload.trim());
+        Matcher matcher = SUCCESS_PATTERN.matcher(trimmedPayload);
         if (!matcher.matches()) {
             if (response.isError()) {
                 return sourceUnavailable(MCP_ERROR_FLAG_MESSAGE);

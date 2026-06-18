@@ -1,16 +1,15 @@
 package dev.localassistant.countries.schemas;
 
 import io.modelcontextprotocol.spec.McpSchema;
+import lombok.experimental.UtilityClass;
 
 import java.util.List;
 import java.util.Map;
 
-public final class CountryToolSchemas {
+@UtilityClass
+public class CountryToolSchemas {
 
     public static final String TOOL_NAME = "country_lookup";
-
-    private CountryToolSchemas() {
-    }
 
     public static McpSchema.JsonSchema inputSchema() {
         return new McpSchema.JsonSchema(

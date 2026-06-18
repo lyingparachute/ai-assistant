@@ -4,6 +4,7 @@ import dev.localassistant.assistant.config.AssistantMcpProperties;
 import dev.localassistant.assistant.tools.ToolExecutionResult;
 import dev.localassistant.assistant.tools.WeatherPort;
 import dev.localassistant.assistant.tools.WeatherReport;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -25,11 +26,11 @@ public final class WeatherMcpClientAdapter implements WeatherPort {
 
     @Override
     public ToolExecutionResult<WeatherReport> currentWeather(String location) {
-        if (location == null || location.isBlank()) {
+        if (StringUtils.isBlank(location)) {
             return responseMapper.mapBlankLocation();
         }
 
-        String canonicalLocation = location.trim();
+        final var canonicalLocation = StringUtils.trim(location);
         try {
             McpToolInvoker.McpToolResponse response = mcpToolInvoker.invoke(
                     toolName,

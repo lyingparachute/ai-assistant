@@ -6,6 +6,7 @@ import dev.localassistant.countries.config.CountriesMcpConfiguration;
 import dev.localassistant.countries.model.CountryFacts;
 import dev.localassistant.countries.model.LookupPlace;
 import dev.localassistant.countries.ports.RestCountriesPort;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -135,7 +136,8 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
         if (node.isMissingNode() || node.isNull() || !node.isTextual()) {
             return Optional.empty();
         }
-        return Optional.of(node.asText());
+        final var text = StringUtils.trimToNull(node.asText());
+        return Optional.ofNullable(text);
     }
 
     private static String encodePathSegment(String value) {

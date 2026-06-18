@@ -106,3 +106,16 @@ Captured answers and traces: [docs/demo/final-answers.md](docs/demo/final-answer
 - No conversational memory across requests (ADR `0006`).
 - The assistant does not fabricate tool or RAG results when a source is unavailable.
 - Demo capture on 2026-06-16 hit upstream blockers (REST Countries v3.1 deprecated, weather key unset, RAG not ingested). Details: [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md).
+
+## Stack (Java backend)
+
+| Component | Version |
+| --- | --- |
+| Java | 21 |
+| Spring Boot | 3.5.15 |
+| Spring AI | 1.1.8 |
+| MCP SDK | 1.0.2 |
+| Lombok | managed by Spring Boot parent (annotation processor required to compile) |
+| Apache Commons Lang | 3.x (managed by Spring Boot parent) |
+
+Spring Boot 4 / Spring AI 2 / MCP SDK 2 are intentionally deferred (platform migration).

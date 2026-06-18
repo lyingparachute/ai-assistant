@@ -9,23 +9,19 @@ import dev.localassistant.countries.schemas.CountryToolSchemas;
 import dev.localassistant.countries.support.errors.CountryToolErrors;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
+@RequiredArgsConstructor
 public final class CountryLookupTool {
-
-    private static final Logger log = LoggerFactory.getLogger(CountryLookupTool.class);
 
     private final LookupCountryUseCase lookupCountryUseCase;
     private final ObjectMapper objectMapper;
-
-    public CountryLookupTool(LookupCountryUseCase lookupCountryUseCase, ObjectMapper objectMapper) {
-        this.lookupCountryUseCase = lookupCountryUseCase;
-        this.objectMapper = objectMapper;
-    }
 
     public McpSchema.Tool toolDefinition() {
         return McpSchema.Tool.builder()
@@ -37,8 +33,8 @@ public final class CountryLookupTool {
 
     public McpSchema.CallToolResult handle(McpSyncServerExchange exchange, McpSchema.CallToolRequest request) {
         Object rawName = request.arguments().get("name");
-        String name = rawName == null ? "" : rawName.toString();
-        if (name.isBlank()) {
+        final var name = StringUtils.stripToNull(rawName == null ? null : rawName.toString());
+        if (name == null) {
             return toCallToolResult(CountryToolErrors.nameRequired(), true);
         }
 

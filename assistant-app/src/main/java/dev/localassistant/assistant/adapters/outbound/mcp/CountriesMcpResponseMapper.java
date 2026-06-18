@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.ToolExecutionResult;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Optional;
 
@@ -29,8 +30,8 @@ final class CountriesMcpResponseMapper {
     }
 
     ToolExecutionResult<CountryInfo> mapResponse(McpToolInvoker.McpToolResponse response) {
-        String payload = response.firstTextContent();
-        if (payload.isBlank()) {
+        final var payload = response.firstTextContent();
+        if (StringUtils.isBlank(payload)) {
             return sourceUnavailable("countries MCP returned empty tool content");
         }
 
@@ -81,10 +82,10 @@ final class CountriesMcpResponseMapper {
             return Optional.empty();
         }
 
-        String countryName = data.path("countryName").asText();
-        String capital = data.path("capital").asText();
-        String region = data.path("region").asText();
-        if (countryName.isBlank() || capital.isBlank() || region.isBlank()) {
+        final var countryName = data.path("countryName").asText();
+        final var capital = data.path("capital").asText();
+        final var region = data.path("region").asText();
+        if (StringUtils.isAnyBlank(countryName, capital, region)) {
             return Optional.empty();
         }
 
@@ -117,7 +118,7 @@ final class CountriesMcpResponseMapper {
     }
 
     private static String textOrDefault(JsonNode node, String fallback) {
-        String text = node.asText();
-        return text.isBlank() ? fallback : text;
+        final var text = node.asText();
+        return StringUtils.isBlank(text) ? fallback : text;
     }
 }

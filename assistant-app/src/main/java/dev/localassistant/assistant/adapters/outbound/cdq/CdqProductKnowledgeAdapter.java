@@ -5,6 +5,7 @@ import dev.localassistant.assistant.rag.ProductPageResult;
 
 import java.io.IOException;
 import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 
 public final class CdqProductKnowledgeAdapter implements ProductKnowledgePort {
 
@@ -22,7 +23,7 @@ public final class CdqProductKnowledgeAdapter implements ProductKnowledgePort {
 
     @Override
     public ProductPageResult fetchAndExtract(String sourceUrl) {
-        if (sourceUrl == null || sourceUrl.isBlank()) {
+        if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
 
