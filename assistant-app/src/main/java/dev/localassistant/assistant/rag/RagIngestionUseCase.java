@@ -4,7 +4,6 @@ import dev.localassistant.assistant.llm.EmbeddingPort;
 import dev.localassistant.assistant.llm.EmbeddingResult;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,11 +18,11 @@ public final class RagIngestionUseCase {
     private final Clock clock;
 
     public RagIngestionUseCase(
-            EmbeddingPort embeddingPort,
-            RagKnowledgePort ragKnowledgePort,
-            ProductKnowledgePort productKnowledgePort,
-            DeterministicTextChunker textChunker,
-            Clock clock) {
+        final EmbeddingPort embeddingPort,
+        final RagKnowledgePort ragKnowledgePort,
+        final ProductKnowledgePort productKnowledgePort,
+        final DeterministicTextChunker textChunker,
+        final Clock clock) {
         this.embeddingPort = Objects.requireNonNull(embeddingPort, "embeddingPort");
         this.ragKnowledgePort = Objects.requireNonNull(ragKnowledgePort, "ragKnowledgePort");
         this.productKnowledgePort = Objects.requireNonNull(productKnowledgePort, "productKnowledgePort");
@@ -31,78 +30,82 @@ public final class RagIngestionUseCase {
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
-    public RagIngestionResult ingest(String sourceUrl) {
+    public RagIngestionResult ingest(final String sourceUrl) {
         if (sourceUrl == null || sourceUrl.isBlank()) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
 
-        ProductPageResult pageResult = productKnowledgePort.fetchAndExtract(sourceUrl);
-        if (pageResult instanceof ProductPageResult.SourceUnavailable unavailable) {
-            return new RagIngestionResult.SourceUnavailable(unavailable.asUnavailability());
-        }
-
-        String extractedText = ((ProductPageResult.Success) pageResult).extractedText();
-        String normalizedText = textChunker.normalizeWhitespace(extractedText);
-        String contentHash = ContentHasher.sha256Hex(normalizedText);
-
-        Optional<RagIngestionResult> earlyResult =
-                decideFromStoredState(
-                        ragKnowledgePort.findContentHashForSource(sourceUrl), sourceUrl, contentHash);
-        if (earlyResult.isPresent()) {
-            return earlyResult.get();
-        }
-
-        return embedAndStore(sourceUrl, contentHash, normalizedText);
+        final var pageResult = productKnowledgePort.fetchAndExtract(sourceUrl);
+        return switch (pageResult) {
+            case ProductPageResult.SourceUnavailable(final var unavailability) ->
+                    new RagIngestionResult.SourceUnavailable(unavailability);
+            case ProductPageResult.Success(final var extractedText) -> {
+                final var normalizedText = textChunker.normalizeWhitespace(extractedText);
+                final var contentHash = ContentHasher.sha256Hex(normalizedText);
+                yield decideFromStoredState(
+                                ragKnowledgePort.findContentHashForSource(sourceUrl),
+                                sourceUrl,
+                                contentHash)
+                        .orElseGet(() -> embedAndStore(sourceUrl, contentHash, normalizedText));
+            }
+        };
     }
 
     private Optional<RagIngestionResult> decideFromStoredState(
-            StoredSourceState storedState, String sourceUrl, String contentHash) {
+        final StoredSourceState storedState, final String sourceUrl, final String contentHash) {
         return switch (storedState) {
-            case StoredSourceState.Unavailable unavailable ->
-                    Optional.of(new RagIngestionResult.SourceUnavailable(unavailable.unavailability()));
-            case StoredSourceState.Stored stored when stored.contentHash().equals(contentHash) ->
+            case StoredSourceState.Unavailable(final var unavailability) ->
+                    Optional.of(new RagIngestionResult.SourceUnavailable(unavailability));
+            case StoredSourceState.Stored(final var storedHash, final var chunkCount) when storedHash.equals(contentHash) ->
                     Optional.of(
                             new RagIngestionResult.Success(
                                     new RagIngestionReport(
                                             sourceUrl,
                                             contentHash,
-                                            stored.chunkCount(),
+                                            chunkCount,
                                             RagIngestionReport.Outcome.UNCHANGED)));
-            case StoredSourceState.Stored ignored -> Optional.empty();
-            case StoredSourceState.Absent ignored -> Optional.empty();
+            case final StoredSourceState.Stored ignored -> Optional.empty();
+            case final StoredSourceState.Absent ignored -> Optional.empty();
         };
     }
 
     private RagIngestionResult embedAndStore(
-            String sourceUrl, String contentHash, String normalizedText) {
-        List<TextChunk> textChunks = textChunker.chunk(normalizedText);
-        Instant ingestionTimestamp = clock.instant();
-        List<RagChunk> ragChunks = new ArrayList<>(textChunks.size());
-        for (TextChunk textChunk : textChunks) {
-            EmbeddingResult embeddingResult = embeddingPort.embedDocument(textChunk.chunkText());
-            if (embeddingResult instanceof EmbeddingResult.SourceUnavailable unavailable) {
-                return new RagIngestionResult.SourceUnavailable(unavailable.asUnavailability());
+        final String sourceUrl, final String contentHash, final String normalizedText) {
+        final var textChunks = textChunker.chunk(normalizedText);
+        final var ingestionTimestamp = clock.instant();
+        final var ragChunks = new ArrayList<RagChunk>(textChunks.size());
+        for (final var textChunk : textChunks) {
+            switch (textChunk) {
+                case TextChunk(final var chunkIndex, final var chunkText) -> {
+                    final var embeddingResult = embeddingPort.embedDocument(chunkText);
+                    switch (embeddingResult) {
+                        case EmbeddingResult.SourceUnavailable(final var unavailability) -> {
+                            return new RagIngestionResult.SourceUnavailable(unavailability);
+                        }
+                        case EmbeddingResult.Success(final var embedding) ->
+                                ragChunks.add(
+                                        new RagChunk(
+                                                chunkText,
+                                                embedding,
+                                                sourceUrl,
+                                                contentHash,
+                                                chunkIndex,
+                                                ingestionTimestamp));
+                    }
+                }
             }
-            float[] embedding = ((EmbeddingResult.Success) embeddingResult).embedding();
-            ragChunks.add(
-                    new RagChunk(
-                            textChunk.chunkText(),
-                            embedding,
-                            sourceUrl,
-                            contentHash,
-                            textChunk.chunkIndex(),
-                            ingestionTimestamp));
         }
 
-        ChunkStorageOutcome storageOutcome =
-                ragKnowledgePort.storeChunks(sourceUrl, contentHash, List.copyOf(ragChunks));
+        final var storedChunks = List.copyOf(ragChunks);
+        final var storageOutcome =
+                ragKnowledgePort.storeChunks(sourceUrl, contentHash, storedChunks);
         return switch (storageOutcome) {
-            case ChunkStorageOutcome.Unavailable unavailable ->
-                    new RagIngestionResult.SourceUnavailable(unavailable.unavailability());
-            case ChunkStorageOutcome.Stored stored ->
+            case ChunkStorageOutcome.Unavailable(final var unavailability) ->
+                    new RagIngestionResult.SourceUnavailable(unavailability);
+            case ChunkStorageOutcome.Stored(final var outcome) ->
                     new RagIngestionResult.Success(
                             new RagIngestionReport(
-                                    sourceUrl, contentHash, ragChunks.size(), stored.outcome()));
+                                    sourceUrl, contentHash, storedChunks.size(), outcome));
         };
     }
 }
