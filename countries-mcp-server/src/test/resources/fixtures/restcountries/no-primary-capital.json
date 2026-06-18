@@ -1,0 +1,28 @@
+{
+  "data": {
+    "objects": [
+      {
+        "names": {
+          "common": "Bolivia"
+        },
+        "capitals": [
+          {
+            "name": "Sucre",
+            "attributes": {
+              "primary": false
+            }
+          },
+          {
+            "name": "La Paz"
+          }
+        ],
+        "region": "Americas",
+        "population": 11673021
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "count": 1
+    }
+  }
+}

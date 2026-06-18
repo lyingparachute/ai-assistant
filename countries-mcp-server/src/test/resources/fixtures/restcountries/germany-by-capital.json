@@ -1,13 +1,25 @@
-[
-  {
-    "name": {
-      "common": "Germany",
-      "official": "Federal Republic of Germany"
-    },
-    "capital": [
-      "Berlin"
+{
+  "data": {
+    "objects": [
+      {
+        "names": {
+          "common": "Germany"
+        },
+        "capitals": [
+          {
+            "name": "Berlin",
+            "attributes": {
+              "primary": true
+            }
+          }
+        ],
+        "region": "Europe",
+        "population": 83240525
+      }
     ],
-    "region": "Europe",
-    "population": 83240525
+    "meta": {
+      "total": 1,
+      "count": 1
+    }
   }
-]
+}

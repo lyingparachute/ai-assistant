@@ -10,6 +10,7 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "countries.mcp")
 public record CountriesMcpConfiguration(
         @NotBlank String restCountriesBaseUrl,
+        @DefaultValue("") String restCountriesApiKey,
         @Positive int restCountriesTimeoutSeconds,
         @NotBlank String serverName,
         @NotBlank String serverVersion,
@@ -18,7 +19,12 @@ public record CountriesMcpConfiguration(
 
     public CountriesMcpConfiguration {
         restCountriesBaseUrl = restCountriesBaseUrl.strip();
+        restCountriesApiKey = restCountriesApiKey.strip();
         serverName = serverName.strip();
         serverVersion = serverVersion.strip();
+    }
+
+    public boolean hasRestCountriesApiKey() {
+        return !restCountriesApiKey.isBlank();
     }
 }

@@ -1,20 +1,40 @@
-[
-  {
-    "name": {
-      "common": "Country A",
-      "official": "Country A"
-    },
-    "capital": ["Shared City"],
-    "region": "Europe",
-    "population": 1000
-  },
-  {
-    "name": {
-      "common": "Country B",
-      "official": "Country B"
-    },
-    "capital": ["Shared City"],
-    "region": "Africa",
-    "population": 2000
+{
+  "data": {
+    "objects": [
+      {
+        "names": {
+          "common": "Country A"
+        },
+        "capitals": [
+          {
+            "name": "Shared City",
+            "attributes": {
+              "primary": true
+            }
+          }
+        ],
+        "region": "Europe",
+        "population": 1000
+      },
+      {
+        "names": {
+          "common": "Country B"
+        },
+        "capitals": [
+          {
+            "name": "Shared City",
+            "attributes": {
+              "primary": true
+            }
+          }
+        ],
+        "region": "Africa",
+        "population": 2000
+      }
+    ],
+    "meta": {
+      "total": 2,
+      "count": 2
+    }
   }
-]
+}

@@ -21,6 +21,7 @@ public record AssistantMcpProperties(
             @NotBlank String command,
             @NotNull @DefaultValue List<String> args,
             @NotNull @DefaultValue Map<String, String> env,
+            @NotNull @DefaultValue List<String> envPassthrough,
             @NotBlank @DefaultValue("stdio") String transport,
             @Positive @DefaultValue("60") int timeoutSeconds,
             @NotBlank String toolName) {
@@ -28,6 +29,7 @@ public record AssistantMcpProperties(
         public McpServer {
             args = List.copyOf(args);
             env = Map.copyOf(env);
+            envPassthrough = List.copyOf(envPassthrough);
         }
     }
 }
