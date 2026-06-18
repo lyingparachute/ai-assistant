@@ -1,63 +1,76 @@
 # Local Java AI Assistant
 
-Local-first AI assistant: Astro Chat Interface, Spring Boot API, Ollama synthesis, RAG over CDQ Fraud Guard product knowledge (pgvector), and MCP tools for countries and weather.
+Local-first AI Assistant: an Astro Chat Interface calls a Spring Boot API that combines Ollama synthesis, RAG knowledge over CDQ Fraud Guard product content in pgvector, and MCP-backed country and weather knowledge sources.
+
+## Architecture
+
+The backend follows Hexagonal Architecture as described in [docs/spec/05-architecture.md](docs/spec/05-architecture.md) and ADR `0005`. The Assistant API maps HTTP SSE requests into an application use case. The application depends on ports (`LlmPort`, `RagKnowledgePort`, `CountriesPort`, `WeatherPort`), while adapters hide Ollama, pgvector, REST Countries, WeatherAPI, and MCP runtime details. The Chat Interface talks to `POST /api/chat` over Server-Sent Events; the terminal `final` event is the authoritative answer.
+
+Modules:
+
+- `assistant-app` - API, orchestration, RAG, MCP client adapters
+- `chat-ui` - Astro Chat Interface
+- `countries-mcp-server` - REST Countries MCP server
+- `e2e-tests` - black-box checks against a running assistant
+
+## Tech Stack
+
+| Component | Version / setting | Source |
+| --- | --- | --- |
+| Java | 21 | `pom.xml` |
+| Spring Boot | 3.5.15 | `pom.xml` |
+| Spring AI | 1.1.8 | `pom.xml` |
+| MCP SDK | 1.0.2 | `pom.xml` |
+| jsoup | 1.22.2 | `pom.xml` |
+| Astro | 6.4.7 | `chat-ui/package.json` |
+| Node.js | `>=22.12.0` | `chat-ui/package.json` |
+| pgvector | `pgvector/pgvector:pg17` | README setup and ADR `0003` |
+| Ollama chat model | `qwen3:4b` | `assistant-app/src/main/resources/application.yml` |
+| Ollama embedding model | `nomic-embed-text` | `assistant-app/src/main/resources/application.yml` |
+| REST Countries | v5 base URL | ADR `0008`, `application.yml` |
+| Weather | `semdin/mcp-weather` plus WeatherAPI.com | `scripts/mcp-weather`, `application.yml` |
+
+Spring Boot 4, Spring AI 2, and MCP SDK 2 are intentionally deferred in [docs/plans/backend-hygiene.md](docs/plans/backend-hygiene.md).
 
 ## Prerequisites
 
 - Java 21. The repository uses Maven Wrapper (`./mvnw`), so a separate Maven install is not required.
-- Node.js `>=22.12.0` with `npm`. The Chat Interface and weather MCP bootstrap use Node tooling.
+- Node.js `>=22.12.0` with `npm`.
 - Docker with port `5432` free for `pgvector/pgvector:pg17`.
 - `git`, `lsof`, `curl`, and `python3`.
-  - `scripts/start-assistant.sh` requires `lsof`.
-  - `scripts/mcp-weather` uses `git`, `npm`, and `npx` on first run.
-  - `scripts/capture-demo-answers.sh` requires `curl` and `python3`.
 - [Ollama](https://ollama.com/) running at `http://localhost:11434`.
 - Ollama models: `qwen3:4b` for answer synthesis and `nomic-embed-text` for RAG embeddings.
-- Live country facts: `REST_COUNTRIES_API_KEY` — a free [REST Countries](https://restcountries.com/) v5 key (500 req/month). REST Countries v3.1 is deprecated; the server targets v5 (ADR `0008`).
-- Live weather: `WEATHER_API_KEY` and `WEATHER_API_URL` — a free [WeatherAPI.com](https://www.weatherapi.com/) key. Use `https://api.weatherapi.com/v1/current.json` for the URL.
-- Free local ports:
-  - `8080` for the Assistant API, or set `ASSISTANT_BACKEND_PORT`.
-  - `4321` for the Chat Interface, or set `CHAT_UI_PORT`.
-  - `5432` for pgvector.
+- Live country facts: `REST_COUNTRIES_API_KEY`, a free REST Countries v5 key.
+- Live weather: `WEATHER_API_KEY` and `WEATHER_API_URL`; use `https://api.weatherapi.com/v1/current.json`.
+- Free local ports: `8080` for the Assistant API, `4321` for the Chat Interface, and `5432` for pgvector.
 
-### Local secrets
-
-Copy the template and fill in your own keys; `.env` is gitignored and never committed.
-`scripts/start-assistant.sh` sources it on startup so keys reach the assistant and the MCP
-subprocesses.
+Copy the local secret template and fill in your own keys. `.env` is gitignored.
 
 ```bash
 cp .env.example .env
 # edit .env: REST_COUNTRIES_API_KEY, WEATHER_API_KEY, WEATHER_API_URL
 ```
 
-Without a key, the matching source returns a source-unavailable answer (no fabricated facts).
+Without a key, the matching source returns a source-unavailable answer instead of fabricated facts.
 
-### Ollama setup
-
-Start Ollama in a separate terminal, or use the Ollama desktop app:
+Start Ollama and pull the required models:
 
 ```bash
 ollama serve
-```
-
-Then pull the required models:
-
-```bash
 ollama pull qwen3:4b
 ollama pull nomic-embed-text
 ollama list
 ```
 
-If `ollama serve` says the address is already in use, Ollama is already running. Verify it with:
+If `ollama serve` says the address is already in use, verify the running service:
 
 ```bash
 curl -sf http://localhost:11434/api/tags
 ```
 
-## First Run
+## Setup
 
-### 1. Start pgvector
+Start pgvector:
 
 ```bash
 docker run -d --name assistant-pgvector \
@@ -74,15 +87,27 @@ If the container already exists:
 docker start assistant-pgvector
 ```
 
-### 2. Ingest CDQ Fraud Guard RAG knowledge
-
-Run ingestion after pgvector and Ollama are available. Stop any assistant already using port `8080` before this command; ingestion runs a non-web context and exits after storing chunks.
+Build the countries MCP server jar:
 
 ```bash
-./mvnw -pl assistant-app spring-boot:run -- --ingest-rag
+./mvnw -pl countries-mcp-server -am package -DskipTests
 ```
 
-### 3. Start the assistant stack
+Ingest CDQ Fraud Guard product content into pgvector (requires Ollama with `nomic-embed-text`, pgvector running, and network access to the CDQ product page):
+
+```bash
+ASSISTANT_INGEST_RAG=true ./mvnw -pl assistant-app spring-boot:run
+```
+
+Alternative using a Spring Boot program argument:
+
+```bash
+./mvnw -pl assistant-app spring-boot:run -Dspring-boot.run.arguments=--ingest-rag
+```
+
+On success, stdout reports `source-url`, `content-hash`, `chunk-count`, and `outcome`. Re-run is idempotent: unchanged page content is skipped; changed content replaces the prior chunk set.
+
+## Run
 
 From the repository root:
 
@@ -92,28 +117,32 @@ From the repository root:
 
 macOS: double-click `scripts/start-assistant.command` in Finder.
 
-Starts the backend on `http://localhost:8080` and the Chat Interface on `http://localhost:4321`. Logs: `.local/logs/`. Stop with **Ctrl+C**.
+The script starts the backend on `http://localhost:8080` and the Chat Interface on `http://localhost:4321`. Logs are written under `.local/logs/`. Stop with Ctrl+C.
 
-The script builds the countries MCP jar and installs Chat Interface dependencies on first run. It warns when Ollama, pgvector, or weather credentials are missing but still starts the stack.
-
-### 4. Open the Chat Interface
-
-Open `http://localhost:4321` and ask the demo questions listed below.
-
-### Manual run
-
-Use this only if you do not want the launcher script:
+Manual run:
 
 ```bash
-./mvnw -pl countries-mcp-server -am package -DskipTests   # once
-./mvnw -pl assistant-app spring-boot:run                  # terminal 1
+./mvnw -pl countries-mcp-server -am package -DskipTests
+./mvnw -pl assistant-app spring-boot:run
 
-cd chat-ui && npm install && npm run dev                  # terminal 2
+cd chat-ui
+npm install
+npm run dev
 ```
 
-API contract: `docs/spec/14-assistant-api-contract.md`. `POST /api/chat` returns
-`text/event-stream` (Source-Usage Trace + Streamed Answer; the terminal `final` event is the
-authoritative answer). Probe manually with:
+API contract: [docs/spec/14-assistant-api-contract.md](docs/spec/14-assistant-api-contract.md). `POST /api/chat` returns `text/event-stream`: `trace` events show Source-Usage Trace entries, optional `token` events stream synthesis text, and the terminal `final` event contains the authoritative `ChatResponse`.
+
+### Chat Interface behaviour
+
+The Astro Chat Interface at `http://localhost:4321` is a browser-only workspace:
+
+- **Session display** — prior questions and answers stay visible for the browser session. Refresh clears the display. Each API request still sends `{ question }` only; prior turns are not sent to the Assistant API (ADR `0006`).
+- **Stop** — aborts the in-flight SSE stream. The turn shows “Stopped — incomplete” and keeps any partial Source-Usage Trace and Streamed Answer text visible.
+- **Errors** — HTTP validation failures, connection failures, and mid-stream SSE `error` events each produce distinct in-thread states; the workspace does not go blank while turns are visible.
+- **Demo question chips** — six chips load from the same JSON file as e2e tests and demo capture ([e2e-tests/src/test/resources/demo-questions.json](e2e-tests/src/test/resources/demo-questions.json)). Clicking a chip fills the composer; it does not auto-submit.
+- **Client abort note** — when you press Stop or navigate away, the browser closes the SSE connection but the backend worker may continue until its own timeout. Backend cancellation on client disconnect is a documented follow-up, not a guarantee today.
+
+Manual SSE probe:
 
 ```bash
 curl -sfN -X POST http://localhost:8080/api/chat \
@@ -124,22 +153,19 @@ curl -sfN -X POST http://localhost:8080/api/chat \
 ## Tests
 
 ```bash
-./mvnw test                    # all modules, no running server required
-./mvnw verify                  # full build, no demo verification
-./mvnw verify -P e2e           # demo verification against a live stack on port 8080
+./mvnw test
+./mvnw verify
+./mvnw verify -P e2e
+cd chat-ui && npm run build
 ```
 
-`./mvnw verify -P e2e` runs the demo verification (`RequiredDemoQuestionsIT`) against a running
-assistant. It is opt-in: without `-P e2e` it never runs, and with `-P e2e` it fails (does not skip)
-when no assistant responds on the configured base URL.
+`./mvnw verify -P e2e` requires a running assistant on `http://localhost:8080` and fails when no assistant responds. Without `-P e2e`, live demo verification does not run.
 
-## Demo Questions
+Fresh Phase 8 verification is recorded in [docs/demo/clean-checkout-verification.md](docs/demo/clean-checkout-verification.md).
 
-The required and showcase demo questions are defined once in
-[`e2e-tests/src/test/resources/demo-questions.json`](e2e-tests/src/test/resources/demo-questions.json).
-Both `scripts/capture-demo-answers.sh` and `RequiredDemoQuestionsIT` read that file.
+## Demo
 
-Current required questions:
+The required and showcase demo questions are defined once in [e2e-tests/src/test/resources/demo-questions.json](e2e-tests/src/test/resources/demo-questions.json). The Chat Interface demo chips, `scripts/capture-demo-answers.sh`, and `RequiredDemoQuestionsIT` all read that file.
 
 | Key | Question | Expected source path |
 | --- | --- | --- |
@@ -148,9 +174,9 @@ Current required questions:
 | `germany-capital-weather` | What is the temperature of the capital of Germany currently? | Country Facts, then Weather Observation |
 | `berlin-place` | What do you know about Berlin? | Country Facts plus labelled model synthesis |
 
-Showcase questions cover CDQ Fraud Guard RAG knowledge and source-unavailable behavior.
+Showcase questions cover CDQ Fraud Guard RAG knowledge and a no-route source-unavailable response (`Atlantis`). The live weather-key-unset unavailable path is test-covered only; it was not live-captured in the final demo evidence.
 
-Captured Demo Answers and Source-Usage Trace excerpts:
+Captured demo evidence:
 
 - [docs/demo/final-answers.md](docs/demo/final-answers.md)
 - [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md)
@@ -164,59 +190,47 @@ To recapture demo answers from a running assistant:
 
 Raw capture output is written to `docs/demo/capture/`.
 
-## Documentation
-
-| Topic | Location |
-| --- | --- |
-| Domain language | `CONTEXT.md` |
-| Requirements and architecture | `docs/spec/` |
-| Decisions | `docs/adr/` |
-| Demo evidence | `docs/demo/` |
-| AI-assisted work | `docs/ai/` |
-| Test strategy | `docs/spec/07-test-strategy.md` |
-| Assistant API contract | `docs/spec/14-assistant-api-contract.md` |
-
-## Modules
-
-- `assistant-app` — API, orchestration, RAG, MCP client adapters
-- `chat-ui` — Astro Chat Interface
-- `countries-mcp-server` — REST Countries MCP server
-- `e2e-tests` — black-box checks against a running assistant
-
-## Architecture
-
-The backend follows Hexagonal Architecture (ADR `0005`):
-
-- The Assistant API receives questions and delegates to application use cases.
-- Application use cases depend on ports: `LlmPort`, `RagKnowledgePort`, `CountriesPort`, and `WeatherPort`.
-- Outbound adapters hide Ollama, pgvector, REST Countries, and MCP runtime details.
-- The custom countries MCP server owns its REST Countries integration; `assistant-app` does not depend on its internals.
-- The Chat Interface talks to the Assistant API over HTTP SSE (`POST /api/chat`).
-
 ## AI Usage
 
-AI-assisted implementation and review notes are recorded under [docs/ai/](docs/ai/).
-Those files document the task, agent role, files affected, human review, and verification evidence for material work.
+AI-assisted work is documented under [docs/ai/](docs/ai/). Those entries record the task, agent role, files affected, human review status, and verification evidence for material work.
 
-Demo Answers are separate from AI usage notes: they are captured from the running assistant and stored under [docs/demo/](docs/demo/). They are not hand-written by an agent.
+- AI helped draft plans, implement code, review changes, debug runtime blockers, and finalize documentation.
+- Human direction constrained scope, selected trade-offs, required live verification, and rejected fabricated evidence.
+- Demo Answers are not AI-authored documentation. They are captured from the running assistant and linked from [docs/demo/final-answers.md](docs/demo/final-answers.md).
+- Runtime-captured evidence is separated from AI usage notes so generated text is not confused with verified behavior.
+- Source-unavailable behavior is documented honestly: the Atlantis demo proves the no-route guard; weather credential outage is covered by automated tests and earlier run notes, not by the final live capture.
 
 ## Limitations
 
 - No conversational memory across requests (ADR `0006`).
-- The assistant does not fabricate tool or RAG results when a source is unavailable.
+- Source routing is deterministic application logic; bounded agentic orchestration remains a proposed follow-up in [docs/plans/improve-agentic-tool-orchestration.md](docs/plans/improve-agentic-tool-orchestration.md).
+- The application is local-only: no user accounts, no remote deployment, no cloud LLM providers.
+- RAG knowledge is limited to CDQ Fraud Guard product-page content.
 - External sources must be available for fully grounded live answers: REST Countries v5, WeatherAPI.com, Ollama, and local pgvector.
-- Weather values are volatile. Demo weather answers include location and retrieval time in the captured evidence.
-- The 2026-06-16 demo capture had upstream blockers; the 2026-06-17 capture resolved them and is documented in [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md).
+- Weather values are volatile. Demo weather answers include location and retrieval time in captured evidence.
+- Historical upstream blockers from the first demo capture were resolved in later sessions; details remain in [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md).
 
-## Stack (Java backend)
+## Documentation
 
-| Component | Version |
+| Topic | Location |
 | --- | --- |
-| Java | 21 |
-| Spring Boot | 3.5.15 |
-| Spring AI | 1.1.8 |
-| MCP SDK | 1.0.2 |
-| Lombok | managed by Spring Boot parent (annotation processor required to compile) |
-| Apache Commons Lang | 3.x (managed by Spring Boot parent) |
-
-Spring Boot 4 / Spring AI 2 / MCP SDK 2 are intentionally deferred (platform migration).
+| Domain language | [CONTEXT.md](CONTEXT.md) |
+| Product specification | [docs/spec/01-product-specification.md](docs/spec/01-product-specification.md) |
+| Non-functional requirements | [docs/spec/02-non-functional-requirements.md](docs/spec/02-non-functional-requirements.md) |
+| Acceptance criteria | [docs/spec/03-acceptance-criteria.md](docs/spec/03-acceptance-criteria.md) |
+| Architecture | [docs/spec/05-architecture.md](docs/spec/05-architecture.md) |
+| Implementation plan | [docs/spec/06-implementation-plan.md](docs/spec/06-implementation-plan.md) |
+| Test strategy | [docs/spec/07-test-strategy.md](docs/spec/07-test-strategy.md) |
+| Demo plan | [docs/spec/08-demo-plan.md](docs/spec/08-demo-plan.md) |
+| Assistant API contract | [docs/spec/14-assistant-api-contract.md](docs/spec/14-assistant-api-contract.md) |
+| Demo evidence | [docs/demo/](docs/demo/) |
+| AI-assisted work | [docs/ai/](docs/ai/) |
+| ADR `0001` Spring AI | [docs/adr/0001-use-spring-ai.md](docs/adr/0001-use-spring-ai.md) |
+| ADR `0002` Ollama model | [docs/adr/0002-use-ollama-qwen3-4b.md](docs/adr/0002-use-ollama-qwen3-4b.md) |
+| ADR `0003` pgvector | [docs/adr/0003-use-pgvector-for-rag.md](docs/adr/0003-use-pgvector-for-rag.md) |
+| ADR `0004` MCP | [docs/adr/0004-use-mcp-for-external-tools.md](docs/adr/0004-use-mcp-for-external-tools.md) |
+| ADR `0005` Hexagonal Architecture | [docs/adr/0005-use-hexagonal-architecture.md](docs/adr/0005-use-hexagonal-architecture.md) |
+| ADR `0006` no conversational memory | [docs/adr/0006-keep-conversation-memory-out-of-scope.md](docs/adr/0006-keep-conversation-memory-out-of-scope.md) |
+| ADR `0007` embedding model | [docs/adr/0007-use-ollama-embedding-model.md](docs/adr/0007-use-ollama-embedding-model.md) |
+| ADR `0008` REST Countries v5 | [docs/adr/0008-migrate-rest-countries-to-v5.md](docs/adr/0008-migrate-rest-countries-to-v5.md) |
+| ADR `0009` SSE Assistant API | [docs/adr/0009-stream-assistant-api-over-sse.md](docs/adr/0009-stream-assistant-api-over-sse.md) |

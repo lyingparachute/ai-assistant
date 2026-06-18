@@ -1,5 +1,6 @@
 ---
 import '../styles/chat.css';
+import { demoQuestions } from '../lib/demoQuestions';
 ---
 
 <html lang="en">
@@ -28,6 +29,24 @@ import '../styles/chat.css';
       ></section>
 
       <p id="status" class="status" hidden></p>
+
+      <section class="demo-chips" aria-label="Demo questions">
+        <h2 class="demo-chips-heading">Demo questions</h2>
+        <div class="demo-chips-list" role="group" aria-label="Fill composer with a demo question">
+          {
+            demoQuestions.questions.map((item) => (
+              <button
+                type="button"
+                class="demo-chip"
+                data-question={item.question}
+                data-chip-key={item.key}
+              >
+                {item.key}
+              </button>
+            ))
+          }
+        </div>
+      </section>
 
       <form id="chat-form" class="chat-form">
         <label for="question">Your question</label>
@@ -61,6 +80,27 @@ import '../styles/chat.css';
 
       const dom = createDomAdapter(elements);
       dom.bindScrollBehavior();
+
+      const chipButtons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>('.demo-chip'),
+      );
+
+      const setChipsEnabled = (enabled: boolean): void => {
+        chipButtons.forEach((button) => {
+          button.disabled = !enabled;
+        });
+      };
+
+      chipButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const question = button.dataset.question;
+          if (!question) {
+            return;
+          }
+          elements.questionInput.value = question;
+          elements.questionInput.focus();
+        });
+      });
 
       const controller = createChatController({
         onTurnUpdated: (_turn, index) => {
@@ -97,6 +137,7 @@ import '../styles/chat.css';
         const turnIndex = controller.submitQuestion(question);
         elements.questionInput.value = '';
         dom.setComposerEnabled(false);
+        setChipsEnabled(false);
         dom.setStopVisible(true);
         elements.status.hidden = true;
 
@@ -138,6 +179,7 @@ import '../styles/chat.css';
           }
         } finally {
           dom.restoreComposer();
+          setChipsEnabled(true);
         }
       });
     </script>

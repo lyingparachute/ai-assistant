@@ -115,6 +115,47 @@ body {
   margin-top: 1.25rem;
 }
 
+.demo-chips {
+  flex-shrink: 0;
+  padding: 0.75rem 0 0;
+}
+
+.demo-chips-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.demo-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.demo-chip {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.demo-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.demo-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .chat-form {
   display: grid;
   gap: 0.75rem;
