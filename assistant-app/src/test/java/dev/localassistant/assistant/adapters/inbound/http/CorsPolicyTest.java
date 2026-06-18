@@ -1,5 +1,6 @@
 package dev.localassistant.assistant.adapters.inbound.http;
 
+import dev.localassistant.assistant.config.AssistantChatProperties;
 import dev.localassistant.assistant.config.AssistantCorsProperties;
 import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,7 @@ class CorsPolicyTest {
     }
 
     @SpringBootConfiguration
-    @EnableConfigurationProperties(AssistantCorsProperties.class)
+    @EnableConfigurationProperties({AssistantCorsProperties.class, AssistantChatProperties.class})
     @Import({HttpInboundConfiguration.class, ChatHttpMapper.class})
     static class TestSlice {}
 }

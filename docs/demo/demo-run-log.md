@@ -1,5 +1,75 @@
 # Demo Run Log
 
+## Capture session 3: **2026-06-18** (M6 streaming docs) — live stack unavailable
+
+Streaming plan M6 documentation and boundary verification. The assistant was not running on
+`http://localhost:8080` during this session (`curl` health probe failed), so demo re-capture and
+`./mvnw verify -P e2e` were **skipped** — not substituted with fabricated output.
+
+### SSE contract samples (boundary tests, not live)
+
+Deterministic route (`germany-capital`) — `trace` + `final`, no `token` (from
+`e2e-tests/src/test/resources/fixtures/germany-capital-sse-stream.txt`, matches
+`ChatControllerStreamingTest`):
+
+```text
+event:trace
+data:{"type":"countries_facts","status":"USED"}
+
+event:final
+data:{"answerText":"The capital of Germany is Berlin.","sources":[{"type":"countries_facts","status":"USED","countryInfo":{"countryName":"Germany","capital":"Berlin","region":"Europe","population":83497147}}],"traceCorrelationId":"d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38"}
+```
+
+Synthesis route shape — `trace`, `token`(s), `model_synthesis` `trace`, `final` (representative
+from `chat-ui/src/lib/sseParser.test.ts`; live token text varies):
+
+```text
+event:trace
+data:{"type":"countries_facts","status":"USED"}
+
+event:token
+data:{"text":"Berlin "}
+
+event:token
+data:{"text":"is great."}
+
+event:final
+data:{"answerText":"Berlin is great.","sources":[{"type":"countries_facts","status":"USED"}],"traceCorrelationId":"trace-1"}
+```
+
+### Verification run (hermetic)
+
+```bash
+./mvnw test
+cd chat-ui && npm run build
+```
+
+```text
+./mvnw test → BUILD SUCCESS
+  assistant-app: Tests run: 237, Failures: 0, Errors: 0, Skipped: 0
+  countries-mcp-server: Tests run: 33, Failures: 0, Errors: 0, Skipped: 0
+  e2e-tests: Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+
+cd chat-ui && npm run build → Complete! (1 page built)
+```
+
+### Skipped (live stack down)
+
+| Step | Reason |
+| --- | --- |
+| `./scripts/capture-demo-answers.sh` | No assistant on port 8080 |
+| `./mvnw verify -P e2e` | Requires live stack |
+
+Prior capture session 2 evidence (`2026-06-17`) remains the latest live demo capture until a new
+session succeeds.
+
+### CONTEXT glossary check
+
+`CONTEXT.md` already defines **Streamed Answer** and **Source-Usage Trace** with correct Avoid
+lists; no glossary changes required for M6.
+
+---
+
 ## Capture session 2: **2026-06-17** (local machine) — fully grounded
 
 All three 2026-06-16 blockers resolved; every required question now answered from a live

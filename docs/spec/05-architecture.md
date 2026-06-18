@@ -63,7 +63,7 @@ shared-kernel/   (conditional: created only when a concrete cross-module type ex
 
 ### `assistant-app`
 
-Owns the Assistant API (JSON REST), application orchestration, RAG ingestion and retrieval orchestration, and outbound adapters for Ollama, pgvector, countries MCP, and weather MCP. It does not serve the Chat Interface HTML; that lives in `chat-ui/`.
+Owns the Assistant API (SSE over HTTP), application orchestration, RAG ingestion and retrieval orchestration, and outbound adapters for Ollama, pgvector, countries MCP, and weather MCP. It does not serve the Chat Interface HTML; that lives in `chat-ui/`.
 
 ### `chat-ui`
 
@@ -176,7 +176,7 @@ Domain objects should validate their own invariants, such as non-empty question 
 ### Inbound Adapters
 
 - Chat Interface (`chat-ui/`): Astro browser client; calls the Assistant API.
-- Assistant API (`assistant-app` inbound HTTP): JSON endpoint used by the Chat Interface and E2E tests.
+- Assistant API (`assistant-app` inbound HTTP): `POST /api/chat` streams `text/event-stream` (Source-Usage Trace + Streamed Answer; terminal `final` event is authoritative). Used by the Chat Interface and E2E tests. See ADR `0009` and `docs/spec/14-assistant-api-contract.md`.
 - RAG ingestion command or endpoint: local setup path for extracting and loading CDQ Fraud Guard content.
 
 ### Application Ports
@@ -373,6 +373,10 @@ Metrics and tracing platforms are optional for the recruitment task. The applica
 Demo verification should capture enough evidence to show which capabilities were exercised, but final demo answers must come only from the running assistant.
 
 ## 13. Request and Answering Diagrams
+
+The Assistant API streams answers over SSE (ADR `0009`): `trace` events surface the Source-Usage
+Trace as each Knowledge Source resolves; synthesis routes may emit `token` events; the terminal
+`final` event carries the authoritative `ChatResponse`. See `docs/spec/14-assistant-api-contract.md`.
 
 ### Assistant Request Flow
 

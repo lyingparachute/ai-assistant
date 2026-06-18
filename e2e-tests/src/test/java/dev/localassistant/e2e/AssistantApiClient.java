@@ -56,23 +56,8 @@ final class AssistantApiClient {
     }
 
     JsonNode chat(String question) throws IOException, InterruptedException {
-        String body = OBJECT_MAPPER.writeValueAsString(new ChatRequest(question));
-        HttpRequest request =
-                HttpRequest.newBuilder(baseUri.resolve("/api/chat"))
-                        .timeout(Duration.ofSeconds(120))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(body))
-                        .build();
-        HttpResponse<String> response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException(
-                    "POST /api/chat returned HTTP "
-                            + response.statusCode()
-                            + ": "
-                            + response.body());
-        }
-        return OBJECT_MAPPER.readTree(response.body());
+        String sseBody = postChatStream(question, Duration.ofSeconds(120));
+        return SseChatStreamParser.parseFinalChatResponse(sseBody);
     }
 
     int chatExpectingStatus(String question, int expectedStatus) throws IOException, InterruptedException {
@@ -86,6 +71,27 @@ final class AssistantApiClient {
         HttpResponse<String> response =
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         return response.statusCode();
+    }
+
+    private String postChatStream(String question, Duration timeout)
+            throws IOException, InterruptedException {
+        String body = OBJECT_MAPPER.writeValueAsString(new ChatRequest(question));
+        HttpRequest request =
+                HttpRequest.newBuilder(baseUri.resolve("/api/chat"))
+                        .timeout(timeout)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .build();
+        HttpResponse<String> response =
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException(
+                    "POST /api/chat returned HTTP "
+                            + response.statusCode()
+                            + ": "
+                            + response.body());
+        }
+        return response.body();
     }
 
     private record ChatRequest(String question) {}

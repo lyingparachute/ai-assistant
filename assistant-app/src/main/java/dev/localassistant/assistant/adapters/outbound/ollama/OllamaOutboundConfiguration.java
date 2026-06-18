@@ -16,8 +16,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.reactive.JdkClientHttpConnector;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 
 @Configuration
@@ -47,14 +50,20 @@ class OllamaOutboundConfiguration {
 
     @Bean
     LlmPort ollamaLlmPort(AssistantLlmProperties assistantLlmProperties) {
+        Duration chatTimeout = Duration.ofSeconds(assistantLlmProperties.timeoutSeconds());
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(
-                Duration.ofSeconds(assistantLlmProperties.timeoutSeconds()));
-        requestFactory.setReadTimeout(Duration.ofSeconds(assistantLlmProperties.timeoutSeconds()));
-        OllamaApi ollamaApi = OllamaApi.builder()
-                .baseUrl(assistantLlmProperties.ollamaBaseUrl())
-                .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
-                .build();
+        requestFactory.setConnectTimeout(chatTimeout);
+        requestFactory.setReadTimeout(chatTimeout);
+        HttpClient streamingHttpClient =
+                HttpClient.newBuilder().connectTimeout(chatTimeout).build();
+        WebClient.Builder webClientBuilder =
+                WebClient.builder().clientConnector(new JdkClientHttpConnector(streamingHttpClient));
+        OllamaApi ollamaApi =
+                OllamaApi.builder()
+                        .baseUrl(assistantLlmProperties.ollamaBaseUrl())
+                        .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
+                        .webClientBuilder(webClientBuilder)
+                        .build();
         OllamaChatOptions options = OllamaChatOptions.builder()
                 .model(assistantLlmProperties.modelName())
                 .build();
@@ -63,6 +72,6 @@ class OllamaOutboundConfiguration {
                         .ollamaApi(ollamaApi)
                         .defaultOptions(options)
                         .build();
-        return new OllamaLlmAdapter(chatModel);
+        return new OllamaLlmAdapter(chatModel, chatTimeout);
     }
 }

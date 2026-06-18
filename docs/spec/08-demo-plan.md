@@ -16,6 +16,25 @@ Final demo answers must be captured from the running assistant after implementat
 
 The final README must replace these high-level steps with exact verified commands after implementation.
 
+## Manual API probe (SSE)
+
+With the assistant running on port `8080`, use `curl -N` so events arrive incrementally:
+
+```bash
+# Deterministic route — expect trace + final, no token events
+curl -sfN -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What is the capital city of Germany?"}'
+
+# Synthesis route — expect trace, token(s), model_synthesis trace, final
+curl -sfN -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What do you know about Berlin?"}'
+```
+
+The capture script `scripts/capture-demo-answers.sh` uses the same transport and extracts the
+terminal `final` event JSON for each demo question.
+
 ## Demo Verification Command
 
 The demo questions and source paths are verified by `RequiredDemoQuestionsIT` in the `e2e-tests`

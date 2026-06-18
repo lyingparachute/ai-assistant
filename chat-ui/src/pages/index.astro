@@ -32,27 +32,59 @@ import '../styles/chat.css';
       <p id="status" class="status" hidden></p>
 
       <section id="answer-panel" class="answer-panel" hidden>
+        <section id="trace-section" class="trace-section" hidden>
+          <h2>Source-Usage Trace</h2>
+          <div id="trace-timeline" class="trace-timeline-host"></div>
+        </section>
+
         <h2>Answer</h2>
+        <p id="forming-hint" class="forming-hint" hidden>Forming answer…</p>
         <p id="answer-text" class="answer-text"></p>
         <p id="trace-id" class="trace-id" hidden></p>
 
-        <h2>Sources</h2>
-        <div id="sources" class="sources"></div>
+        <section id="sources-section" class="sources-section">
+          <h2>Sources</h2>
+          <div id="sources" class="sources"></div>
+        </section>
       </section>
     </main>
 
     <script>
-      import { askQuestion } from '../lib/api';
+      import { streamQuestion } from '../lib/api';
+      import { appendAnswerToken, clearAnswerText, reconcileAnswerText } from '../lib/answerTokens';
       import { renderSources } from '../lib/sourceDisplay';
+      import { renderTraceTimeline, type TraceStep } from '../lib/traceDisplay';
 
       const form = document.getElementById('chat-form') as HTMLFormElement;
       const questionInput = document.getElementById('question') as HTMLTextAreaElement;
       const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
       const status = document.getElementById('status') as HTMLParagraphElement;
       const answerPanel = document.getElementById('answer-panel') as HTMLElement;
+      const traceSection = document.getElementById('trace-section') as HTMLElement;
+      const traceTimeline = document.getElementById('trace-timeline') as HTMLDivElement;
+      const formingHint = document.getElementById('forming-hint') as HTMLParagraphElement;
       const answerText = document.getElementById('answer-text') as HTMLParagraphElement;
       const traceId = document.getElementById('trace-id') as HTMLParagraphElement;
+      const sourcesSection = document.getElementById('sources-section') as HTMLElement;
       const sources = document.getElementById('sources') as HTMLDivElement;
+
+      function resetAnswerPanel(): void {
+        clearAnswerText(answerText);
+        formingHint.hidden = true;
+        traceSection.hidden = true;
+        traceTimeline.innerHTML = '';
+        sources.innerHTML = '';
+        traceId.hidden = true;
+        traceId.textContent = '';
+        answerPanel.classList.remove('unsupported-layout');
+        sourcesSection.hidden = false;
+      }
+
+      function applyUnsupportedLayout(): void {
+        answerPanel.classList.add('unsupported-layout');
+        traceSection.hidden = true;
+        sourcesSection.hidden = true;
+      }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -68,24 +100,56 @@ import '../styles/chat.css';
         status.hidden = false;
         status.textContent = 'Waiting for the assistant…';
         answerPanel.hidden = true;
+        resetAnswerPanel();
+
+        const traceSteps: TraceStep[] = [];
+        let sawTokens = false;
 
         try {
-          const response = await askQuestion(question);
-          answerText.textContent = response.answerText;
-          // Trust boundary: the sole innerHTML sink. renderSources is the only permitted
-          // producer; every interpolated assistant value inside it must pass through escapeHtml.
-          sources.innerHTML = renderSources(response.sources);
+          await streamQuestion(question, {
+            onTrace: (payload) => {
+              status.hidden = true;
+              answerPanel.hidden = false;
+              traceSteps.push(payload);
+              traceTimeline.innerHTML = renderTraceTimeline(traceSteps);
+              traceSection.hidden = false;
+            },
+            onToken: (payload) => {
+              status.hidden = true;
+              answerPanel.hidden = false;
+              sawTokens = true;
+              formingHint.hidden = false;
+              appendAnswerToken(answerText, payload.text);
+            },
+            onFinal: (response) => {
+              formingHint.hidden = true;
+              reconcileAnswerText(answerText, response.answerText);
 
-          if (response.traceCorrelationId) {
-            traceId.hidden = false;
-            traceId.textContent = `Trace: ${response.traceCorrelationId}`;
-          } else {
-            traceId.hidden = true;
-            traceId.textContent = '';
-          }
+              if (traceSteps.length === 0 && response.sources.length === 0) {
+                applyUnsupportedLayout();
+              } else {
+                // Trust boundary: the sole innerHTML sink. renderSources is the only permitted
+                // producer; every interpolated assistant value inside it must pass through escapeHtml.
+                sources.innerHTML = renderSources(response.sources);
+              }
 
-          status.hidden = true;
-          answerPanel.hidden = false;
+              if (response.traceCorrelationId) {
+                traceId.hidden = false;
+                traceId.textContent = `Trace: ${response.traceCorrelationId}`;
+              } else {
+                traceId.hidden = true;
+                traceId.textContent = '';
+              }
+
+              if (!sawTokens && traceSteps.length > 0) {
+                traceTimeline.innerHTML = renderTraceTimeline(traceSteps);
+                traceSection.hidden = false;
+              }
+
+              status.hidden = true;
+              answerPanel.hidden = false;
+            },
+          });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Request failed.';
           status.hidden = false;
