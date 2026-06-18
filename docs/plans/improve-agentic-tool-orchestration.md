@@ -28,13 +28,14 @@ port and Ollama adapter. `chat-ui` unchanged unless trace copy needs a label twe
   plan.
 - Demo path green after streaming (`docs/demo/final-answers.md`, `./mvnw verify -P e2e`).
 
-## Required gates (not met yet)
+## Required gates
 
-- **M0 spike green** (see Milestones) — `qwen3:4b` + Spring AI `1.1.8` completes at least one
-  user-controlled tool-call round-trip (propose → execute → structured follow-up) **before** loop code.
+- **M0 spike green — met 2026-06-18.** `qwen3:4b` + Spring AI `1.1.8` completed one
+  user-controlled tool-call round-trip (propose → execute → structured follow-up) before loop code.
+  Evidence: `implementation-notes.md`, section "M0 agentic tool-calling spike".
 - Spring AI tool-calling API re-verified against the **post-hygiene** pinned version in M0.
 - ADR [`0010`](../adr/0010-bounded-agentic-tool-orchestration.md) **Accepted** (documentation-first;
-  status moves from Proposed to Accepted in the same change that starts M1 implementation).
+  status moves from Proposed to Accepted in the same change that starts M1 implementation) — not met.
 
 ## Why now
 
@@ -244,7 +245,7 @@ With streaming landed, agentic routes emit **Source-Usage Trace** events via
 ## Definition of Done
 
 - [ ] ADR `0010` **Accepted**; spec `05` §9 agentic paragraph current.
-- [ ] M0 spike paste: `qwen3:4b` one tool-call round-trip green on post-hygiene Spring AI (evidence
+- [x] M0 spike paste: `qwen3:4b` one tool-call round-trip green on post-hygiene Spring AI (evidence
       in plan commit or `implementation-notes.md`).
 - [ ] `mode=deterministic` (default): `./mvnw test` green; demo questions unchanged (paste totals).
 - [ ] `mode=agentic-fallback`: "capital of France" → live `country_lookup`, Paris,
@@ -279,6 +280,10 @@ explicit max-turn, deadline, and consultation recording.
 
 **Gate criteria:** one full round-trip with real `qwen3:4b` (or documented skip with reason); Spring
 AI `1.1.8` tool-calling API verified against the pinned version.
+
+**Result:** green on 2026-06-18. The model proposed `country_lookup`, Spring AI
+`DefaultToolCallingManager` executed it exactly once, and the follow-up answer used the structured
+tool result (`Paris`). No production loop code was added.
 
 ### M1 — ADR `0010` Accepted + `AssistantOrchestrationProperties`
 
