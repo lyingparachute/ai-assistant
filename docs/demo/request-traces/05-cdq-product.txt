@@ -1,6 +1,31 @@
-event=assistant_request_started correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 questionLength=24
-event=assistant_route_selected correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 route=CDQ_PRODUCT
-event=assistant_port_invoked correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 port=RagKnowledgePort invocationOrder=1
-event=assistant_rag_retrieval correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 snippetCount=5
-event=assistant_port_invoked correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 port=LlmPort invocationOrder=2
-event=assistant_request_completed correlationId=f63fdf9a-0a45-4196-98a5-0e6522b24142 route=CDQ_PRODUCT portsInvoked=[RagKnowledgePort, LlmPort] ragRetrievalCount=5 outcome=cdq_product_answered_sources=2
+event=assistant_request_started correlationId=936c7f62-681b-4543-aa5a-4d625718688b questionLength=24
+event=assistant_route_selected correlationId=936c7f62-681b-4543-aa5a-4d625718688b route=CDQ_PRODUCT
+event=assistant_port_invoked correlationId=936c7f62-681b-4543-aa5a-4d625718688b port=RagKnowledgePort invocationOrder=1
+event=assistant_rag_retrieval correlationId=936c7f62-681b-4543-aa5a-4d625718688b snippetCount=5
+event=assistant_port_invoked correlationId=936c7f62-681b-4543-aa5a-4d625718688b port=LlmPort invocationOrder=2
+event=assistant_request_completed correlationId=936c7f62-681b-4543-aa5a-4d625718688b route=CDQ_PRODUCT portsInvoked=[RagKnowledgePort, LlmPort] ragRetrievalCount=5 outcome=cdq_product_answered_sources=2
+
+Separate live SSE probe for the same question (RAG synthesis route - RAG trace, token stream,
+model synthesis trace, final):
+event:trace
+data:{"type":"rag_knowledge","status":"USED"}
+
+event:token
+data:{"text":"CD"}
+
+event:token
+data:{"text":"Q"}
+
+event:token
+data:{"text":" Fraud"}
+
+event:token
+data:{"text":" Guard"}
+
+(additional observed token events omitted)
+
+event:trace
+data:{"type":"model_synthesis","status":"USED"}
+
+event:final
+data:{"answerText":"CDQ Fraud Guard is a service that manages and verifies global payment data to combat payment fraud and inaccurate bank account information...","sources":[{"type":"rag_knowledge","status":"USED","snippets":"5 retrieved snippets"},{"type":"model_synthesis","status":"USED"}],"traceCorrelationId":"1d40ed26-b25f-426c-9169-d529c2210dcf"}

@@ -115,4 +115,4 @@ Trade-offs:
 - `./mvnw -pl countries-mcp-server test` passes; adapter tests cover v5 success,
   not-found (empty objects), unauthorized (401 envelope), and source-unavailable
   against a controlled HTTP stub (no live network, no real key in tests).
-- README, `.env.example`, and `docs/demo/demo-run-log.md` document the new key.
+- README, `.env.example`, and the final demo evidence document the new key without exposing it.

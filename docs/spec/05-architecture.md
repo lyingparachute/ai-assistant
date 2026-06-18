@@ -20,15 +20,15 @@ flowchart LR
     AssistantAPI --> Orchestrator[Assistant Application Service]
 
     Orchestrator --> LLMPort[LLM Port]
-    Orchestrator --> RAGPort[RagKnowledgePort]
-    Orchestrator --> CountriesPort[Countries Port]
-    Orchestrator --> WeatherPort[Weather Port]
+    Orchestrator --> RAGPort[RetrieveRagKnowledge]
+    Orchestrator --> CountryFacts[ResolveCountryFacts]
+    Orchestrator --> WeatherObservation[ResolveWeatherObservation]
     Orchestrator --> Composer[Response Composer]
 
     LLMPort --> Ollama[Ollama Adapter]
     RAGPort --> Pgvector[pgvector Adapter]
-    CountriesPort --> CountriesMcpClient[Countries MCP Client Adapter]
-    WeatherPort --> WeatherMcpClient[Weather MCP Client Adapter]
+    CountryFacts --> CountriesMcpClient[Countries MCP Client Adapter]
+    WeatherObservation --> WeatherMcpClient[Weather MCP Client Adapter]
 
     CountriesMcpClient --> CountriesMcpServer[Countries MCP Server]
     CountriesMcpServer --> RestCountries[REST Countries API]
@@ -101,31 +101,67 @@ assistant-app/src/main/java/.../assistant/
     AssistantApplicationService.java
     ResponseComposer.java
   rag/
-    KnowledgeSnippet.java
-    RagKnowledgePort.java
-    RagIngestionUseCase.java
-    RagRetrievalPolicy.java
-  tools/
-    CountryInfo.java
-    WeatherReport.java
+    api/
+      RagIngestionCli.java
+    domain/
+      KnowledgeSnippet.java
+      RagIngestion.java
+      RagRetrievalPolicy.java
+      port/inbound/
+        IngestRag.java
+        RetrieveRagKnowledge.java
+      port/outbound/
+        ProductPageSource.java
+        KnowledgeEmbedding.java
+        KnowledgeChunkStore.java
+    infrastructure/
+      CdqProductPageSource.java
+      RagRetrieval.java
+      PgvectorKnowledgeChunkStore.java
+      OllamaEmbeddingAdapter.java
+      config/
+        RagUseCaseConfiguration.java
+        PgvectorInfrastructureConfiguration.java
+        OllamaEmbeddingConfiguration.java
+  countryfacts/
+    domain/
+      CountryInfo.java
+      port/inbound/
+        ResolveCountryFacts.java
+    infrastructure/
+      CountriesMcpClientAdapter.java
+      CountriesMcpResponseMapper.java
+  weather/
+    domain/
+      Location.java
+      WeatherReport.java
+      WeatherTimestamp.java
+      port/inbound/
+        ResolveWeatherObservation.java
+    infrastructure/
+      WeatherMcpClientAdapter.java
+      WeatherMcpResponseMapper.java
+  shared/
+    SourceUnavailability.java
     ToolExecutionResult.java
-    CountriesPort.java
-    WeatherPort.java
-  llm/
-    LlmPort.java
-    PromptContext.java
+    mcp/
+      McpToolInvoker.java
+      StdioMcpToolInvoker.java
+  synthesis/
+    domain/
+      LlmResult.java
+      PromptContext.java
+      TokenSink.java
+      port/outbound/
+        LlmPort.java
+    infrastructure/
+      OllamaLlmAdapter.java
+      config/
+        OllamaSynthesisConfiguration.java
   adapters/inbound/http/
     ChatController.java
     ChatRequest.java
     ChatResponse.java
-  adapters/outbound/ollama/
-    OllamaLlmAdapter.java
-  adapters/outbound/pgvector/
-    PgvectorRagAdapter.java
-    PgvectorIngestionRepository.java
-  adapters/outbound/mcp/
-    CountriesMcpClientAdapter.java
-    WeatherMcpClientAdapter.java
   config/
     AssistantProperties.java
 ```
@@ -181,16 +217,18 @@ Domain objects should validate their own invariants, such as non-empty question 
 
 ### Application Ports
 
-- `LlmPort`: generate model output from grounded prompt context.
-- `RagKnowledgePort`: retrieve relevant `KnowledgeSnippet` values and store ingested chunks.
-- `CountriesPort`: resolve country facts through the countries MCP tool.
-- `WeatherPort`: resolve current weather observations through the weather MCP tool.
+- `LlmPort`: generate model output from grounded prompt context. It lives under `synthesis.domain.port.outbound`.
+- `IngestRag`: ingest CDQ Fraud Guard product content into RAG knowledge.
+- `RetrieveRagKnowledge`: retrieve relevant `KnowledgeSnippet` values.
+- `ResolveCountryFacts`: resolve country facts through the countries MCP tool.
+- `ResolveWeatherObservation`: resolve current weather observations through the weather MCP tool.
 
 `LlmPort` is the assistant's AI gateway. It centralizes model communication, prompt settings, timeout behavior, and provider-specific response mapping. The application service should depend on this port instead of calling Spring AI or Ollama directly.
 
 ### Outbound Adapters
 
-- Ollama adapter for local model completion (`qwen3:4b`) and for embeddings (`nomic-embed-text`, dimension `768`; ADR `0007`), through the Spring AI Ollama clients.
+- Ollama synthesis adapter for local model completion (`qwen3:4b`) in `synthesis.infrastructure`, through the Spring AI Ollama chat client.
+- Ollama embedding adapter for RAG embeddings (`nomic-embed-text`, dimension `768`; ADR `0007`) in `rag.infrastructure`, through the Spring AI Ollama embedding client.
 - pgvector adapter for vector storage and similarity retrieval.
 - Countries MCP client adapter for calling the custom countries MCP server.
 - Weather MCP client adapter for calling the local weather MCP server.
@@ -202,22 +240,22 @@ Domain objects should validate their own invariants, such as non-empty question 
 
 1. Chat Interface sends the user question to the Assistant API.
 2. `AssistantApplicationService` classifies the question as country-fact required.
-3. `CountriesPort` asks the countries MCP server for Germany.
+3. `ResolveCountryFacts` asks the countries MCP server for Germany.
 4. Response composer returns Berlin with a countries source.
 5. If the countries source is unavailable, the assistant names that source and does not answer from model memory.
 
 ### "What is the temperature currently in Munich?"
 
 1. The application identifies a current-weather request for Munich.
-2. `WeatherPort` asks the local weather MCP server for Munich.
+2. `ResolveWeatherObservation` asks the local weather MCP server for Munich.
 3. Response composer returns the temperature with location and the weather timestamp, labeled as an observed time or a retrieval time according to what the weather source provided.
 4. If weather is unavailable, the assistant returns a source-unavailable response and does not invent a temperature.
 
 ### "What is the temperature of the capital of Germany currently?"
 
 1. The application identifies a multi-step country plus weather request.
-2. `CountriesPort` resolves Germany's capital.
-3. `WeatherPort` requests current weather for that capital.
+2. `ResolveCountryFacts` resolves Germany's capital.
+3. `ResolveWeatherObservation` requests current weather for that capital.
 4. Response composer combines country facts and weather observation, including both sources.
 5. If either source fails, the assistant returns a partial or unavailable answer that names the failed source.
 
@@ -225,11 +263,11 @@ Domain objects should validate their own invariants, such as non-empty question 
 
 This is the broad place question. Its route is deterministic and fixed in application code:
 
-1. The application classifies the question as a place question and resolves the place through `CountriesPort`. The countries tool accepts a country name or a capital-city name, so "Berlin" resolves to `CountryInfo` for Germany (country name, capital, region, population).
-2. `CountriesPort` and `LlmPort` are the only ports that fire. `WeatherPort` and `RagKnowledgePort` do not fire for this question: the question asks for neither current weather nor CDQ Fraud Guard product knowledge.
-3. The answer must include the verified country facts returned by `CountriesPort`: that Berlin is the capital of Germany, plus at least the country name. These are presented as country-source facts.
+1. The application classifies the question as a place question and resolves the place through `ResolveCountryFacts`. The countries tool accepts a country name or a capital-city name, so "Berlin" resolves to `CountryInfo` for Germany (country name, capital, region, population).
+2. `ResolveCountryFacts` and `LlmPort` are the only ports that fire. `ResolveWeatherObservation` and `RetrieveRagKnowledge` do not fire for this question: the question asks for neither current weather nor CDQ Fraud Guard product knowledge.
+3. The answer must include the verified country facts returned by `ResolveCountryFacts`: that Berlin is the capital of Germany, plus at least the country name. These are presented as country-source facts.
 4. `LlmPort` may add concise connective prose around those facts. It must not present any specific factual claim that no source returned (for example population figures, founding dates, or landmarks) as a verified fact. General context from the model is labeled as general model synthesis, never as a tool result.
-5. If `CountriesPort` is unavailable, the assistant returns a source-unavailable response naming the countries source. It must not state a capital or country fact from model memory in its place.
+5. If `ResolveCountryFacts` is unavailable, the assistant returns a source-unavailable response naming the countries source. It must not state a capital or country fact from model memory in its place.
 
 ## 8. RAG Architecture
 
@@ -277,7 +315,7 @@ The project has two tool paths:
 - custom countries MCP server owned by this repository, backed by REST Countries;
 - local weather MCP server from `semdin/mcp-weather`, consumed through a client adapter.
 
-The assistant application should only see `CountriesPort` and `WeatherPort`. MCP SDK types stay inside adapters.
+The assistant application should only see `ResolveCountryFacts` and `ResolveWeatherObservation`. MCP SDK types stay inside adapters.
 
 MCP tools should be semantic, not a one-to-one mirror of upstream HTTP APIs. Tool names, descriptions, and JSON schemas must be understandable without external documentation. Tool outputs should include only information needed for the assistant answer plus recovery hints for invalid input or unavailable sources.
 
@@ -294,27 +332,36 @@ MCP startup should be repeatable from declarative local configuration, such as a
 
 The assistant may keep a small tool registry at the infrastructure edge to map configured MCP tools to typed application ports. Source routing for the required demo questions remains deterministic in application code; the model should not run an unbounded autonomous tool loop. If a future tool loop is added, it must have a conservative max-turn limit, cancellation support, and typed `{ ok, error, hint }` tool results.
 
+**Bounded agentic orchestration (planned).** An opt-in tool-calling loop behind
+`assistant.orchestration.mode` (default `deterministic`) will let off-demo questions invoke
+`ResolveCountryFacts`, `ResolveWeatherObservation`, and `RetrieveRagKnowledge` through a bounded
+harness (`OrchestrateQuestionUseCase` facade in `answering`, `LlmToolCallPort` in `synthesis`).
+Required demo questions stay policy-routed in every mode. SSE streaming, `AssistantResponseSink`, and
+terminal `final` authority from ADR `0009` are unchanged. See ADR
+[`0010`](../adr/0010-bounded-agentic-tool-orchestration.md) and ExecPlan
+[`improve-agentic-tool-orchestration.md`](../plans/improve-agentic-tool-orchestration.md).
+
 ```mermaid
 sequenceDiagram
     participant App as Assistant Application Service
-    participant CountriesPort as Countries Port
+    participant CountryFacts as ResolveCountryFacts
     participant CountriesClient as Countries MCP Client Adapter
     participant CountriesServer as Countries MCP Server
     participant RestCountries as REST Countries
-    participant WeatherPort as Weather Port
+    participant WeatherObservation as ResolveWeatherObservation
     participant WeatherClient as Weather MCP Client Adapter
     participant WeatherServer as Local Weather MCP Server
 
-    App->>CountriesPort: lookup Germany
-    CountriesPort->>CountriesClient: execute country tool
+    App->>CountryFacts: execute country command
+    CountryFacts->>CountriesClient: execute country tool
     CountriesClient->>CountriesServer: MCP tool call
     CountriesServer->>RestCountries: HTTP country lookup
     RestCountries-->>CountriesServer: country facts
     CountriesServer-->>CountriesClient: MCP tool result
     CountriesClient-->>App: CountryInfo
 
-    App->>WeatherPort: current weather for Berlin
-    WeatherPort->>WeatherClient: execute weather tool
+    App->>WeatherObservation: execute weather command
+    WeatherObservation->>WeatherClient: execute weather tool
     WeatherClient->>WeatherServer: MCP tool call
     WeatherServer-->>WeatherClient: weather observation
     WeatherClient-->>App: WeatherReport
@@ -414,9 +461,9 @@ flowchart TD
     Router --> RagNeeded{CDQ product knowledge needed?}
     Router --> GeneralNeeded{Synthesis needed?}
 
-    CountryNeeded -- yes --> Countries[CountriesPort]
-    WeatherNeeded -- yes --> Weather[WeatherPort]
-    RagNeeded -- yes --> Rag[RagKnowledgePort]
+    CountryNeeded -- yes --> Countries[ResolveCountryFacts]
+    WeatherNeeded -- yes --> Weather[ResolveWeatherObservation]
+    RagNeeded -- yes --> Rag[RetrieveRagKnowledge]
     GeneralNeeded -- yes --> Llm[LlmPort]
 
     Countries --> Results[Grounded Results]
@@ -437,10 +484,10 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    App[Assistant Application Service] --> CountriesPort[Countries Port]
-    App --> WeatherPort[Weather Port]
-    CountriesPort --> CountriesAdapter[Countries MCP Client Adapter]
-    WeatherPort --> WeatherAdapter[Weather MCP Client Adapter]
+    App[Assistant Application Service] --> CountryFacts[ResolveCountryFacts]
+    App --> WeatherObservation[ResolveWeatherObservation]
+    CountryFacts --> CountriesAdapter[Countries MCP Client Adapter]
+    WeatherObservation --> WeatherAdapter[Weather MCP Client Adapter]
     CountriesAdapter --> CustomMcp[Custom Countries MCP Server]
     CustomMcp --> RestCountries[REST Countries API]
     WeatherAdapter --> WeatherMcp[semdin/mcp-weather Server]

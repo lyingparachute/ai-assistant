@@ -6,9 +6,9 @@ Assistant-side mapping for the `country_lookup` tool defined in `docs/spec/11-co
 
 | Port | Method | Input | Output |
 | --- | --- | --- | --- |
-| `CountriesPort` | `lookupCountry` | Non-blank English country or capital name | `ToolExecutionResult<CountryInfo>` |
+| `ResolveCountryFacts` | `execute(Command)` | Non-blank English country or capital name | `ToolExecutionResult<CountryInfo>` |
 
-Blank input is rejected at the port boundary as `ToolError` with category `name is required` (no MCP call).
+Blank input is rejected by `ResolveCountryFacts.Command` before the MCP adapter is called.
 
 ## Value object: `CountryInfo`
 
@@ -67,7 +67,7 @@ Constructed only from a successful tool envelope. Population must be non-negativ
 
 ## Adapter behavior
 
-1. Validate non-blank `name` before MCP call.
+1. Validate and normalize non-blank `Command.name` before MCP call.
 2. Invoke `country_lookup` through `McpToolInvoker`.
 3. Parse the first text content block as JSON.
 4. When `ok` is true, require all `data` fields; missing fields → `SourceUnavailable` (`malformed countries tool payload`).
@@ -95,10 +95,11 @@ exposes no cwd setter. The subprocess therefore inherits the assistant JVM's cwd
 launches that JVM from `assistant-app/`, which is why the countries jar and weather launcher are
 referenced through paths relative to `assistant-app/` (for example
 `../countries-mcp-server/target/countries-mcp-server-<version>.jar`). Changing cwd needs an SDK
-upgrade or a wrapper command that sets it; tracked in `docs/plans/refactor-4-countries-mcp-structural.md`.
+upgrade or a wrapper command that sets it; the current behavior is documented here as a known SDK
+constraint.
 
 Secrets must not be committed. Assignment defaults may live in `application.yml` when safe.
 
 ## Test fixtures
 
-Controlled fixtures live under `assistant-app/src/test/resources/fixtures/mcp/countries/`. Tests use `McpToolInvoker` stubs; they do not spawn the countries server or call REST Countries.
+Controlled fixtures live under `assistant-app/src/test/resources/fixtures/mcp/countries/`. Tests use `shared.mcp.McpToolInvoker` stubs; they do not spawn the countries server or call REST Countries.

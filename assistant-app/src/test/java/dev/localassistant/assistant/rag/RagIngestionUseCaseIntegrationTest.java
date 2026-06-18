@@ -1,10 +1,14 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
-import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorSchemaInitializer;
-import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorTestConfiguration;
-import dev.localassistant.assistant.rag.support.FixtureProductKnowledgePort;
+import dev.localassistant.assistant.rag.domain.RagIngestionReport;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
+import dev.localassistant.assistant.rag.infrastructure.FixtureProductPageSource;
+import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
+import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.support.ChatPathPortStubs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class, RagIngestionTestConfiguration.class})
-@org.springframework.test.context.ContextConfiguration(
-        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
+@org.springframework.test.context.ContextConfiguration(initializers = ChatPathPortStubs.class)
 @Testcontainers
 class RagIngestionUseCaseIntegrationTest {
 
@@ -54,13 +57,13 @@ class RagIngestionUseCaseIntegrationTest {
     }
 
     @Autowired
-    private RagIngestionUseCase ragIngestionUseCase;
+    private IngestRag ingestRag;
 
     @Autowired
     private JdbcTemplate ragJdbcTemplate;
 
     @Autowired
-    private AtomicReference<FixtureProductKnowledgePort> fixtureProductKnowledgePortHolder;
+    private AtomicReference<FixtureProductPageSource> fixtureProductPageSourceHolder;
 
     @Autowired
     private PgvectorSchemaInitializer pgvectorSchemaInitializer;
@@ -69,13 +72,13 @@ class RagIngestionUseCaseIntegrationTest {
     void resetDatabase() throws IOException {
         pgvectorSchemaInitializer.initializeSchema();
         ragJdbcTemplate.execute("TRUNCATE rag_chunks RESTART IDENTITY");
-        fixtureProductKnowledgePortHolder.set(
-                FixtureProductKnowledgePort.fromClasspathHtml(RagIngestionTestConfiguration.FIXTURE_HTML));
+        fixtureProductPageSourceHolder.set(
+                FixtureProductPageSource.fromClasspathHtml(RagIngestionTestConfiguration.FIXTURE_HTML));
     }
 
     @Test
     void fullIngestFromFixtureHtmlStoresRetrievableChunks() {
-        RagIngestionResult result = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult result = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
 
         assertThat(result).isInstanceOf(RagIngestionResult.Success.class);
         RagIngestionReport report = ((RagIngestionResult.Success) result).report();
@@ -92,10 +95,10 @@ class RagIngestionUseCaseIntegrationTest {
 
     @Test
     void reIngestUnchangedContentSkipsReEmbedding() {
-        RagIngestionResult firstResult = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult firstResult = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
         RagIngestionReport firstReport = ((RagIngestionResult.Success) firstResult).report();
 
-        RagIngestionResult secondResult = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult secondResult = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
         RagIngestionReport secondReport = ((RagIngestionResult.Success) secondResult).report();
 
         assertThat(secondReport.outcome()).isEqualTo(RagIngestionReport.Outcome.UNCHANGED);
@@ -112,15 +115,15 @@ class RagIngestionUseCaseIntegrationTest {
 
     @Test
     void changedContentHashReplacesStoredChunks() throws IOException {
-        RagIngestionResult firstResult = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult firstResult = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
         RagIngestionReport firstReport = ((RagIngestionResult.Success) firstResult).report();
 
-        fixtureProductKnowledgePortHolder.set(
-                FixtureProductKnowledgePort.fromClasspathHtml(RagIngestionTestConfiguration.FIXTURE_HTML)
+        fixtureProductPageSourceHolder.set(
+                FixtureProductPageSource.fromClasspathHtml(RagIngestionTestConfiguration.FIXTURE_HTML)
                         .withExtractedText(
                                 "Updated Fraud Guard knowledge with new chargeback prevention details."));
 
-        RagIngestionResult secondResult = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult secondResult = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
         RagIngestionReport secondReport = ((RagIngestionResult.Success) secondResult).report();
 
         assertThat(secondReport.outcome()).isEqualTo(RagIngestionReport.Outcome.REPLACED);

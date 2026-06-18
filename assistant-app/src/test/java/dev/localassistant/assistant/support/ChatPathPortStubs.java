@@ -1,27 +1,19 @@
 package dev.localassistant.assistant.support;
 
-import dev.localassistant.assistant.llm.LlmPort;
-import dev.localassistant.assistant.rag.ChunkStorageOutcome;
-import dev.localassistant.assistant.rag.RagChunk;
-import dev.localassistant.assistant.rag.RagKnowledgePort;
-import dev.localassistant.assistant.rag.RagRetrievalPolicy;
-import dev.localassistant.assistant.rag.RagRetrievalResult;
-import dev.localassistant.assistant.rag.StoredSourceState;
+import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
+import dev.localassistant.assistant.synthesis.domain.port.outbound.LlmPort;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import java.util.List;
-
 /**
- * Registers stub {@link LlmPort} and {@link RagKnowledgePort} singletons before context refresh so
- * the {@code @ConditionalOnBean} guard on {@code AnswerQuestionUseCase} (and the unconditional
- * {@code ChatController}) is satisfied in outbound-adapter integration contexts that boot the full
- * application but do not exercise the chat path.
+ * Registers stub {@link LlmPort} and {@link RetrieveRagKnowledge} singletons before context refresh so
+ * outbound-adapter integration contexts that boot the full application but do not exercise the chat path
+ * still satisfy {@link dev.localassistant.assistant.answering.api.http.ChatController} wiring.
  *
- * <p>Singletons are registered in the initializer (not via {@code @Import}) because
- * {@code @ConditionalOnBean} is evaluated against definitions present when the configuration class
- * is parsed; imported test beans register too late. A context that already declares a primary
- * {@link RagKnowledgePort} keeps it: the stub is non-primary and is never chosen for injection.
+ * <p>Singletons are registered in the initializer (not via {@code @Import}) because imported test beans
+ * register too late for {@code @ConditionalOnMissingBean} on the production use-case beans. A context that
+ * already declares a primary {@link RetrieveRagKnowledge} keeps it: the stub is non-primary and is never
+ * chosen for injection.
  */
 public final class ChatPathPortStubs
         implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -31,7 +23,7 @@ public final class ChatPathPortStubs
         applicationContext.getBeanFactory().registerSingleton("stubChatPathLlmPort", stubLlmPort());
         applicationContext
                 .getBeanFactory()
-                .registerSingleton("stubChatPathRagKnowledgePort", stubRagKnowledgePort());
+                .registerSingleton("stubChatPathRetrieveRagKnowledge", stubRetrieveRagKnowledge());
     }
 
     private static LlmPort stubLlmPort() {
@@ -40,23 +32,9 @@ public final class ChatPathPortStubs
         };
     }
 
-    private static RagKnowledgePort stubRagKnowledgePort() {
-        return new RagKnowledgePort() {
-            @Override
-            public RagRetrievalResult retrieve(String questionText, RagRetrievalPolicy policy) {
-                throw notExercised();
-            }
-
-            @Override
-            public ChunkStorageOutcome storeChunks(
-                    String sourceUrl, String contentHash, List<RagChunk> chunks) {
-                throw notExercised();
-            }
-
-            @Override
-            public StoredSourceState findContentHashForSource(String sourceUrl) {
-                throw notExercised();
-            }
+    private static RetrieveRagKnowledge stubRetrieveRagKnowledge() {
+        return command -> {
+            throw notExercised();
         };
     }
 

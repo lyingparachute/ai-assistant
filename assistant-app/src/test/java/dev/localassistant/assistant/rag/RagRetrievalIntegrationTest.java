@@ -1,14 +1,23 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
-import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorSchemaInitializer;
-import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorTestConfiguration;
-import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
+import dev.localassistant.assistant.answering.domain.port.inbound.AnswerQuestion;
+import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
+import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
+import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
+import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
+import dev.localassistant.assistant.rag.infrastructure.config.AssistantRagRetrievalProperties;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
+import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.support.LlmPortStub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -24,10 +33,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class, RagIngestionTestConfiguration.class})
-@org.springframework.test.context.ContextConfiguration(
-        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
+@org.springframework.test.context.ContextConfiguration(initializers = LlmPortStub.class)
 @Testcontainers
 class RagRetrievalIntegrationTest {
+
+    @MockBean
+    AnswerQuestion answerQuestion;
 
     private static final DockerImageName PGVECTOR_IMAGE =
             DockerImageName.parse("pgvector/pgvector:pg17");
@@ -51,10 +62,10 @@ class RagRetrievalIntegrationTest {
     }
 
     @Autowired
-    private RagIngestionUseCase ragIngestionUseCase;
+    private IngestRag ingestRag;
 
     @Autowired
-    private RagKnowledgePort ragKnowledgePort;
+    private RetrieveRagKnowledge retrieveRagKnowledge;
 
     @Autowired
     private AssistantRagRetrievalProperties retrievalProperties;
@@ -73,16 +84,17 @@ class RagRetrievalIntegrationTest {
 
     @Test
     void relevantCdqQuestionRetrievesFixtureKnowledgeSnippets() {
-        RagIngestionResult ingestionResult = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult ingestionResult = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
         assertThat(ingestionResult).isInstanceOf(RagIngestionResult.Success.class);
 
         RagRetrievalPolicy policy =
                 new RagRetrievalPolicy(
                         retrievalProperties.topK(), retrievalProperties.relevanceThreshold());
         RagRetrievalResult retrievalResult =
-                ragKnowledgePort.retrieve(
+                retrieveRagKnowledge.execute(
+                        new RetrieveRagKnowledge.Command(
                         "How does Fraud Guard analyze transaction patterns and flag suspicious behavior before losses occur?",
-                        policy);
+                        policy));
 
         assertThat(retrievalResult).isInstanceOf(RagRetrievalResult.Success.class);
         RagRetrievalResult.Success success = (RagRetrievalResult.Success) retrievalResult;
@@ -109,7 +121,7 @@ class RagRetrievalIntegrationTest {
 
     @Test
     void offTopicQuestionReturnsNoRelevantKnowledgeWithoutLoweringThreshold() {
-        RagIngestionResult ingestionResult = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult ingestionResult = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
         assertThat(ingestionResult).isInstanceOf(RagIngestionResult.Success.class);
 
         double configuredThreshold = retrievalProperties.relevanceThreshold();
@@ -118,7 +130,8 @@ class RagRetrievalIntegrationTest {
         RagRetrievalPolicy policy =
                 new RagRetrievalPolicy(retrievalProperties.topK(), configuredThreshold);
         RagRetrievalResult retrievalResult =
-                ragKnowledgePort.retrieve("What is the weather in Munich?", policy);
+                retrieveRagKnowledge.execute(
+                        new RetrieveRagKnowledge.Command("What is the weather in Munich?", policy));
 
         assertThat(retrievalResult).isInstanceOf(RagRetrievalResult.NoRelevantKnowledge.class);
         assertThat(retrievalResult).isNotInstanceOf(RagRetrievalResult.Success.class);

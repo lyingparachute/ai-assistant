@@ -12,13 +12,13 @@ import java.util.Map;
 public class CountryToolResult {
 
     public static Map<String, Object> success(CountryFacts facts) {
-        Map<String, Object> data = new LinkedHashMap<>();
+        var data = new LinkedHashMap<String, Object>();
         data.put("countryName", facts.countryName());
         data.put("capital", facts.capital());
         data.put("region", facts.region());
         data.put("population", facts.population());
 
-        Map<String, Object> envelope = new LinkedHashMap<>();
+        var envelope = new LinkedHashMap<String, Object>();
         envelope.put("ok", true);
         envelope.put("data", data);
         return envelope;
@@ -26,11 +26,11 @@ public class CountryToolResult {
 
     public static ToolEnvelope fromOutcome(CountryLookupOutcome outcome) {
         return switch (outcome) {
-            case CountryLookupOutcome.Success success -> new ToolEnvelope(success(success.facts()), false);
+            case CountryLookupOutcome.Success(var facts) -> new ToolEnvelope(success(facts), false);
             case CountryLookupOutcome.NotRecognized ignored ->
                     new ToolEnvelope(CountryToolErrors.notRecognized(), true);
-            case CountryLookupOutcome.AmbiguousCapital ambiguousCapital ->
-                    new ToolEnvelope(CountryToolErrors.ambiguousCapital(ambiguousCapital.countryNames()), true);
+            case CountryLookupOutcome.AmbiguousCapital(var countryNames) ->
+                    new ToolEnvelope(CountryToolErrors.ambiguousCapital(countryNames), true);
             case CountryLookupOutcome.SourceUnavailable ignored ->
                     new ToolEnvelope(CountryToolErrors.sourceUnavailable(), true);
         };

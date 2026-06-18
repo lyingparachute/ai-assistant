@@ -1,8 +1,8 @@
 package dev.localassistant.assistant;
 
-import dev.localassistant.assistant.adapters.inbound.http.ChatController;
-import dev.localassistant.assistant.adapters.outbound.mcp.McpToolInvoker;
-import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
+import dev.localassistant.assistant.answering.api.http.ChatController;
+import dev.localassistant.assistant.answering.domain.port.inbound.AnswerQuestion;
+import dev.localassistant.assistant.shared.mcp.McpToolInvoker;
 import dev.localassistant.assistant.support.ChatPathPortStubs;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ class AssistantContextLoadTest {
     @Test
     void defaultContextBootsWithChatPathWired() {
         assertThat(applicationContext.getBeanNamesForType(ChatController.class)).hasSize(1);
-        assertThat(applicationContext.getBeanNamesForType(AnswerQuestionUseCase.class)).hasSize(1);
+        assertThat(applicationContext.getBeanNamesForType(AnswerQuestion.class)).hasSize(1);
     }
 
     @Test

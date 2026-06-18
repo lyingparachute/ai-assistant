@@ -3,6 +3,9 @@ package dev.localassistant.countries.support;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,7 +77,7 @@ public final class StubRestCountriesServer implements AutoCloseable {
             String lookupPath = path.contains("?") ? path.substring(0, path.indexOf('?')) : path;
             StubResponse response = routes.get(lookupPath);
             if (response == null) {
-                writeResponse(exchange, 200, EMPTY_BODY);
+                writeResponse(exchange, HttpStatus.OK.value(), EMPTY_BODY);
                 return;
             }
             if (response.delayMillis() > 0) {
@@ -89,7 +92,7 @@ public final class StubRestCountriesServer implements AutoCloseable {
 
         private void writeResponse(HttpExchange exchange, int statusCode, String body) throws IOException {
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.getResponseHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             exchange.sendResponseHeaders(statusCode, bytes.length);
             try (OutputStream outputStream = exchange.getResponseBody()) {
                 outputStream.write(bytes);

@@ -50,10 +50,10 @@ no assistant responds on the configured base URL (`assistant.e2e.base-url`, defa
 `e2e-tests/src/test/resources/demo-questions.json`; the capture script
 `scripts/capture-demo-answers.sh` and the integration test both read that file.
 
-Each captured file under `docs/demo/capture/` records the expected source-path key
-(`expectedSourcePathKey`, taken from `demo-questions.json`) alongside the assistant `response`, so
-the evidence shows which source path each question should exercise. The capture script fails
-non-zero if the question file is missing, malformed, or empty rather than capturing nothing.
+The capture script writes raw local JSON under `docs/demo/capture/`, then the curated submission
+evidence is summarized in `docs/demo/final-answers.md` with trace excerpts under
+`docs/demo/request-traces/`. The capture script fails non-zero if the question file is missing,
+malformed, or empty rather than capturing nothing.
 
 ## Required Questions
 
@@ -84,7 +84,7 @@ Use this dedicated demo evidence location after implementation:
 
 ```text
 docs/demo/final-answers.md
-docs/demo/demo-run-log.md
+docs/demo/clean-checkout-verification.md
 docs/demo/request-traces/
 ```
 

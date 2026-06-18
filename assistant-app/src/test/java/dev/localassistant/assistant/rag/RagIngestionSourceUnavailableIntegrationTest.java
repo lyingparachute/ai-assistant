@@ -1,8 +1,11 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
-import dev.localassistant.assistant.adapters.outbound.pgvector.PgvectorTestConfiguration;
+import dev.localassistant.assistant.rag.domain.RagIngestionResult;
+import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
+import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.support.ChatPathPortStubs;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,8 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class, RagIngestionTestConfiguration.class})
-@org.springframework.test.context.ContextConfiguration(
-        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
+@org.springframework.test.context.ContextConfiguration(initializers = ChatPathPortStubs.class)
 @Testcontainers
 class RagIngestionSourceUnavailableIntegrationTest {
 
@@ -49,17 +51,17 @@ class RagIngestionSourceUnavailableIntegrationTest {
     }
 
     @Autowired
-    private RagIngestionUseCase ragIngestionUseCase;
+    private IngestRag ingestRag;
 
     @Test
     void ingestReturnsSourceUnavailableWhenPgvectorIsDownInsteadOfThrowing() {
         postgres.stop();
 
-        RagIngestionResult result = ragIngestionUseCase.ingest(SOURCE_URL);
+        RagIngestionResult result = ingestRag.execute(new IngestRag.Command(SOURCE_URL));
 
         assertThat(result).isInstanceOf(RagIngestionResult.SourceUnavailable.class);
         RagIngestionResult.SourceUnavailable unavailable = (RagIngestionResult.SourceUnavailable) result;
         assertThat(unavailable.sourceLabel()).isEqualTo(PGVECTOR_SOURCE_LABEL);
-        assertThatCode(() -> ragIngestionUseCase.ingest(SOURCE_URL)).doesNotThrowAnyException();
+        assertThatCode(() -> ingestRag.execute(new IngestRag.Command(SOURCE_URL))).doesNotThrowAnyException();
     }
 }

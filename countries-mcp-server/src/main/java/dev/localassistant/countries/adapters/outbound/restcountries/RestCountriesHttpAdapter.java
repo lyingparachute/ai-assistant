@@ -7,6 +7,8 @@ import dev.localassistant.countries.model.CountryFacts;
 import dev.localassistant.countries.model.LookupPlace;
 import dev.localassistant.countries.ports.RestCountriesPort;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.net.URI;
@@ -26,10 +28,7 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
     private static final String CAPITAL_PATH_PREFIX = "/capitals/";
     private static final String QUERY_SEPARATOR = "?";
     private static final String FIELDS_QUERY = "response_fields=names.common,capitals,region,population";
-    private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final int HTTP_UNAUTHORIZED = 401;
-    private static final int HTTP_FORBIDDEN = 403;
     private static final String MISSING_API_KEY_REASON =
             "REST Countries API key is not configured; set REST_COUNTRIES_API_KEY";
     private static final String UNAUTHORIZED_REASON =
@@ -63,15 +62,15 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
         if (!configuration.hasRestCountriesApiKey()) {
             return new RestCountriesQueryResult.SourceUnavailable(MISSING_API_KEY_REASON);
         }
-        URI uri = URI.create(
+        final var uri = URI.create(
                 trimTrailingSlash(configuration.restCountriesBaseUrl()) + path + QUERY_SEPARATOR + FIELDS_QUERY);
-        HttpRequest request = HttpRequest.newBuilder(uri)
+        final var request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(configuration.restCountriesTimeoutSeconds()))
-                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + configuration.restCountriesApiKey())
+                .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + configuration.restCountriesApiKey())
                 .GET()
                 .build();
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return mapResponse(response.statusCode(), response.body());
         } catch (IOException | InterruptedException exception) {
             if (exception instanceof InterruptedException) {
@@ -82,21 +81,22 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
     }
 
     private RestCountriesQueryResult mapResponse(int statusCode, String body) {
-        if (statusCode == HTTP_UNAUTHORIZED || statusCode == HTTP_FORBIDDEN) {
+        final HttpStatus httpStatus = HttpStatus.resolve(statusCode);
+        if (httpStatus == HttpStatus.UNAUTHORIZED || httpStatus == HttpStatus.FORBIDDEN) {
             return new RestCountriesQueryResult.SourceUnavailable(UNAUTHORIZED_REASON.formatted(statusCode));
         }
-        if (statusCode < 200 || statusCode >= 300) {
+        if (HttpStatus.Series.SUCCESSFUL != HttpStatus.Series.resolve(statusCode)) {
             return new RestCountriesQueryResult.SourceUnavailable("HTTP " + statusCode);
         }
         try {
-            JsonNode objects = objectMapper.readTree(body).path("data").path("objects");
+            final var objects = objectMapper.readTree(body).path("data").path("objects");
             if (!objects.isArray()) {
                 return new RestCountriesQueryResult.SourceUnavailable("expected data.objects array");
             }
             if (objects.isEmpty()) {
                 return new RestCountriesQueryResult.NotFound();
             }
-            List<CountryFacts> countries = new ArrayList<>();
+            var countries = new ArrayList<CountryFacts>();
             for (JsonNode node : objects) {
                 mapCountry(node).ifPresent(countries::add);
             }
@@ -110,9 +110,9 @@ public final class RestCountriesHttpAdapter implements RestCountriesPort {
     }
 
     private Optional<CountryFacts> mapCountry(JsonNode node) {
-        Optional<String> countryName = textValue(node.path("names").path("common"));
-        Optional<String> capital = selectCapital(node.path("capitals"));
-        Optional<String> region = textValue(node.path("region"));
+        final var countryName = textValue(node.path("names").path("common"));
+        final var capital = selectCapital(node.path("capitals"));
+        final var region = textValue(node.path("region"));
         if (countryName.isEmpty() || capital.isEmpty() || region.isEmpty() || !node.hasNonNull("population")) {
             return Optional.empty();
         }

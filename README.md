@@ -2,9 +2,18 @@
 
 Local-first AI Assistant: an Astro Chat Interface calls a Spring Boot API that combines Ollama synthesis, RAG knowledge over CDQ Fraud Guard product content in pgvector, and MCP-backed country and weather knowledge sources.
 
+## Reviewer Reading Path
+
+For a fast review, read this file first, then:
+
+1. [docs/demo/final-answers.md](docs/demo/final-answers.md) for runtime-captured answers.
+2. [docs/demo/clean-checkout-verification.md](docs/demo/clean-checkout-verification.md) for verified commands.
+3. [docs/ai/summary.md](docs/ai/summary.md) for AI-assisted workflow disclosure.
+4. [docs/spec/05-architecture.md](docs/spec/05-architecture.md) and ADRs for design trade-offs.
+
 ## Architecture
 
-The backend follows Hexagonal Architecture as described in [docs/spec/05-architecture.md](docs/spec/05-architecture.md) and ADR `0005`. The Assistant API maps HTTP SSE requests into an application use case. The application depends on ports (`LlmPort`, `RagKnowledgePort`, `CountriesPort`, `WeatherPort`), while adapters hide Ollama, pgvector, REST Countries, WeatherAPI, and MCP runtime details. The Chat Interface talks to `POST /api/chat` over Server-Sent Events; the terminal `final` event is the authoritative answer.
+The backend follows Hexagonal Architecture as described in [docs/spec/05-architecture.md](docs/spec/05-architecture.md) and ADR `0005`. The Assistant API maps HTTP SSE requests into an application use case. The application depends on feature ports (`LlmPort`, `RetrieveRagKnowledge`, `ResolveCountryFacts`, `ResolveWeatherObservation`), while adapters hide Ollama, pgvector, REST Countries, WeatherAPI, and MCP runtime details. The Chat Interface talks to `POST /api/chat` over Server-Sent Events; the terminal `final` event is the authoritative answer.
 
 Modules:
 
@@ -30,7 +39,7 @@ Modules:
 | REST Countries | v5 base URL | ADR `0008`, `application.yml` |
 | Weather | `semdin/mcp-weather` plus WeatherAPI.com | `scripts/mcp-weather`, `application.yml` |
 
-Spring Boot 4, Spring AI 2, and MCP SDK 2 are intentionally deferred in [docs/plans/backend-hygiene.md](docs/plans/backend-hygiene.md).
+Spring Boot 4, Spring AI 2, and MCP SDK 2 are intentionally deferred; the submitted stack uses the verified versions above.
 
 ## Prerequisites
 
@@ -179,7 +188,7 @@ Showcase questions cover CDQ Fraud Guard RAG knowledge and a no-route source-una
 Captured demo evidence:
 
 - [docs/demo/final-answers.md](docs/demo/final-answers.md)
-- [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md)
+- [docs/demo/clean-checkout-verification.md](docs/demo/clean-checkout-verification.md)
 - [docs/demo/request-traces/](docs/demo/request-traces/)
 
 To recapture demo answers from a running assistant:
@@ -188,11 +197,11 @@ To recapture demo answers from a running assistant:
 ./scripts/capture-demo-answers.sh
 ```
 
-Raw capture output is written to `docs/demo/capture/`.
+Raw capture output is generated locally under `docs/demo/capture/` and is not part of the submitted documentation.
 
 ## AI Usage
 
-AI-assisted work is documented under [docs/ai/](docs/ai/). Those entries record the task, agent role, files affected, human review status, and verification evidence for material work.
+AI-assisted work is summarized in [docs/ai/summary.md](docs/ai/summary.md). The summary records how AI helped, what was human-reviewed, and where verification evidence lives.
 
 - AI helped draft plans, implement code, review changes, debug runtime blockers, and finalize documentation.
 - Human direction constrained scope, selected trade-offs, required live verification, and rejected fabricated evidence.
@@ -203,12 +212,12 @@ AI-assisted work is documented under [docs/ai/](docs/ai/). Those entries record 
 ## Limitations
 
 - No conversational memory across requests (ADR `0006`).
-- Source routing is deterministic application logic; bounded agentic orchestration remains a proposed follow-up in [docs/plans/improve-agentic-tool-orchestration.md](docs/plans/improve-agentic-tool-orchestration.md).
+- Source routing is deterministic application logic; bounded agentic orchestration remains out of scope for this submission.
 - The application is local-only: no user accounts, no remote deployment, no cloud LLM providers.
 - RAG knowledge is limited to CDQ Fraud Guard product-page content.
 - External sources must be available for fully grounded live answers: REST Countries v5, WeatherAPI.com, Ollama, and local pgvector.
 - Weather values are volatile. Demo weather answers include location and retrieval time in captured evidence.
-- Historical upstream blockers from the first demo capture were resolved in later sessions; details remain in [docs/demo/demo-run-log.md](docs/demo/demo-run-log.md).
+- Historical upstream blockers from earlier demo attempts were resolved before the final captured answers.
 
 ## Documentation
 
@@ -219,12 +228,10 @@ AI-assisted work is documented under [docs/ai/](docs/ai/). Those entries record 
 | Non-functional requirements | [docs/spec/02-non-functional-requirements.md](docs/spec/02-non-functional-requirements.md) |
 | Acceptance criteria | [docs/spec/03-acceptance-criteria.md](docs/spec/03-acceptance-criteria.md) |
 | Architecture | [docs/spec/05-architecture.md](docs/spec/05-architecture.md) |
-| Implementation plan | [docs/spec/06-implementation-plan.md](docs/spec/06-implementation-plan.md) |
 | Test strategy | [docs/spec/07-test-strategy.md](docs/spec/07-test-strategy.md) |
-| Demo plan | [docs/spec/08-demo-plan.md](docs/spec/08-demo-plan.md) |
 | Assistant API contract | [docs/spec/14-assistant-api-contract.md](docs/spec/14-assistant-api-contract.md) |
 | Demo evidence | [docs/demo/](docs/demo/) |
-| AI-assisted work | [docs/ai/](docs/ai/) |
+| AI-assisted work | [docs/ai/summary.md](docs/ai/summary.md) |
 | ADR `0001` Spring AI | [docs/adr/0001-use-spring-ai.md](docs/adr/0001-use-spring-ai.md) |
 | ADR `0002` Ollama model | [docs/adr/0002-use-ollama-qwen3-4b.md](docs/adr/0002-use-ollama-qwen3-4b.md) |
 | ADR `0003` pgvector | [docs/adr/0003-use-pgvector-for-rag.md](docs/adr/0003-use-pgvector-for-rag.md) |
