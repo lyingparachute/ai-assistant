@@ -35,6 +35,48 @@ public record RagChunk(
     }
 
     @Override
+    public boolean equals(final Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (!(object instanceof RagChunk other)) {
+            return false;
+        }
+        return chunkIndex == other.chunkIndex
+            && chunkText.equals(other.chunkText)
+            && sourceUrl.equals(other.sourceUrl)
+            && contentHash.equals(other.contentHash)
+            && ingestionTimestamp.equals(other.ingestionTimestamp)
+            && Arrays.equals(embedding, other.embedding);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(chunkText, sourceUrl, contentHash, chunkIndex, ingestionTimestamp);
+        result = 31 * result + Arrays.hashCode(embedding);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RagChunk[chunkText="
+            + chunkText
+            + ", embedding=float["
+            + embedding.length
+            + "]{contentHash="
+            + Arrays.hashCode(embedding)
+            + "}, sourceUrl="
+            + sourceUrl
+            + ", contentHash="
+            + contentHash
+            + ", chunkIndex="
+            + chunkIndex
+            + ", ingestionTimestamp="
+            + ingestionTimestamp
+            + ']';
+    }
+
+    @Override
     public float[] embedding() {
         return Arrays.copyOf(embedding, embedding.length);
     }

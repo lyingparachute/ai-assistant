@@ -20,6 +20,11 @@ fi
 BACKEND_PID=""
 FRONTEND_PID=""
 
+# Set START_ASSISTANT_LOG_CONSOLE=0 to keep file-only logging (e.g. automation).
+log_to_console() {
+  [[ "${START_ASSISTANT_LOG_CONSOLE:-1}" == "1" ]]
+}
+
 info() {
   printf '==> %s\n' "$*"
 }
@@ -50,10 +55,10 @@ wait_for_port() {
 
   while ! port_in_use "$port"; do
     if ! kill -0 "$pid" >/dev/null 2>&1; then
-      fail "$name exited before port $port became ready. See logs in $LOG_DIR"
+      fail "$name exited before port $port became ready. See output above or logs in $LOG_DIR"
     fi
     if (( elapsed >= timeout_seconds )); then
-      fail "Timed out waiting for $name on port $port. See logs in $LOG_DIR"
+      fail "Timed out waiting for $name on port $port. See output above or logs in $LOG_DIR"
     fi
     sleep 1
     elapsed=$((elapsed + 1))
@@ -173,13 +178,30 @@ open_browser() {
   info "Open $url in your browser."
 }
 
+# Mirror process output to the console (with a prefix) and to a log file.
+run_with_console_logs() {
+  local prefix="$1"
+  local log_file="$2"
+  shift 2
+
+  : >"$log_file"
+  "$@" 2>&1 | tee -a "$log_file" | while IFS= read -r line || [[ -n "$line" ]]; do
+    printf '[%s] %s\n' "$prefix" "$line"
+  done
+}
+
 start_backend() {
   info "Starting Assistant API on $BACKEND_URL ..."
   mkdir -p "$LOG_DIR"
   (
     cd "$REPO_ROOT"
-    ./mvnw -q -pl assistant-app spring-boot:run
-  ) >"$LOG_DIR/backend.log" 2>&1 &
+    if log_to_console; then
+      run_with_console_logs "backend" "$LOG_DIR/backend.log" \
+        ./mvnw -pl assistant-app spring-boot:run
+    else
+      ./mvnw -q -pl assistant-app spring-boot:run >>"$LOG_DIR/backend.log" 2>&1
+    fi
+  ) &
   BACKEND_PID=$!
   wait_for_port "Assistant API" "$BACKEND_PORT" "$BACKEND_PID" 180
   info "Assistant API is ready ($BACKEND_URL)"
@@ -187,10 +209,16 @@ start_backend() {
 
 start_frontend() {
   info "Starting Chat Interface on $FRONTEND_URL ..."
+  mkdir -p "$LOG_DIR"
   (
     cd "$REPO_ROOT/chat-ui"
-    npm run dev -- --port "$FRONTEND_PORT" --host localhost
-  ) >"$LOG_DIR/frontend.log" 2>&1 &
+    if log_to_console; then
+      run_with_console_logs "frontend" "$LOG_DIR/frontend.log" \
+        npm run dev -- --port "$FRONTEND_PORT" --host localhost
+    else
+      npm run dev -- --port "$FRONTEND_PORT" --host localhost >>"$LOG_DIR/frontend.log" 2>&1
+    fi
+  ) &
   FRONTEND_PID=$!
   wait_for_port "Chat Interface" "$FRONTEND_PORT" "$FRONTEND_PID" 60
   info "Chat Interface is ready ($FRONTEND_URL)"
@@ -211,7 +239,11 @@ main() {
   info "Assistant is running."
   printf '    Backend:  %s\n' "$BACKEND_URL"
   printf '    Chat UI:  %s\n' "$FRONTEND_URL"
-  printf '    Logs:     %s\n' "$LOG_DIR"
+  if log_to_console; then
+    printf '    Logs:     streaming below ([backend] / [frontend]); also saved in %s\n' "$LOG_DIR"
+  else
+    printf '    Logs:     %s\n' "$LOG_DIR"
+  fi
   printf '    Stop:     press Ctrl+C in this terminal\n'
 
   open_browser "$FRONTEND_URL"

@@ -1,9 +1,7 @@
 package dev.localassistant.assistant.synthesis.infrastructure.config;
 
-import dev.localassistant.assistant.config.AssistantLlmProperties;
 import dev.localassistant.assistant.synthesis.domain.port.outbound.LlmPort;
 import dev.localassistant.assistant.synthesis.infrastructure.OllamaLlmAdapter;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;

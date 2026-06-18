@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.shared.mcp;
 
-import dev.localassistant.assistant.config.AssistantMcpProperties.McpServer;
+import dev.localassistant.assistant.shared.mcp.infrastructure.config.AssistantMcpProperties.McpServer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -9,7 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 @UtilityClass
-public class ContentHasher {
+class ContentHasher {
 
     private static final HexFormat HEX = HexFormat.of();
 

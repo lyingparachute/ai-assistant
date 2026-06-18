@@ -1,9 +1,6 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
-import dev.localassistant.assistant.rag.infrastructure.PgvectorTestConfiguration;
-import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
-import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
+import dev.localassistant.assistant.answering.domain.port.inbound.AnswerQuestion;
 import dev.localassistant.assistant.rag.domain.KnowledgeSnippet;
 import dev.localassistant.assistant.rag.domain.RagIngestionResult;
 import dev.localassistant.assistant.rag.domain.RagRetrievalPolicy;
@@ -11,7 +8,10 @@ import dev.localassistant.assistant.rag.domain.RagRetrievalResult;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
 import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
 import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
+import dev.localassistant.assistant.rag.infrastructure.config.AssistantRagRetrievalProperties;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
+import dev.localassistant.assistant.shared.mcp.support.McpTestConfiguration;
 import dev.localassistant.assistant.support.LlmPortStub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RagRetrievalIntegrationTest {
 
     @MockBean
-    AnswerQuestionUseCase answerQuestionUseCase;
+    AnswerQuestion answerQuestion;
 
     private static final DockerImageName PGVECTOR_IMAGE =
             DockerImageName.parse("pgvector/pgvector:pg17");

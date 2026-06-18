@@ -1,17 +1,17 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
+import com.sun.net.httpserver.HttpServer;
 import dev.localassistant.assistant.rag.domain.ProductPageResult;
 import dev.localassistant.assistant.rag.domain.port.outbound.ProductPageSource;
+import dev.localassistant.assistant.rag.infrastructure.config.AssistantRagRetrievalProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
-
-import com.sun.net.httpserver.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,7 +26,7 @@ class CdqProductPageSourceTest {
         httpServer.createContext(
                 "/cdq-fraud-guard",
                 exchange -> {
-                    exchange.sendResponseHeaders(503, -1);
+                    exchange.sendResponseHeaders(HttpStatus.SERVICE_UNAVAILABLE.value(), -1);
                     exchange.close();
                 });
         httpServer.start();
@@ -52,7 +52,7 @@ class CdqProductPageSourceTest {
         assertThat(result).isInstanceOf(ProductPageResult.SourceUnavailable.class);
         ProductPageResult.SourceUnavailable unavailable = (ProductPageResult.SourceUnavailable) result;
         assertThat(unavailable.sourceLabel()).isEqualTo("CDQ product page");
-        assertThat(unavailable.message()).contains("503");
+        assertThat(unavailable.message()).contains(String.valueOf(HttpStatus.SERVICE_UNAVAILABLE.value()));
         assertThat(unavailable.hint()).contains("CDQ product page URL");
     }
 
@@ -63,7 +63,7 @@ class CdqProductPageSourceTest {
         httpServer.createContext(
                 "/empty",
                 exchange -> {
-                    exchange.sendResponseHeaders(200, 0);
+                    exchange.sendResponseHeaders(HttpStatus.OK.value(), 0);
                     try (OutputStream responseBody = exchange.getResponseBody()) {
                         responseBody.flush();
                     }

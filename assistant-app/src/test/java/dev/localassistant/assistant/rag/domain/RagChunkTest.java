@@ -94,6 +94,44 @@ class RagChunkTest {
         assertThat(chunk.embedding()[0]).isNotEqualTo(99.0f);
     }
 
+    @Test
+    void equalsAndHashCodeConsiderEmbeddingContent() {
+        Instant ingestionTimestamp = Instant.parse("2026-06-15T10:00:00Z");
+        float[] firstEmbedding = validEmbedding();
+        float[] matchingEmbedding = Arrays.copyOf(firstEmbedding, firstEmbedding.length);
+        float[] differentEmbedding = validEmbedding();
+        differentEmbedding[0] = 0.9f;
+
+        RagChunk baseline =
+                new RagChunk(
+                        "chunk text",
+                        firstEmbedding,
+                        "https://example.com",
+                        "hash-1",
+                        0,
+                        ingestionTimestamp);
+        RagChunk matching =
+                new RagChunk(
+                        "chunk text",
+                        matchingEmbedding,
+                        "https://example.com",
+                        "hash-1",
+                        0,
+                        ingestionTimestamp);
+        RagChunk different =
+                new RagChunk(
+                        "chunk text",
+                        differentEmbedding,
+                        "https://example.com",
+                        "hash-1",
+                        0,
+                        ingestionTimestamp);
+
+        assertThat(baseline).isEqualTo(matching).hasSameHashCodeAs(matching);
+        assertThat(baseline).isNotEqualTo(different);
+        assertThat(baseline.toString()).contains("contentHash=").contains("float[768]");
+    }
+
     private static float[] validEmbedding() {
         float[] embedding = new float[EmbeddingDimensions.VECTOR_SIZE];
         Arrays.fill(embedding, 0.1f);

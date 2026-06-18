@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.shared.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.localassistant.assistant.config.AssistantMcpProperties;
+import dev.localassistant.assistant.shared.mcp.infrastructure.config.AssistantMcpProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 

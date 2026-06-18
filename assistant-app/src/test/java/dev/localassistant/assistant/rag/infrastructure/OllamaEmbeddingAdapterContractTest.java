@@ -1,8 +1,8 @@
 package dev.localassistant.assistant.rag.infrastructure;
 
-import dev.localassistant.assistant.config.AssistantEmbeddingProperties;
-import dev.localassistant.assistant.rag.domain.EmbeddingResult;
 import dev.localassistant.assistant.rag.domain.EmbeddingDimensions;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
+import dev.localassistant.assistant.rag.infrastructure.config.AssistantEmbeddingProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

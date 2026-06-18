@@ -2,11 +2,11 @@ package dev.localassistant.assistant.rag.infrastructure;
 
 class PgvectorStorageException extends RuntimeException {
 
-    PgvectorStorageException(String message) {
+    PgvectorStorageException(final String message) {
         super(message);
     }
 
-    PgvectorStorageException(String message, Throwable cause) {
+    PgvectorStorageException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

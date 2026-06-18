@@ -1,11 +1,10 @@
 package dev.localassistant.assistant.rag.api;
 
-import dev.localassistant.assistant.adapters.inbound.http.ChatController;
-import dev.localassistant.assistant.rag.api.RagIngestionCli;
-import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
-import dev.localassistant.assistant.rag.infrastructure.PgvectorTestConfiguration;
-import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
+import dev.localassistant.assistant.answering.api.http.ChatController;
+import dev.localassistant.assistant.answering.domain.port.inbound.AnswerQuestion;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
+import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorTestConfiguration;
 import dev.localassistant.assistant.rag.support.RagIngestionTestConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +63,7 @@ class RagIngestionContextLoadTest {
     @Test
     void ingestRagProfileLoadsIngestionWithoutChatOrchestration() {
         assertThat(applicationContext.getBeansOfType(ChatController.class)).isEmpty();
-        assertThat(applicationContext.getBeansOfType(AnswerQuestionUseCase.class)).isEmpty();
+        assertThat(applicationContext.getBeansOfType(AnswerQuestion.class)).isEmpty();
         assertThat(applicationContext.getBeansOfType(IngestRag.class)).hasSize(1);
         assertThat(applicationContext.getBeansOfType(RagIngestionCli.class)).hasSize(1);
     }

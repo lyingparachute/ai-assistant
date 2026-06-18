@@ -1,6 +1,5 @@
 package dev.localassistant.assistant.rag.domain;
 
-import dev.localassistant.assistant.rag.domain.EmbeddingDimensions;
 import dev.localassistant.assistant.shared.SourceUnavailability;
 
 import java.util.Arrays;
@@ -10,9 +9,8 @@ public sealed interface EmbeddingResult {
 
     default SourceUnavailability asUnavailability() {
         return switch (this) {
-            case Success ignored ->
-                    throw new IllegalStateException("asUnavailability requires a failed result");
-            case SourceUnavailable(var unavailability) -> unavailability;
+            case final Success ignored -> throw new IllegalStateException("asUnavailability requires a failed result");
+            case SourceUnavailable(final var unavailability) -> unavailability;
         };
     }
 
@@ -34,7 +32,7 @@ public sealed interface EmbeddingResult {
             Objects.requireNonNull(unavailability, "unavailability");
         }
 
-        public SourceUnavailable(String sourceLabel, String message, String hint) {
+        public SourceUnavailable(final String sourceLabel, final String message, final String hint) {
             this(new SourceUnavailability(sourceLabel, message, hint));
         }
 

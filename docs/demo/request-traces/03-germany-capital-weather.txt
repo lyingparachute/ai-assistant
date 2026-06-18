@@ -1,5 +1,15 @@
-event=assistant_request_started correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 questionLength=60
-event=assistant_route_selected correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 route=COUNTRY_THEN_WEATHER
-event=assistant_port_invoked correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 port=CountriesPort invocationOrder=1
-event=assistant_port_invoked correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 port=WeatherPort invocationOrder=2
-event=assistant_request_completed correlationId=785e0349-9a23-4418-a8a6-32ca4ff10f97 route=COUNTRY_THEN_WEATHER portsInvoked=[CountriesPort, WeatherPort] ragRetrievalCount=0 outcome=country_then_weather_answered_sources=2
+event=assistant_request_started correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 questionLength=60
+event=assistant_route_selected correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 route=COUNTRY_THEN_WEATHER
+event=assistant_port_invoked correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 port=CountriesPort invocationOrder=1
+event=assistant_port_invoked correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 port=WeatherPort invocationOrder=2
+event=assistant_request_completed correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 route=COUNTRY_THEN_WEATHER portsInvoked=[CountriesPort, WeatherPort] ragRetrievalCount=0 outcome=country_then_weather_answered_sources=2
+
+SSE (deterministic route - ordered trace events + final, no token events):
+event:trace
+data:{"type":"countries_facts","status":"USED"}
+
+event:trace
+data:{"type":"weather_observation","status":"USED"}
+
+event:final
+data:{"answerText":"The current temperature in Berlin, the capital of Germany, is 23.4°C. Retrieved: 2026-06-18T08:02:28.645675Z","traceCorrelationId":"d29b1ee6-0b23-4ac3-a2de-37e6e497d681"}

@@ -1,6 +1,5 @@
 package dev.localassistant.assistant.shared.mcp.infrastructure.config;
 
-import dev.localassistant.assistant.config.AssistantMcpProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;

@@ -1,21 +1,22 @@
 package dev.localassistant.assistant.rag;
 
-import dev.localassistant.assistant.rag.infrastructure.support.DeterministicTestEmbeddingAdapter;
-import dev.localassistant.assistant.rag.domain.port.outbound.EmbeddingPort;
-import dev.localassistant.assistant.rag.domain.EmbeddingResult;
 import dev.localassistant.assistant.rag.domain.ChunkStorageOutcome;
+import dev.localassistant.assistant.rag.domain.ChunkingWindow;
 import dev.localassistant.assistant.rag.domain.DeterministicTextChunker;
-import dev.localassistant.assistant.rag.domain.RagIngestion;
+import dev.localassistant.assistant.rag.domain.EmbeddingResult;
 import dev.localassistant.assistant.rag.domain.KnowledgeSimilarityMatch;
 import dev.localassistant.assistant.rag.domain.ProductPageResult;
 import dev.localassistant.assistant.rag.domain.RagChunk;
+import dev.localassistant.assistant.rag.domain.RagIngestion;
 import dev.localassistant.assistant.rag.domain.RagIngestionReport;
 import dev.localassistant.assistant.rag.domain.RagIngestionResult;
 import dev.localassistant.assistant.rag.domain.StoredSourceState;
 import dev.localassistant.assistant.rag.domain.port.inbound.IngestRag;
+import dev.localassistant.assistant.rag.domain.port.outbound.EmbeddingPort;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;
 import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeEmbedding;
 import dev.localassistant.assistant.rag.domain.port.outbound.ProductPageSource;
+import dev.localassistant.assistant.rag.infrastructure.support.DeterministicTestEmbeddingAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +50,7 @@ class RagIngestionUseCaseTest {
                         knowledgeEmbedding,
                         knowledgeChunkStore,
                         productPageSource,
-                        new DeterministicTextChunker(80, 10),
+                        new DeterministicTextChunker(ChunkingWindow.of(80, 10)),
                         Clock.fixed(INGESTED_AT, ZoneOffset.UTC));
     }
 
@@ -119,7 +120,7 @@ class RagIngestionUseCaseTest {
                         new SourceUnavailableKnowledgeEmbedding(),
                         knowledgeChunkStore,
                         productPageSource,
-                        new DeterministicTextChunker(80, 10),
+                        new DeterministicTextChunker(ChunkingWindow.of(80, 10)),
                         Clock.fixed(INGESTED_AT, ZoneOffset.UTC));
 
         RagIngestionResult result = ingestRag.execute(new IngestRag.Command(SOURCE_URL));

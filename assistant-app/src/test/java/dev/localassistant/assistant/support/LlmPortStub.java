@@ -5,7 +5,7 @@ import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * Registers a stub {@link LlmPort} singleton before context refresh so {@code AnswerQuestionUseCase}
+ * Registers a stub {@link LlmPort} singleton before context refresh so {@code AnswerQuestion}
  * and {@code ChatController} can load in integration contexts that do not exercise the chat path.
  */
 public final class LlmPortStub

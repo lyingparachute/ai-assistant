@@ -3,7 +3,6 @@ package dev.localassistant.countries.tools;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.localassistant.countries.application.LookupCountryUseCase;
-import dev.localassistant.countries.model.CountryLookupOutcome;
 import dev.localassistant.countries.model.LookupPlace;
 import dev.localassistant.countries.schemas.CountryToolSchemas;
 import dev.localassistant.countries.support.errors.CountryToolErrors;
@@ -32,14 +31,14 @@ public final class CountryLookupTool {
     }
 
     public McpSchema.CallToolResult handle(McpSyncServerExchange exchange, McpSchema.CallToolRequest request) {
-        Object rawName = request.arguments().get("name");
+        final var rawName = request.arguments().get("name");
         final var name = StringUtils.stripToNull(rawName == null ? null : rawName.toString());
         if (name == null) {
             return toCallToolResult(CountryToolErrors.nameRequired(), true);
         }
 
-        CountryLookupOutcome outcome = lookupCountryUseCase.lookup(LookupPlace.of(name));
-        CountryToolResult.ToolEnvelope envelope = CountryToolResult.fromOutcome(outcome);
+        final var outcome = lookupCountryUseCase.lookup(LookupPlace.of(name));
+        final var envelope = CountryToolResult.fromOutcome(outcome);
         return toCallToolResult(envelope.payload(), envelope.isError());
     }
 

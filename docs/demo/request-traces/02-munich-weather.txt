@@ -1,4 +1,11 @@
-event=assistant_request_started correlationId=11be1652-0635-4412-b55e-f7695be53ca0 questionLength=44
-event=assistant_route_selected correlationId=11be1652-0635-4412-b55e-f7695be53ca0 route=WEATHER_LOCATION
-event=assistant_port_invoked correlationId=11be1652-0635-4412-b55e-f7695be53ca0 port=WeatherPort invocationOrder=1
-event=assistant_request_completed correlationId=11be1652-0635-4412-b55e-f7695be53ca0 route=WEATHER_LOCATION portsInvoked=[WeatherPort] ragRetrievalCount=0 outcome=weather_location_answered_sources=1
+event=assistant_request_started correlationId=3b3a69cd-93a5-44c5-91b0-cb81583522e9 questionLength=44
+event=assistant_route_selected correlationId=3b3a69cd-93a5-44c5-91b0-cb81583522e9 route=WEATHER_LOCATION
+event=assistant_port_invoked correlationId=3b3a69cd-93a5-44c5-91b0-cb81583522e9 port=WeatherPort invocationOrder=1
+event=assistant_request_completed correlationId=3b3a69cd-93a5-44c5-91b0-cb81583522e9 route=WEATHER_LOCATION portsInvoked=[WeatherPort] ragRetrievalCount=0 outcome=weather_location_answered_sources=1
+
+SSE (deterministic route - trace + final, no token events):
+event:trace
+data:{"type":"weather_observation","status":"USED"}
+
+event:final
+data:{"answerText":"The current temperature in Munich is 24.3°C. Retrieved: 2026-06-18T08:02:28.177905Z","sources":[{"type":"weather_observation","status":"USED","weatherReport":{"location":{"city":"Munich"},"temperature":{"celsius":24.3},"timestamp":{"kind":"retrieved","value":"2026-06-18T08:02:28.177905Z"}}}],"traceCorrelationId":"3b3a69cd-93a5-44c5-91b0-cb81583522e9"}
