@@ -95,7 +95,8 @@ exposes no cwd setter. The subprocess therefore inherits the assistant JVM's cwd
 launches that JVM from `assistant-app/`, which is why the countries jar and weather launcher are
 referenced through paths relative to `assistant-app/` (for example
 `../countries-mcp-server/target/countries-mcp-server-<version>.jar`). Changing cwd needs an SDK
-upgrade or a wrapper command that sets it; tracked in `docs/plans/refactor-4-countries-mcp-structural.md`.
+upgrade or a wrapper command that sets it; the current behavior is documented here as a known SDK
+constraint.
 
 Secrets must not be committed. Assignment defaults may live in `application.yml` when safe.
 

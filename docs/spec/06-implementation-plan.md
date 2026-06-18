@@ -307,7 +307,7 @@ Provide a local chat interface for reviewers to ask questions and see assistant 
 - Implement typed `ChatRequest` and `ChatResponse` DTOs that map to and from `UserQuestion` and `AssistantAnswer`.
 - Keep the controller thin: parse the request, call one application service, and map the result. No routing, source selection, or port decisions in the controller.
 - Implement a simple single-turn local Chat Interface as a separate Astro frontend (`chat-ui/`). Each request sends only the current question; no server-side chat history and no prior-turn payload.
-- **Supersession (Chat Interface improvements):** the Phase 6 out-of-scope item “no client-side turn history” is superseded by a browser-only **session display** — prior turns stay visible in the Chat Interface for the current session but are not sent to the Assistant API. See [docs/ai/chat-interface-improvements.md](../ai/chat-interface-improvements.md).
+- **Supersession (Chat Interface improvements):** the Phase 6 out-of-scope item “no client-side turn history” is superseded by a browser-only **session display** — prior turns stay visible in the Chat Interface for the current session but are not sent to the Assistant API. AI-assisted work is summarized in [docs/ai/summary.md](../ai/summary.md).
 - Keep `assistant-app` API-only (JSON REST). Do not serve HTML from Spring; the Chat Interface calls the Assistant API over HTTP with CORS configured for the local Astro dev origin.
 - Display assistant responses, source metadata, and source-unavailable messages clearly in the Astro UI.
 - Avoid exposing stack traces, secrets, or local environment details in normal responses.
@@ -363,7 +363,7 @@ Verify the implementation against acceptance criteria and capture final demo ans
 
 - `e2e-tests/`
 - `docs/demo/final-answers.md`
-- `docs/demo/demo-run-log.md`
+- `docs/demo/clean-checkout-verification.md`
 - `docs/demo/request-traces/`
 
 ### Acceptance Criteria
@@ -374,7 +374,7 @@ Verify the implementation against acceptance criteria and capture final demo ans
 - For "What do you know about Berlin?", trace evidence shows countries and LLM only; weather and RAG are absent; answer distinguishes country facts from model synthesis.
 - For "What is the temperature of the capital of Germany currently?", answer and trace show countries before weather and name the resolved capital location.
 - `docs/demo/request-traces/` contains one trace excerpt per required question and excludes secrets, local paths, and raw stack traces.
-- `docs/demo/demo-run-log.md` includes startup commands, MCP configuration summary, ingestion command and result, ingestion summary, test commands with pasted actual output, trace-capture method, and skipped verification notes.
+- `docs/demo/clean-checkout-verification.md` includes documented verification commands with actual output or honest blockers.
 - E2E checks assert routing and trace fields, not exact volatile weather values.
 - Tests cover happy paths and source-unavailable paths.
 - Any skipped live verification records the failed source, the failed command or dependency, the assistant source-unavailable response, and whether the skip blocks an acceptance criterion. Missing values are not replaced with model memory or manual lookup.
