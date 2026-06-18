@@ -21,22 +21,61 @@ export interface StreamEventHandlers {
   onTrace: (payload: TraceEventPayload) => void;
   onToken: (payload: TokenEventPayload) => void;
   onFinal: (response: ChatResponse) => void;
+  /** Invoked when the Assistant API emits an SSE `error` event after the stream opens. */
+  onStreamError?: (payload: ApiErrorResponse) => void;
+  /** Invoked when the client aborts the request via `AbortSignal`. */
+  onAbort?: () => void;
+}
+
+export class StreamAbortedError extends Error {
+  constructor() {
+    super('Request aborted.');
+    this.name = 'StreamAbortedError';
+  }
+}
+
+export class HttpRequestError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'HttpRequestError';
+    this.status = status;
+  }
+}
+
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) {
+    return true;
+  }
+  return error instanceof DOMException && error.name === 'AbortError';
 }
 
 export async function streamQuestion(
   question: string,
   handlers: StreamEventHandlers,
+  signal?: AbortSignal,
 ): Promise<ChatResponse> {
-  const response = await fetch(`${assistantApiUrl()}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${assistantApiUrl()}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+      signal,
+    });
+  } catch (error) {
+    if (isAbortError(error, signal)) {
+      handlers.onAbort?.();
+      throw new StreamAbortedError();
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as ApiErrorResponse | null;
     const message = errorBody?.message ?? `Request failed with status ${response.status}`;
-    throw new Error(message);
+    throw new HttpRequestError(message, response.status);
   }
 
   const reader = response.body?.getReader();
@@ -63,29 +102,44 @@ export async function streamQuestion(
         break;
       case 'error':
         streamError = JSON.parse(data) as ApiErrorResponse;
+        handlers.onStreamError?.(streamError);
         break;
     }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        await reader.cancel();
+        handlers.onAbort?.();
+        throw new StreamAbortedError();
+      }
+
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const consumed = consumeSseEvents(buffer);
+      buffer = consumed.remainder;
+
+      for (const event of consumed.events) {
+        dispatch(event.name, event.data);
+      }
     }
 
-    buffer += decoder.decode(value, { stream: true });
-    const consumed = consumeSseEvents(buffer);
-    buffer = consumed.remainder;
-
-    for (const event of consumed.events) {
+    buffer += decoder.decode();
+    const trailing = consumeSseEvents(buffer);
+    for (const event of trailing.events) {
       dispatch(event.name, event.data);
     }
-  }
-
-  buffer += decoder.decode();
-  const trailing = consumeSseEvents(buffer);
-  for (const event of trailing.events) {
-    dispatch(event.name, event.data);
+  } catch (error) {
+    if (isAbortError(error, signal)) {
+      handlers.onAbort?.();
+      throw new StreamAbortedError();
+    }
+    throw error;
   }
 
   if (streamError) {

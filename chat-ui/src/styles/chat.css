@@ -88,6 +88,18 @@ body {
   cursor: not-allowed;
 }
 
+.composer-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.stop-button {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
 .status {
   margin-top: 1rem;
   color: var(--danger);

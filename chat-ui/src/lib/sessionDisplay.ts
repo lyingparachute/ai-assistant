@@ -3,6 +3,8 @@ import type { TraceStep } from './traceDisplay';
 
 export type TurnStatus = 'pending' | 'streaming' | 'complete' | 'aborted' | 'error';
 
+export type TurnErrorKind = 'validation-error' | 'connection-error' | 'stream-error';
+
 export interface SessionTurn {
   question: string;
   status: TurnStatus;
@@ -12,6 +14,9 @@ export interface SessionTurn {
   startedAt: number;
   completedAt?: number;
   abortReason?: string;
+  errorKind?: TurnErrorKind;
+  errorMessage?: string;
+  sawTokens?: boolean;
 }
 
 export interface SessionDisplay {

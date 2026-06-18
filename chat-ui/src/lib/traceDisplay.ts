@@ -1,20 +1,6 @@
+import { escapeHtml } from './htmlEscape';
+import { SOURCE_LABELS } from './sourceLabels';
 import type { SourceContributionStatus, SourceType } from './types';
-
-const SOURCE_LABELS: Record<SourceType, string> = {
-  countries_facts: 'Country facts',
-  weather_observation: 'Weather observation',
-  rag_knowledge: 'RAG knowledge',
-  model_synthesis: 'Model synthesis',
-};
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 export interface TraceStep {
   type: SourceType;

@@ -1,13 +1,6 @@
+import { escapeHtml } from './htmlEscape';
+import { SOURCE_LABELS } from './sourceLabels';
 import type { SourceResponse } from './types';
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 function unavailableBlock(message: string, hint?: string): string {
   const hintHtml = hint ? `<p class="hint">${escapeHtml(hint)}</p>` : '';
@@ -64,13 +57,6 @@ function renderModelSynthesis(source: Extract<SourceResponse, { type: 'model_syn
   }
   return unavailableBlock(source.unavailableMessage ?? 'Model synthesis unavailable', source.unavailableHint);
 }
-
-const SOURCE_LABELS: Record<SourceResponse['type'], string> = {
-  countries_facts: 'Country facts',
-  weather_observation: 'Weather observation',
-  rag_knowledge: 'RAG knowledge',
-  model_synthesis: 'Model synthesis',
-};
 
 export function renderSources(sources: SourceResponse[]): string {
   if (sources.length === 0) {
