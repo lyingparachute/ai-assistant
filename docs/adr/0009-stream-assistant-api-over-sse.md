@@ -2,8 +2,7 @@
 
 ## Status
 
-Proposed — 2026-06-17. Move to **Accepted** in the same change that starts implementation
-M1 of `docs/plans/stream-chat-answers-and-source-usage-trace.md`.
+Accepted — 2026-06-18 (M1 of `docs/plans/stream-chat-answers-and-source-usage-trace.md`).
 
 ## Context
 

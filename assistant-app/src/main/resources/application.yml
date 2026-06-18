@@ -61,3 +61,7 @@ assistant:
     ollama-base-url: ${assistant.ollama.base-url}
     model-name: qwen3:4b
     timeout-seconds: 120
+  chat:
+    stream-timeout-seconds: 150
+    pool-size: 4
+    queue-capacity: 32

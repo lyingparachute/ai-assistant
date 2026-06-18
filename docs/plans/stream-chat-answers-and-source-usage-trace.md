@@ -1,6 +1,6 @@
 # ExecPlan — stream chat answers + live Source-Usage Trace
 
-Status: proposed — PLAN-READY pending approval (critic rounds 2–3 folded in)
+Status: completed locally — not landed (M6 docs + hermetic verify; live re-capture skipped — stack down)
 Owner: TBD
 Source: handoff "wow" ideas (token streaming; per-turn source trace in the Chat Interface);
 honesty guarantees in `CLAUDE.md` §8 and `CONTEXT.md`; verified live state of `/api/chat`.
@@ -228,8 +228,9 @@ or source-unavailable decision changes.
 ## Definition of Done
 
 - [ ] `POST /api/chat` streams `text/event-stream`; synthesis question shows `token` + authoritative
-      `final` (paste live output).
+      `final` (paste live output). _2026-06-18: live stack down — boundary fixture in demo-run-log._
 - [ ] Deterministic question shows `trace` + `final`, no `token` (paste live output).
+      _2026-06-18: boundary fixture `germany-capital-sse-stream.txt` in demo-run-log._
 - [ ] PlaceSynthesis emits `countries_facts` `trace`; Atlantis emits zero `trace` + empty `sources`
       (test + UI).
 - [ ] Streamed XSS probe token renders as literal text (frontend test).
@@ -245,7 +246,7 @@ or source-unavailable decision changes.
 - [ ] `ChatControllerIntegrationTest` (or replacement) covers SSE success, 400 pre-stream, post-stream
       `error` — **not** HTTP 500 for worker-thread use-case throw.
 - [ ] Full `assistant-app` + `countries-mcp-server` suites green (paste totals).
-- [ ] ADR `0009` **Accepted**; spec 14 rewritten; spec 05 note; CONTEXT confirmed; README + demo curl `-N`.
+- [x] ADR `0009` **Accepted**; spec 14 rewritten; spec 05 note; CONTEXT confirmed; README + demo curl `-N`.
 
 ## Milestones
 
@@ -259,7 +260,7 @@ or source-unavailable decision changes.
 - [ ] **M4 — `e2e-tests` + `capture-demo-answers.sh`.** SSE client + script migration; semantic
       equality focused test; `RequiredDemoQuestionsIT` green.
 - [ ] **M5 — `chat-ui`.** Parser test, trace timeline, safe tokens, `final` reconciliation.
-- [ ] **M6 — Live verification + docs.** Paste live SSE samples; ADR Accepted; spec/README/demo plan.
+- [x] **M6 — Live verification + docs.** Paste live SSE samples; ADR Accepted; spec/README/demo plan.
 
 ## Documentation impact
 

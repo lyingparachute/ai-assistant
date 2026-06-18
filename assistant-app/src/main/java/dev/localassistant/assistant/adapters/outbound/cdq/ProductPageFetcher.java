@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 
 class ProductPageFetcher {
 
@@ -19,7 +20,7 @@ class ProductPageFetcher {
     }
 
     String fetchHtml(String sourceUrl) throws IOException, InterruptedException {
-        if (sourceUrl == null || sourceUrl.isBlank()) {
+        if (StringUtils.isBlank(sourceUrl)) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
 
@@ -40,7 +41,7 @@ class ProductPageFetcher {
         }
 
         String body = response.body();
-        if (body == null || body.isBlank()) {
+        if (StringUtils.isBlank(body)) {
             throw new ProductPageFetchException("Product page response body was empty");
         }
         return body;

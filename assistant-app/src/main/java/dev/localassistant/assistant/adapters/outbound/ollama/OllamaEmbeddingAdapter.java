@@ -4,6 +4,7 @@ import dev.localassistant.assistant.config.AssistantEmbeddingProperties;
 import dev.localassistant.assistant.llm.EmbeddingPort;
 import dev.localassistant.assistant.llm.EmbeddingResult;
 import dev.localassistant.assistant.rag.EmbeddingDimensions;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.embedding.EmbeddingModel;
 
 import java.util.Objects;
@@ -52,7 +53,7 @@ public final class OllamaEmbeddingAdapter implements EmbeddingPort {
         } catch (RuntimeException exception) {
             return new EmbeddingResult.SourceUnavailable(
                     SOURCE_LABEL,
-                    exception.getMessage() == null ? "Ollama embedding request failed" : exception.getMessage(),
+                    StringUtils.defaultIfBlank(exception.getMessage(), "Ollama embedding request failed"),
                     UNAVAILABLE_HINT);
         }
     }

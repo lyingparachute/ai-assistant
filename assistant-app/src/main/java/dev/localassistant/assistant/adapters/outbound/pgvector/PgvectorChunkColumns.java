@@ -1,5 +1,8 @@
 package dev.localassistant.assistant.adapters.outbound.pgvector;
 
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
 final class PgvectorChunkColumns {
 
     static final String RAG_CHUNKS_TABLE = "rag_chunks";
@@ -13,7 +16,4 @@ final class PgvectorChunkColumns {
 
     static final String CHUNK_COUNT_ALIAS = "chunk_count";
     static final String SIMILARITY_ALIAS = "similarity";
-
-    private PgvectorChunkColumns() {
-    }
 }

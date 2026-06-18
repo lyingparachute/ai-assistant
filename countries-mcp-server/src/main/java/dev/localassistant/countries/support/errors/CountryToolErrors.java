@@ -1,9 +1,12 @@
 package dev.localassistant.countries.support.errors;
 
+import lombok.experimental.UtilityClass;
+
 import java.util.List;
 import java.util.Map;
 
-public final class CountryToolErrors {
+@UtilityClass
+public class CountryToolErrors {
 
     public static final String ERROR_NAME_REQUIRED = "name is required";
     public static final String ERROR_NOT_RECOGNIZED = "country name is not recognized";
@@ -19,9 +22,6 @@ public final class CountryToolErrors {
             "REST Countries is unavailable. Retry the lookup later and do not invent country facts.";
     public static final String HINT_INTERNAL_FAILURE =
             "Retry the lookup later. If the problem persists, check server logs on stderr.";
-
-    private CountryToolErrors() {
-    }
 
     public static Map<String, Object> nameRequired() {
         return envelope(ERROR_NAME_REQUIRED, HINT_NAME_REQUIRED);

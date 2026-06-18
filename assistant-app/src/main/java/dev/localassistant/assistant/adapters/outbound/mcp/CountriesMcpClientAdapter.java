@@ -4,6 +4,7 @@ import dev.localassistant.assistant.config.AssistantMcpProperties;
 import dev.localassistant.assistant.tools.CountriesPort;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.ToolExecutionResult;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -25,14 +26,14 @@ public final class CountriesMcpClientAdapter implements CountriesPort {
 
     @Override
     public ToolExecutionResult<CountryInfo> lookupCountry(String name) {
-        if (name == null || name.isBlank()) {
+        if (StringUtils.isBlank(name)) {
             return responseMapper.mapBlankName();
         }
 
         try {
             McpToolInvoker.McpToolResponse response = mcpToolInvoker.invoke(
                     toolName,
-                    Map.of("name", name.trim())
+                    Map.of("name", StringUtils.trim(name))
             );
             return responseMapper.mapResponse(response);
         } catch (McpToolInvocationException exception) {

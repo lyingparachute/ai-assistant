@@ -11,10 +11,29 @@ Final demo answers must be captured from the running assistant after implementat
 5. Run CDQ Fraud Guard RAG ingestion.
 6. Start `assistant-app`.
 7. Open the Chat Interface.
-8. Ask the required demo questions exactly as written below.
+8. Ask the required demo questions exactly as written below. Optionally use the **demo question chips** in the Chat Interface to fill the composer (click does not auto-submit).
 9. Save the assistant responses and verification notes under the final demo evidence location.
 
 The final README must replace these high-level steps with exact verified commands after implementation.
+
+## Manual API probe (SSE)
+
+With the assistant running on port `8080`, use `curl -N` so events arrive incrementally:
+
+```bash
+# Deterministic route — expect trace + final, no token events
+curl -sfN -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What is the capital city of Germany?"}'
+
+# Synthesis route — expect trace, token(s), model_synthesis trace, final
+curl -sfN -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What do you know about Berlin?"}'
+```
+
+The capture script `scripts/capture-demo-answers.sh` uses the same transport and extracts the
+terminal `final` event JSON for each demo question.
 
 ## Demo Verification Command
 

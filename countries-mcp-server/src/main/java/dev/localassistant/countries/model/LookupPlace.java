@@ -1,12 +1,15 @@
 package dev.localassistant.countries.model;
 
+import org.apache.commons.lang3.StringUtils;
+
 public record LookupPlace(String value) {
 
     public LookupPlace {
-        if (value == null || value.isBlank()) {
+        final var normalized = StringUtils.stripToNull(value);
+        if (normalized == null) {
             throw new IllegalArgumentException("lookup place must not be blank");
         }
-        value = value.strip();
+        value = normalized;
     }
 
     public static LookupPlace of(String value) {

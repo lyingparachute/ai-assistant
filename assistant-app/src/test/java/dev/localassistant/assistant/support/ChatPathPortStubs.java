@@ -35,7 +35,7 @@ public final class ChatPathPortStubs
     }
 
     private static LlmPort stubLlmPort() {
-        return context -> {
+        return (context, tokenSink) -> {
             throw notExercised();
         };
     }

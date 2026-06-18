@@ -30,6 +30,50 @@ for q in questions:
 ' "$QUESTIONS_FILE"
 }
 
+extract_final_from_sse() {
+  python3 -c '
+import json
+import sys
+
+
+def parse_events(content: str):
+    events = []
+    current_name = None
+    data_lines = []
+    for line in content.splitlines():
+        if line.startswith("event:"):
+            current_name = line[len("event:"):].strip()
+        elif line.startswith("data:"):
+            data_lines.append(line[len("data:"):].strip())
+        elif line == "" and current_name is not None:
+            events.append((current_name, "\n".join(data_lines)))
+            current_name = None
+            data_lines = []
+    if current_name is not None:
+        events.append((current_name, "\n".join(data_lines)))
+    return events
+
+
+content = sys.stdin.read()
+error_payload = None
+for name, data in parse_events(content):
+    if name == "error":
+        error_payload = json.loads(data)
+    if name == "final":
+        print(data)
+        sys.exit(0)
+
+if error_payload is not None:
+    sys.exit(
+        "SSE stream ended with error event: "
+        + error_payload.get("error", "unknown")
+        + " — "
+        + error_payload.get("message", "no message")
+    )
+sys.exit("SSE stream did not contain a final event")
+'
+}
+
 ask() {
   local label="$1"
   local question="$2"
@@ -37,9 +81,10 @@ ask() {
   local outfile="$OUT_DIR/${label}.json"
   local payload answer
   payload=$(python3 -c 'import json,sys; print(json.dumps({"question": sys.argv[1]}))' "$question")
-  answer=$(curl -sf -X POST "${BASE_URL}/api/chat" \
+  answer=$(curl -sfN -X POST "${BASE_URL}/api/chat" \
     -H 'Content-Type: application/json' \
-    -d "$payload")
+    -d "$payload" \
+    | extract_final_from_sse)
   python3 -c '
 import json, sys
 print(json.dumps({

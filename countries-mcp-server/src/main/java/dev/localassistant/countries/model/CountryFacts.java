@@ -1,5 +1,7 @@
 package dev.localassistant.countries.model;
 
+import org.apache.commons.lang3.StringUtils;
+
 public record CountryFacts(
         String countryName,
         String capital,
@@ -8,13 +10,13 @@ public record CountryFacts(
 ) {
 
     public CountryFacts {
-        if (countryName == null || countryName.isBlank()) {
+        if (StringUtils.isBlank(countryName)) {
             throw new IllegalArgumentException("countryName must not be blank");
         }
-        if (capital == null || capital.isBlank()) {
+        if (StringUtils.isBlank(capital)) {
             throw new IllegalArgumentException("capital must not be blank");
         }
-        if (region == null || region.isBlank()) {
+        if (StringUtils.isBlank(region)) {
             throw new IllegalArgumentException("region must not be blank");
         }
         if (population < 0) {

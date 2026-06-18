@@ -1,0 +1,6 @@
+event:trace
+data:{"type":"countries_facts","status":"USED"}
+
+event:final
+data:{"answerText":"The capital of Germany is Berlin.","sources":[{"type":"countries_facts","status":"USED","countryInfo":{"countryName":"Germany","capital":"Berlin","region":"Europe","population":83497147}}],"traceCorrelationId":"d4eb3d1b-2049-42a9-91c6-ba26dfcdfd38"}
+

@@ -1,6 +1,6 @@
 # ExecPlan — backend hygiene (dependencies, Commons Lang, selective Lombok)
 
-Status: proposed — PLAN-READY pending approval (critic round folded in)
+Status: landed — c866bc2
 Owner: TBD
 Source: recruitment focus on backend quality; user-directed scope (Option A — hygiene only);
 `docs/reviews/2026-06-16-code-quality-audit.md` residual style tail; `implementation-notes.md`
@@ -43,17 +43,17 @@ while making the Java modules easier to read and audit.
    platform migration (weeks, cross-cutting), not hygiene. Record it as a **follow-up plan**
    with its own ADR if pursued later.
 
-2. **Apache Commons Lang 3 — explicit dependency, managed in parent `pom.xml`.**
-   Version comes from the Spring Boot BOM where possible; if not managed, pin
-   `commons-lang3` in parent `<properties>` + `<dependencyManagement>`. Both Java modules
-   depend on it `compile` scope.
+2. **Apache Commons Lang 3 — explicit dependency in both Java modules.**
+   Version is managed by the Spring Boot parent BOM (no separate parent
+   `<dependencyManagement>` entry required). Both `assistant-app` and
+   `countries-mcp-server` declare `commons-lang3` at `compile` scope.
 
 3. **String handling rules (production code in both Java modules).**
 
    | Situation | Use |
    | --- | --- |
    | Nullable external / adapter input, blank means invalid | `StringUtils.isBlank(s)` |
-   | Normalize user or tool input before validation | `StringUtils.trimToNull(s)` then validate |
+   | Normalize user or tool input before validation | `StringUtils.stripToNull(s)` then validate |
    | Required non-null parameter / record component | `Objects.requireNonNull(x, "name")` (keep — already idiomatic) |
    | Optional readability for null checks on non-strings | `Objects.isNull` / `Objects.nonNull` where it clarifies control flow |
    | Required non-blank after trim (domain boundary) | trim via `StringUtils`, then `isNotBlank` or throw — **do not** mix `isBlank` on untrimmed user text |
@@ -167,45 +167,52 @@ while making the Java modules easier to read and audit.
 
 ## Definition of Done
 
-- [ ] Version table recorded (before → after) for Boot, Spring AI, MCP SDK, jsoup; all bumps
+- [x] Version table recorded (before → after) for Boot, Spring AI, MCP SDK, jsoup; all bumps
       stay on the 3.5 / 1.1 / 1.0 lines unless a written exception is in the plan appendix.
-- [ ] `./mvnw test` BUILD SUCCESS with pasted reactor test totals (countries + assistant-app).
-- [ ] `commons-lang3` declared in parent; both Java modules compile against it.
-- [ ] `grep -r "LoggerFactory.getLogger" assistant-app/src/main countries-mcp-server/src/main`
+      See `docs/plans/backend-hygiene-versions.md`.
+- [x] `./mvnw test` BUILD SUCCESS with pasted reactor test totals (countries + assistant-app).
+      See `docs/plans/backend-hygiene-versions.md` and `docs/demo/implementation-notes.md`.
+- [x] `commons-lang3` declared in both Java modules; version managed by Spring Boot parent BOM
+      (no parent `<dependencyManagement>` entry — deviation from original locked decision §2).
+- [x] `grep -r "LoggerFactory.getLogger" assistant-app/src/main countries-mcp-server/src/main`
       returns **zero** matches (replaced by `@Slf4j`).
-- [ ] `grep -rE "@Data|@Setter|@AllArgsConstructor" assistant-app/src countries-mcp-server/src`
+- [x] `grep -rE "@Data|@Setter|@AllArgsConstructor" assistant-app/src countries-mcp-server/src`
       returns **zero** matches.
-- [ ] The eight listed utility types carry `@UtilityClass`; no production utility type still
+- [x] The eight listed utility types carry `@UtilityClass`; no production utility type still
       uses a hand-written private empty constructor without `@UtilityClass` (grep
       `private \\w+\\(\\)` over those files → zero).
-- [ ] `lombok.config` at repo root with `lombok.addLombokGeneratedAnnotation = true`.
-- [ ] `StdioMcpToolInvoker` keeps explicit `@Autowired` constructor (not `@RequiredArgsConstructor`).
-- [ ] At least one `@RequiredArgsConstructor` Spring bean and one justified `@Builder` site
-      exist (named in implementation notes); hand-written constructors remain only where the
-      plan allows (validation / non-obvious wiring).
-- [ ] Adapter/mapper null-blank sites identified in M2 use `StringUtils` (spot-check:
+- [x] `lombok.config` at repo root with `lombok.addLombokGeneratedAnnotation = true`.
+- [x] `StdioMcpToolInvoker` keeps explicit `@Autowired` constructor (not `@RequiredArgsConstructor`).
+- [x] At least one `@RequiredArgsConstructor` Spring bean exists (`CountryLookupTool`,
+      `CountriesMcpServerAdapter`); hand-written constructors remain only where the plan allows.
+- **Deviation:** no justified `@Builder` site remains. `SuccessfulLookupFixture` was removed
+  because it was a single-use test helper; see implementation notes.
+- [x] Adapter/mapper null-blank sites identified in M2 use `StringUtils` (spot-check:
       `CountryLookupTool`, `CountriesMcpResponseMapper`, `WeatherMcpResponseMapper`,
       `RestCountriesHttpAdapter`, `StdioMcpToolInvoker`, `CountryFacts`, `LookupPlace` — each
       reviewed; list any intentional JDK-only sites in implementation notes).
-- [ ] `docs/spec/10-code-quality-guidelines.md` §1 documents Lang + Lombok policy; clean-java
+- [x] `docs/spec/10-code-quality-guidelines.md` §1 documents Lang + Lombok policy; clean-java
       skill matches.
-- [ ] README mentions current stack versions (one short subsection or table).
-- [ ] Optional live smoke: one chat question + `--ingest-rag` dry run or documented skip with
-      reason — paste output or skip note.
+- [x] README mentions current stack versions (one short subsection or table).
+- [x] Optional live smoke: one chat question + `--ingest-rag` dry run or documented skip with
+      reason — skipped (no assistant on `localhost:8080`); see implementation notes.
 
 ## Milestones
 
-- [ ] **M1 — Dependency audit and bumps.** Add versions-maven-plugin to parent (if needed);
+- [x] **M1 — Dependency audit and bumps.** Add versions-maven-plugin to parent (if needed);
       bump Boot `3.5.9` → `3.5.12`, Spring AI → latest `1.1.x`, jsoup patch, MCP `1.0.x`
       patch if any; `./mvnw test` green; record version table.
-- [ ] **M2 — Tooling: Commons Lang + Lombok wiring.** Parent dependencyManagement;
+      **Completed 2026-06-18 (uncommitted):** Boot `3.5.15` (metadata newer than plan baseline `3.5.12`),
+      Spring AI `1.1.8`, MCP SDK `1.0.2`, jsoup `1.22.2` — see
+      `docs/plans/backend-hygiene-versions.md`.
+- [x] **M2 — Tooling: Commons Lang + Lombok wiring.** Parent dependencyManagement;
       `lombok.config`; compiler annotation processor; spec §1 + clean-java skill updated.
-- [ ] **M3 — Lombok ergonomics.** `@Slf4j` on five logger classes; `@UtilityClass` on the
+- [x] **M3 — Lombok ergonomics.** `@Slf4j` on five logger classes; `@UtilityClass` on the
       eight utility types; `@RequiredArgsConstructor` on eligible Spring beans touched in this
       milestone; `@Builder` only where it clearly helps in touched code; tests green.
-- [ ] **M4 — StringUtils / Objects boundary pass.** Touch adapter, MCP mapper, REST, and tool
+- [x] **M4 — StringUtils / Objects boundary pass.** Touch adapter, MCP mapper, REST, and tool
       entrypoints listed in DoD; `final var` in edited methods; no domain-wide churn.
-- [ ] **M5 — Verification and notes.** Full reactor test paste; optional live smoke;
+- [x] **M5 — Verification and notes.** Full reactor test paste; optional live smoke;
       implementation-notes entry summarizing what changed and what was explicitly deferred
       (Boot 4 / AI 2).
 

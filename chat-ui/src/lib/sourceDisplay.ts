@@ -1,13 +1,7 @@
+import { escapeHtml } from './htmlEscape';
+import { resolveSourceLabel } from './sourceLabels';
+import { statusBadgeClass } from './statusBadge';
 import type { SourceResponse } from './types';
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 function unavailableBlock(message: string, hint?: string): string {
   const hintHtml = hint ? `<p class="hint">${escapeHtml(hint)}</p>` : '';
@@ -60,17 +54,10 @@ function renderRagKnowledge(source: Extract<SourceResponse, { type: 'rag_knowled
 
 function renderModelSynthesis(source: Extract<SourceResponse, { type: 'model_synthesis' }>): string {
   if (source.status === 'USED') {
-    return '<p>Model synthesis contributed to the answer text.</p>';
+    return '<p>Grounded prose from verified source results, woven into the answer above. Synthesis — not a tool result.</p>';
   }
   return unavailableBlock(source.unavailableMessage ?? 'Model synthesis unavailable', source.unavailableHint);
 }
-
-const SOURCE_LABELS: Record<SourceResponse['type'], string> = {
-  countries_facts: 'Country facts',
-  weather_observation: 'Weather observation',
-  rag_knowledge: 'RAG knowledge',
-  model_synthesis: 'Model synthesis',
-};
 
 export function renderSources(sources: SourceResponse[]): string {
   if (sources.length === 0) {
@@ -89,13 +76,24 @@ export function renderSources(sources: SourceResponse[]): string {
             return renderRagKnowledge(source);
           case 'model_synthesis':
             return renderModelSynthesis(source);
+          default: {
+            const message =
+              'unavailableMessage' in source && typeof source.unavailableMessage === 'string'
+                ? source.unavailableMessage
+                : 'Source details unavailable';
+            const hint =
+              'unavailableHint' in source && typeof source.unavailableHint === 'string'
+                ? source.unavailableHint
+                : undefined;
+            return unavailableBlock(message, hint);
+          }
         }
       })();
 
       return `<article class="source-card">
         <header>
-          <h3>${escapeHtml(SOURCE_LABELS[source.type])}</h3>
-          <span class="badge">${escapeHtml(source.status)}</span>
+          <h3>${escapeHtml(resolveSourceLabel(source.type))}</h3>
+          <span class="${statusBadgeClass(source.status)}">${escapeHtml(source.status)}</span>
         </header>
         ${body}
       </article>`;

@@ -11,6 +11,7 @@ import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.orchestration.support.RecordingAssistantResponseSink;
 import dev.localassistant.assistant.orchestration.support.StubCountriesPort;
 import dev.localassistant.assistant.orchestration.support.StubRagKnowledgePort;
 import dev.localassistant.assistant.orchestration.support.StubWeatherPort;
@@ -78,7 +79,7 @@ class AnswerQuestionUseCaseTest {
         countriesPort.register("Germany", new ToolExecutionResult.Success<>(GERMANY));
 
         ConversationTurn turn =
-                useCase.answer(UserQuestion.of("What is the capital city of Germany?"));
+                answer(UserQuestion.of("What is the capital city of Germany?"));
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
         assertThat(weatherPort.invocationCount()).isZero();
@@ -97,7 +98,7 @@ class AnswerQuestionUseCaseTest {
                         "weather MCP", "weather service down", "retry later"));
 
         ConversationTurn turn =
-                useCase.answer(UserQuestion.of("What is the temperature currently in Munich?"));
+                answer(UserQuestion.of("What is the temperature currently in Munich?"));
 
         assertThat(weatherPort.invocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isZero();
@@ -115,7 +116,7 @@ class AnswerQuestionUseCaseTest {
                         "countries MCP", "countries service down", "retry later"));
 
         ConversationTurn turn =
-                useCase.answer(UserQuestion.of("What is the capital city of Germany?"));
+                answer(UserQuestion.of("What is the capital city of Germany?"));
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isZero();
@@ -130,7 +131,7 @@ class AnswerQuestionUseCaseTest {
                         new RagRetrievalResult.SourceUnavailable(
                                 "pgvector RAG", "database down", "start postgres"));
 
-        ConversationTurn turn = useCase.answer(UserQuestion.of("What is CDQ Fraud Guard?"));
+        ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
         assertThat(ragKnowledgePort.retrieveInvocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isZero();
@@ -155,7 +156,7 @@ class AnswerQuestionUseCaseTest {
                         new ResponseComposer(),
                         new RagRetrievalPolicy(5, 0.5));
 
-        ConversationTurn turn = useCase.answer(UserQuestion.of("What is CDQ Fraud Guard?"));
+        ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
         assertThat(llmPort.invocationCount()).isEqualTo(1);
         assertThat(((AnswerSource.RagKnowledge) turn.answer().sources().get(0)).status())
@@ -169,7 +170,7 @@ class AnswerQuestionUseCaseTest {
     @Test
     void unsupportedQuestionInvokesNoPorts() {
         ConversationTurn turn =
-                useCase.answer(UserQuestion.of("Who won the World Cup in 2022?"));
+                answer(UserQuestion.of("Who won the World Cup in 2022?"));
 
         assertThat(countriesPort.invocationCount()).isZero();
         assertThat(weatherPort.invocationCount()).isZero();
@@ -183,7 +184,7 @@ class AnswerQuestionUseCaseTest {
         weatherPort.register("Munich", new ToolExecutionResult.Success<>(MUNICH_WEATHER));
 
         ConversationTurn turn =
-                useCase.answer(UserQuestion.of("What is the temperature currently in Munich?"));
+                answer(UserQuestion.of("What is the temperature currently in Munich?"));
 
         assertThat(weatherPort.invocationCount()).isEqualTo(1);
         assertThat(countriesPort.invocationCount()).isZero();
@@ -198,7 +199,7 @@ class AnswerQuestionUseCaseTest {
         weatherPort.register("Berlin", new ToolExecutionResult.Success<>(BERLIN_WEATHER));
 
         ConversationTurn turn =
-                useCase.answer(
+                answer(
                         UserQuestion.of("What is the temperature of the capital of Germany currently?"));
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
@@ -228,7 +229,7 @@ class AnswerQuestionUseCaseTest {
                         new ResponseComposer(),
                         new RagRetrievalPolicy(5, 0.5));
 
-        ConversationTurn turn = useCase.answer(UserQuestion.of("What do you know about Berlin?"));
+        ConversationTurn turn = answer(UserQuestion.of("What do you know about Berlin?"));
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isEqualTo(1);
@@ -261,7 +262,7 @@ class AnswerQuestionUseCaseTest {
                         new ResponseComposer(),
                         new RagRetrievalPolicy(5, 0.5));
 
-        ConversationTurn turn = useCase.answer(UserQuestion.of("What is CDQ Fraud Guard?"));
+        ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
         assertThat(ragKnowledgePort.retrieveInvocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isEqualTo(1);
@@ -276,7 +277,7 @@ class AnswerQuestionUseCaseTest {
     void ragNoResultReportsInsufficientProductKnowledgeWithoutLlm() {
         ragKnowledgePort.onRetrieve((question, policy) -> new RagRetrievalResult.NoRelevantKnowledge());
 
-        ConversationTurn turn = useCase.answer(UserQuestion.of("What is CDQ Fraud Guard?"));
+        ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
         assertThat(ragKnowledgePort.retrieveInvocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isZero();
@@ -302,7 +303,7 @@ class AnswerQuestionUseCaseTest {
                         new ResponseComposer(),
                         new RagRetrievalPolicy(5, 0.5));
 
-        ConversationTurn turn = useCase.answer(UserQuestion.of("What do you know about Berlin?"));
+        ConversationTurn turn = answer(UserQuestion.of("What do you know about Berlin?"));
 
         assertThat(llmPort.invocationCount()).isEqualTo(1);
         assertThat(turn.answer().answerText()).contains("Ollama chat is unavailable");
@@ -318,7 +319,7 @@ class AnswerQuestionUseCaseTest {
                         "countries MCP", "countries service down", "retry later"));
 
         ConversationTurn turn =
-                useCase.answer(
+                answer(
                         UserQuestion.of("What is the temperature of the capital of Germany currently?"));
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
@@ -336,7 +337,7 @@ class AnswerQuestionUseCaseTest {
                         "weather MCP", "weather service down", "retry later"));
 
         ConversationTurn turn =
-                useCase.answer(
+                answer(
                         UserQuestion.of("What is the temperature of the capital of Germany currently?"));
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
@@ -348,5 +349,12 @@ class AnswerQuestionUseCaseTest {
                 .isEqualTo(SourceContributionStatus.USED);
         assertThat(((AnswerSource.WeatherObservation) answer.sources().get(1)).status())
                 .isEqualTo(SourceContributionStatus.UNAVAILABLE);
+    }
+
+    private ConversationTurn answer(UserQuestion question) {
+        RecordingAssistantResponseSink sink = new RecordingAssistantResponseSink();
+        ConversationTurn turn = useCase.answer(question, sink);
+        assertThat(sink.completedTurn()).isEqualTo(turn);
+        return turn;
     }
 }

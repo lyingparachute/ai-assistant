@@ -9,6 +9,9 @@
   --border: #d7dce3;
   --accent: #1f6feb;
   --danger: #b42318;
+  --status-used: #1a7f37;
+  --status-unavailable: #b42318;
+  --status-insufficient: #9a6700;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +23,9 @@
     --border: #2a3340;
     --accent: #58a6ff;
     --danger: #ff8f84;
+    --status-used: #3fb950;
+    --status-unavailable: #ff8f84;
+    --status-insufficient: #d4a72c;
   }
 }
 
@@ -31,12 +37,21 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  min-height: 100vh;
 }
 
-.layout {
+.chat-workspace {
+  display: flex;
+  flex-direction: column;
   max-width: 48rem;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: 1.5rem 1rem 0;
+}
+
+.page-header {
+  flex-shrink: 0;
+  padding-bottom: 1rem;
 }
 
 .page-header h1 {
@@ -48,14 +63,109 @@ body {
   color: var(--muted);
 }
 
-.chat-form {
+.message-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 1rem;
+  padding: 0.5rem 0 1rem;
+}
+
+.turn {
   display: grid;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+}
+
+.turn-question {
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.turn-question-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.user-question {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.turn-assistant {
   padding: 1rem;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
+}
+
+.turn-assistant h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.turn-assistant h2:not(:first-child) {
+  margin-top: 1.25rem;
+}
+
+.demo-chips {
+  flex-shrink: 0;
+  padding: 0.75rem 0 0;
+}
+
+.demo-chips-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.demo-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.demo-chip {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.demo-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.demo-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chat-form {
+  display: grid;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: 1rem 0 1.5rem;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
 }
 
 .chat-form label {
@@ -88,24 +198,83 @@ body {
   cursor: not-allowed;
 }
 
+.composer-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.stop-button {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
 .status {
-  margin-top: 1rem;
+  flex-shrink: 0;
+  margin: 0;
+  padding-bottom: 0.5rem;
   color: var(--danger);
 }
 
-.answer-panel {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: var(--panel);
+.trace-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.trace-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.trace-timeline-host {
+  margin: 0;
+}
+
+.trace-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.trace-step {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.trace-step-label {
+  font-weight: 600;
+}
+
+.forming-hint {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
 .answer-text {
+  margin: 0;
   white-space: pre-wrap;
 }
 
+.turn-assistant.unsupported-layout .forming-hint,
+.turn-assistant.unsupported-layout .trace-section,
+.turn-assistant.unsupported-layout .sources-section {
+  display: none;
+}
+
 .trace-id {
+  margin: 0.75rem 0 0;
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -139,7 +308,48 @@ body {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.badge-used {
+  color: var(--status-used);
+}
+
+.badge-unavailable {
+  color: var(--status-unavailable);
+}
+
+.badge-insufficient {
+  color: var(--status-insufficient);
+}
+
+.trace-step-badge {
+  flex-shrink: 0;
+}
+
+.trace-step-more {
+  list-style: none;
+}
+
+.trace-step-more details {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.trace-step-more summary {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
   color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.trace-timeline-nested {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 .source-card ul {

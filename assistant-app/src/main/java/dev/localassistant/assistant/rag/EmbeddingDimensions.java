@@ -1,11 +1,11 @@
 package dev.localassistant.assistant.rag;
 
-public final class EmbeddingDimensions {
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class EmbeddingDimensions {
 
     public static final int VECTOR_SIZE = 768;
-
-    private EmbeddingDimensions() {
-    }
 
     public static boolean matches(float[] embedding) {
         return embedding.length == VECTOR_SIZE;

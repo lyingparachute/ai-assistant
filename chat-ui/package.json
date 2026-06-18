@@ -16,6 +16,7 @@
     "astro": "^6.4.7"
   },
   "devDependencies": {
+    "happy-dom": "^18.0.1",
     "vitest": "^3.2.4"
   }
 }

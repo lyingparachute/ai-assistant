@@ -3,14 +3,13 @@ package dev.localassistant.countries.tools;
 import dev.localassistant.countries.model.CountryFacts;
 import dev.localassistant.countries.model.CountryLookupOutcome;
 import dev.localassistant.countries.support.errors.CountryToolErrors;
+import lombok.experimental.UtilityClass;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public final class CountryToolResult {
-
-    private CountryToolResult() {
-    }
+@UtilityClass
+public class CountryToolResult {
 
     public static Map<String, Object> success(CountryFacts facts) {
         Map<String, Object> data = new LinkedHashMap<>();

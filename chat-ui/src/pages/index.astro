@@ -1,5 +1,6 @@
 ---
 import '../styles/chat.css';
+import { demoQuestions } from '../lib/demoQuestions';
 ---
 
 <html lang="en">
@@ -11,11 +12,41 @@ import '../styles/chat.css';
     <title>Local AI Assistant</title>
   </head>
   <body>
-    <main class="layout">
+    <main class="chat-workspace">
       <header class="page-header">
         <h1>Local AI Assistant</h1>
-        <p>Ask one question at a time. Answers show grounded sources from the Assistant API.</p>
+        <p>
+          Questions and answers stay visible in this browser session. Each request sends only your
+          latest question to the Assistant API — not prior turns.
+        </p>
       </header>
+
+      <section
+        id="message-thread"
+        class="message-thread"
+        role="log"
+        aria-label="Chat Interface session display"
+      ></section>
+
+      <p id="status" class="status" hidden></p>
+
+      <section class="demo-chips" aria-label="Demo questions">
+        <h2 class="demo-chips-heading">Demo questions</h2>
+        <div class="demo-chips-list" role="group" aria-label="Fill composer with a demo question">
+          {
+            demoQuestions.questions.map((item) => (
+              <button
+                type="button"
+                class="demo-chip"
+                data-question={item.question}
+                data-chip-key={item.key}
+              >
+                {item.key}
+              </button>
+            ))
+          }
+        </div>
+      </section>
 
       <form id="chat-form" class="chat-form">
         <label for="question">Your question</label>
@@ -26,73 +57,125 @@ import '../styles/chat.css';
           required
           placeholder="What is the capital city of Germany?"
         ></textarea>
-        <button type="submit" id="submit-button">Ask</button>
+        <div class="composer-actions">
+          <button type="submit" id="submit-button">Ask</button>
+          <button type="button" id="stop-button" class="stop-button" hidden>Stop</button>
+        </div>
       </form>
-
-      <p id="status" class="status" hidden></p>
-
-      <section id="answer-panel" class="answer-panel" hidden>
-        <h2>Answer</h2>
-        <p id="answer-text" class="answer-text"></p>
-        <p id="trace-id" class="trace-id" hidden></p>
-
-        <h2>Sources</h2>
-        <div id="sources" class="sources"></div>
-      </section>
     </main>
 
     <script>
-      import { askQuestion } from '../lib/api';
-      import { renderSources } from '../lib/sourceDisplay';
+      import { HttpRequestError, StreamAbortedError, streamQuestion } from '../lib/api';
+      import { createChatController } from '../lib/chatController';
+      import { createDomAdapter } from '../lib/domAdapter';
 
-      const form = document.getElementById('chat-form') as HTMLFormElement;
-      const questionInput = document.getElementById('question') as HTMLTextAreaElement;
-      const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
-      const status = document.getElementById('status') as HTMLParagraphElement;
-      const answerPanel = document.getElementById('answer-panel') as HTMLElement;
-      const answerText = document.getElementById('answer-text') as HTMLParagraphElement;
-      const traceId = document.getElementById('trace-id') as HTMLParagraphElement;
-      const sources = document.getElementById('sources') as HTMLDivElement;
+      const elements = {
+        form: document.getElementById('chat-form') as HTMLFormElement,
+        questionInput: document.getElementById('question') as HTMLTextAreaElement,
+        submitButton: document.getElementById('submit-button') as HTMLButtonElement,
+        stopButton: document.getElementById('stop-button') as HTMLButtonElement,
+        status: document.getElementById('status') as HTMLParagraphElement,
+        messageThread: document.getElementById('message-thread') as HTMLElement,
+      };
 
-      form.addEventListener('submit', async (event) => {
+      const dom = createDomAdapter(elements);
+      dom.bindScrollBehavior();
+
+      const chipButtons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>('.demo-chip'),
+      );
+
+      const setChipsEnabled = (enabled: boolean): void => {
+        chipButtons.forEach((button) => {
+          button.disabled = !enabled;
+        });
+      };
+
+      chipButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const question = button.dataset.question;
+          if (!question) {
+            return;
+          }
+          elements.questionInput.value = question;
+          elements.questionInput.focus();
+        });
+      });
+
+      const controller = createChatController({
+        onTurnUpdated: () => {
+          dom.renderSession(controller.session, controller.activeTurnIndex);
+        },
+        onValidationError: (message) => {
+          dom.showValidationStatus(message);
+        },
+      });
+
+      const submitQuestion = (): void => {
+        elements.form.requestSubmit();
+      };
+
+      dom.bindComposerKeys(submitQuestion);
+
+      elements.stopButton.addEventListener('click', () => {
+        controller.stopActiveTurn();
+        dom.restoreComposer();
+      });
+
+      elements.form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const question = questionInput.value.trim();
+        const question = elements.questionInput.value.trim();
         if (!question) {
-          status.hidden = false;
-          status.textContent = 'Enter a question before submitting.';
-          answerPanel.hidden = true;
+          dom.showValidationStatus('Enter a question before submitting.');
           return;
         }
 
-        submitButton.disabled = true;
-        status.hidden = false;
-        status.textContent = 'Waiting for the assistant…';
-        answerPanel.hidden = true;
+        const turnIndex = controller.submitQuestion(question);
+        elements.questionInput.value = '';
+        dom.setComposerEnabled(false);
+        setChipsEnabled(false);
+        dom.setStopVisible(true);
+        elements.status.hidden = true;
+
+        controller.markStreaming(turnIndex);
 
         try {
-          const response = await askQuestion(question);
-          answerText.textContent = response.answerText;
-          // Trust boundary: the sole innerHTML sink. renderSources is the only permitted
-          // producer; every interpolated assistant value inside it must pass through escapeHtml.
-          sources.innerHTML = renderSources(response.sources);
-
-          if (response.traceCorrelationId) {
-            traceId.hidden = false;
-            traceId.textContent = `Trace: ${response.traceCorrelationId}`;
-          } else {
-            traceId.hidden = true;
-            traceId.textContent = '';
+          await streamQuestion(
+            question,
+            {
+              onTrace: (payload) => controller.handleTrace(turnIndex, payload),
+              onToken: (payload) => controller.handleToken(turnIndex, payload),
+              onFinal: (response) => controller.handleFinal(turnIndex, response),
+              onStreamError: (payload) => controller.handleStreamError(turnIndex, payload),
+              onAbort: () => {
+                if (
+                  turnIndex === controller.activeTurnIndex &&
+                  controller.getTurnStatus(turnIndex) === 'streaming'
+                ) {
+                  controller.stopActiveTurn();
+                }
+              },
+            },
+            controller.getStreamAbortSignal(),
+          );
+        } catch (error) {
+          if (error instanceof StreamAbortedError) {
+            return;
           }
 
-          status.hidden = true;
-          answerPanel.hidden = false;
-        } catch (error) {
           const message = error instanceof Error ? error.message : 'Request failed.';
-          status.hidden = false;
-          status.textContent = message;
-          answerPanel.hidden = true;
+
+          if (error instanceof HttpRequestError && error.status === 400) {
+            controller.handleValidationError(message, turnIndex);
+          } else if (
+            controller.getTurnStatus(turnIndex) === 'streaming' ||
+            controller.getTurnStatus(turnIndex) === 'pending'
+          ) {
+            controller.handleConnectionError(turnIndex, message);
+          }
         } finally {
-          submitButton.disabled = false;
+          dom.restoreComposer();
+          setChipsEnabled(true);
         }
       });
     </script>
