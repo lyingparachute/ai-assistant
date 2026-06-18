@@ -1,6 +1,6 @@
 package dev.localassistant.assistant;
 
-import dev.localassistant.assistant.adapters.inbound.cli.RagIngestionMode;
+import dev.localassistant.assistant.rag.api.RagIngestionMode;
 import dev.localassistant.assistant.config.OrchestrationConfiguration;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;

@@ -8,9 +8,9 @@ import dev.localassistant.assistant.question.ConversationTurn;
 import dev.localassistant.assistant.question.SourceContributionStatus;
 import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
-import dev.localassistant.assistant.rag.RagKnowledgePort;
 import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
+import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
 import dev.localassistant.assistant.tools.CountriesPort;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.SourceUnavailability;
@@ -26,7 +26,7 @@ public final class AnswerQuestionUseCase {
 
     private static final String COUNTRIES_PORT_NAME = "CountriesPort";
     private static final String WEATHER_PORT_NAME = "WeatherPort";
-    private static final String RAG_PORT_NAME = "RagKnowledgePort";
+    private static final String RAG_PORT_NAME = "RetrieveRagKnowledge";
     private static final String LLM_PORT_NAME = "LlmPort";
 
     private static final String PLACE_SYNTHESIS_INSTRUCTIONS =
@@ -38,7 +38,7 @@ public final class AnswerQuestionUseCase {
 
     private final CountriesPort countriesPort;
     private final WeatherPort weatherPort;
-    private final RagKnowledgePort ragKnowledgePort;
+    private final RetrieveRagKnowledge retrieveRagKnowledge;
     private final LlmPort llmPort;
     private final SourceRoutingPolicy sourceRoutingPolicy;
     private final ResponseComposer responseComposer;
@@ -47,14 +47,14 @@ public final class AnswerQuestionUseCase {
     public AnswerQuestionUseCase(
             CountriesPort countriesPort,
             WeatherPort weatherPort,
-            RagKnowledgePort ragKnowledgePort,
+            RetrieveRagKnowledge retrieveRagKnowledge,
             LlmPort llmPort,
             SourceRoutingPolicy sourceRoutingPolicy,
             ResponseComposer responseComposer,
             RagRetrievalPolicy ragRetrievalPolicy) {
         this.countriesPort = countriesPort;
         this.weatherPort = weatherPort;
-        this.ragKnowledgePort = ragKnowledgePort;
+        this.retrieveRagKnowledge = retrieveRagKnowledge;
         this.llmPort = llmPort;
         this.sourceRoutingPolicy = sourceRoutingPolicy;
         this.responseComposer = responseComposer;
@@ -211,7 +211,9 @@ public final class AnswerQuestionUseCase {
     private AssistantAnswer handleCdqProduct(
             RoutedQuestion.CdqProduct routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
         trace.portInvoked(RAG_PORT_NAME);
-        final var retrieval = ragKnowledgePort.retrieve(routed.question().text(), ragRetrievalPolicy);
+        final var retrieval =
+                retrieveRagKnowledge.execute(
+                        new RetrieveRagKnowledge.Command(routed.question().text(), ragRetrievalPolicy));
         sink.recordSourceOutcome(SourceType.RAG_KNOWLEDGE, statusFor(retrieval));
 
         return switch (retrieval) {

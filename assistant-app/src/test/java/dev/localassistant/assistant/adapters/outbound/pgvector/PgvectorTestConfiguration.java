@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import dev.localassistant.assistant.adapters.outbound.pgvector.support.TestEmbeddingPortConfiguration;
 import dev.localassistant.assistant.config.AssistantRagStorageProperties;
+import dev.localassistant.assistant.rag.infrastructure.config.PgvectorBeansConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

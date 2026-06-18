@@ -1,6 +1,7 @@
 package dev.localassistant.assistant.rag.support;
 
-import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
+import dev.localassistant.assistant.rag.infrastructure.FixtureProductPageSource;
+import dev.localassistant.assistant.rag.domain.port.outbound.ProductPageSource;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -15,14 +16,14 @@ public class RagIngestionTestConfiguration {
 
     @Bean
     @Primary
-    AtomicReference<FixtureProductKnowledgePort> fixtureProductKnowledgePortHolder() throws IOException {
-        return new AtomicReference<>(FixtureProductKnowledgePort.fromClasspathHtml(FIXTURE_HTML));
+    AtomicReference<FixtureProductPageSource> fixtureProductPageSourceHolder() throws IOException {
+        return new AtomicReference<>(FixtureProductPageSource.fromClasspathHtml(FIXTURE_HTML));
     }
 
     @Bean
     @Primary
-    ProductKnowledgePort fixtureProductKnowledgePort(
-            AtomicReference<FixtureProductKnowledgePort> fixtureProductKnowledgePortHolder) {
-        return sourceUrl -> fixtureProductKnowledgePortHolder.get().fetchAndExtract(sourceUrl);
+    ProductPageSource fixtureProductPageSource(
+            AtomicReference<FixtureProductPageSource> fixtureProductPageSourceHolder) {
+        return command -> fixtureProductPageSourceHolder.get().fetchAndExtract(command);
     }
 }

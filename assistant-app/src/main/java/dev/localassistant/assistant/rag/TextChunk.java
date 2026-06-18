@@ -2,7 +2,7 @@ package dev.localassistant.assistant.rag;
 
 import java.util.Objects;
 
-record TextChunk(int chunkIndex, String chunkText) {
+public record TextChunk(int chunkIndex, String chunkText) {
 
     public TextChunk {
         Objects.requireNonNull(chunkText, "chunkText");
