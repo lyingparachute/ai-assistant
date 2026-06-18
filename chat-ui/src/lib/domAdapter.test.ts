@@ -161,4 +161,48 @@ describe('domAdapter', () => {
     const liveAnswer = elements.messageThread.querySelector('.answer-text[aria-live="polite"]');
     expect(liveAnswer).not.toBeNull();
   });
+
+  it('shows final answer without tokens and hides forming hint', () => {
+    const elements = mountScaffold();
+    const dom = createDomAdapter(elements);
+    const controller = createChatController({
+      onTurnUpdated: () => {
+        dom.renderSession(controller.session, controller.activeTurnIndex);
+      },
+    });
+
+    const response: ChatResponse = {
+      answerText: 'Berlin is the capital of Germany.',
+      sources: [
+        {
+          type: 'countries_facts',
+          status: 'USED',
+          countryInfo: {
+            countryName: 'Germany',
+            capital: 'Berlin',
+            region: 'Europe',
+            population: 83_000_000,
+          },
+        },
+      ],
+    };
+
+    const index = controller.submitQuestion('Capital of Germany?');
+    controller.markStreaming(index);
+    controller.handleTrace(index, { type: 'countries_facts', status: 'USED' });
+    dom.renderSession(controller.session, controller.activeTurnIndex);
+
+    const formingHintWhileStreaming = elements.messageThread.querySelector('.forming-hint');
+    expect(formingHintWhileStreaming?.hidden).toBe(true);
+    expect(elements.messageThread.querySelector('.answer-text')?.textContent).toBe('');
+
+    controller.handleFinal(index, response);
+    dom.renderSession(controller.session, controller.activeTurnIndex);
+
+    const formingHintAfterFinal = elements.messageThread.querySelector('.forming-hint');
+    expect(formingHintAfterFinal?.hidden).toBe(true);
+    expect(elements.messageThread.querySelector('.answer-text')?.textContent).toBe(
+      response.answerText,
+    );
+  });
 });

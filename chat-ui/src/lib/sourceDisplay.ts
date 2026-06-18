@@ -1,5 +1,6 @@
 import { escapeHtml } from './htmlEscape';
 import { SOURCE_LABELS } from './sourceLabels';
+import { statusBadgeClass } from './statusBadge';
 import type { SourceResponse } from './types';
 
 function unavailableBlock(message: string, hint?: string): string {
@@ -53,7 +54,7 @@ function renderRagKnowledge(source: Extract<SourceResponse, { type: 'rag_knowled
 
 function renderModelSynthesis(source: Extract<SourceResponse, { type: 'model_synthesis' }>): string {
   if (source.status === 'USED') {
-    return '<p>Model synthesis contributed to the answer text.</p>';
+    return '<p>Grounded prose from verified source results, woven into the answer above. Synthesis — not a tool result.</p>';
   }
   return unavailableBlock(source.unavailableMessage ?? 'Model synthesis unavailable', source.unavailableHint);
 }
@@ -81,7 +82,7 @@ export function renderSources(sources: SourceResponse[]): string {
       return `<article class="source-card">
         <header>
           <h3>${escapeHtml(SOURCE_LABELS[source.type])}</h3>
-          <span class="badge">${escapeHtml(source.status)}</span>
+          <span class="${statusBadgeClass(source.status)}">${escapeHtml(source.status)}</span>
         </header>
         ${body}
       </article>`;

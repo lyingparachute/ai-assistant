@@ -267,7 +267,48 @@ body {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.badge-used {
+  color: var(--status-used);
+}
+
+.badge-unavailable {
+  color: var(--status-unavailable);
+}
+
+.badge-insufficient {
+  color: var(--status-insufficient);
+}
+
+.trace-step-badge {
+  flex-shrink: 0;
+}
+
+.trace-step-more {
+  list-style: none;
+}
+
+.trace-step-more details {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+}
+
+.trace-step-more summary {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
   color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.trace-timeline-nested {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 .source-card ul {
