@@ -7,12 +7,25 @@ import { createChatController } from './chatController';
 import { createDomAdapter, createDomScaffold } from './domAdapter';
 import type { ChatResponse } from './types';
 
+function mountScaffold() {
+  const doc = document;
+  const elements = createDomScaffold(doc);
+  const workspace = doc.createElement('main');
+  workspace.appendChild(elements.messageThread);
+  workspace.appendChild(elements.status);
+  workspace.appendChild(elements.form);
+  doc.body.appendChild(workspace);
+  return elements;
+}
+
 describe('domAdapter', () => {
-  it('renders a completed turn through the controller scaffold', () => {
-    const elements = createDomScaffold();
+  it('renders session thread with a11y scaffold attributes', () => {
+    const elements = mountScaffold();
     const dom = createDomAdapter(elements);
     const controller = createChatController({
-      onTurnUpdated: (turn) => dom.renderTurn(turn),
+      onTurnUpdated: () => {
+        dom.renderSession(controller.session, controller.activeTurnIndex);
+      },
     });
 
     const response: ChatResponse = {
@@ -38,18 +51,68 @@ describe('domAdapter', () => {
     controller.handleToken(index, { text: 'Berlin ' });
     controller.handleFinal(index, response);
 
-    expect(elements.answerPanel.hidden).toBe(false);
-    expect(elements.answerText.textContent).toBe(response.answerText);
-    expect(elements.traceTimeline.querySelector('.trace-timeline')).not.toBeNull();
-    expect(elements.sources.querySelector('.source-card')).not.toBeNull();
-    expect(elements.traceId.textContent).toBe('Trace: trace-abc');
+    expect(elements.messageThread.getAttribute('role')).toBe('log');
+    expect(elements.messageThread.getAttribute('aria-label')).toBe(
+      'Chat Interface session display',
+    );
+
+    const turns = elements.messageThread.querySelectorAll('.turn');
+    expect(turns).toHaveLength(1);
+
+    const liveAnswer = elements.messageThread.querySelector('.answer-text[aria-live="polite"]');
+    expect(liveAnswer).toBeNull();
+
+    const answerText = elements.messageThread.querySelector('.answer-text');
+    expect(answerText?.textContent).toBe(response.answerText);
+    expect(elements.messageThread.querySelector('.trace-timeline')).not.toBeNull();
+    expect(elements.messageThread.querySelector('.source-card')).not.toBeNull();
+    expect(elements.messageThread.querySelector('.trace-id')?.textContent).toBe(
+      'Trace: trace-abc',
+    );
+  });
+
+  it('renders at least two turns in the session display thread', () => {
+    const elements = mountScaffold();
+    const dom = createDomAdapter(elements);
+    const controller = createChatController({
+      onTurnUpdated: () => {
+        dom.renderSession(controller.session, controller.activeTurnIndex);
+      },
+    });
+
+    const firstResponse: ChatResponse = {
+      answerText: 'Berlin.',
+      sources: [{ type: 'countries_facts', status: 'USED' }],
+    };
+    const secondResponse: ChatResponse = {
+      answerText: 'Munich weather is mild.',
+      sources: [{ type: 'weather_observation', status: 'USED' }],
+    };
+
+    const firstIndex = controller.submitQuestion('Capital of Germany?');
+    controller.markStreaming(firstIndex);
+    controller.handleFinal(firstIndex, firstResponse);
+
+    const secondIndex = controller.submitQuestion('Weather in Munich?');
+    controller.markStreaming(secondIndex);
+    controller.handleFinal(secondIndex, secondResponse);
+
+    const turns = elements.messageThread.querySelectorAll('.turn');
+    expect(turns).toHaveLength(2);
+    expect(turns[0]?.querySelector('.user-question')?.textContent).toBe(
+      'Capital of Germany?',
+    );
+    expect(turns[1]?.querySelector('.user-question')?.textContent).toBe('Weather in Munich?');
+    expect(turns[1]?.querySelector('.answer-text[aria-live="polite"]')).toBeNull();
   });
 
   it('shows aborted and stream-error labels with partial answer text', () => {
-    const elements = createDomScaffold();
+    const elements = mountScaffold();
     const dom = createDomAdapter(elements);
     const controller = createChatController({
-      onTurnUpdated: (turn) => dom.renderTurn(turn),
+      onTurnUpdated: () => {
+        dom.renderSession(controller.session, controller.activeTurnIndex);
+      },
     });
 
     const index = controller.submitQuestion('Stop me');
@@ -57,8 +120,11 @@ describe('domAdapter', () => {
     controller.handleToken(index, { text: 'Partial answer' });
     controller.stopActiveTurn();
 
-    expect(elements.formingHint.textContent).toBe('Stopped — incomplete');
-    expect(elements.answerText.textContent).toBe('Partial answer');
+    const formingHint = elements.messageThread.querySelector('.forming-hint');
+    expect(formingHint?.textContent).toBe('Stopped — incomplete');
+    expect(elements.messageThread.querySelector('.answer-text')?.textContent).toBe(
+      'Partial answer',
+    );
 
     const errorIndex = controller.submitQuestion('Stream fail');
     controller.markStreaming(errorIndex);
@@ -69,8 +135,30 @@ describe('domAdapter', () => {
       message: 'Assistant stream failed.',
     });
 
-    expect(elements.formingHint.textContent).toBe('Assistant stream failed.');
-    expect(elements.answerText.textContent).toBe('Partial stream answer');
-    expect(elements.traceTimeline.querySelector('.trace-timeline')).not.toBeNull();
+    const turns = elements.messageThread.querySelectorAll('.turn');
+    expect(turns).toHaveLength(2);
+    const activeTurn = turns[1];
+    expect(activeTurn?.querySelector('.forming-hint')?.textContent).toBe(
+      'Assistant stream failed.',
+    );
+    expect(activeTurn?.querySelector('.answer-text')?.textContent).toBe('Partial stream answer');
+    expect(activeTurn?.querySelector('.trace-timeline')).not.toBeNull();
+  });
+
+  it('sets aria-live on the active turn answer while streaming', () => {
+    const elements = mountScaffold();
+    const dom = createDomAdapter(elements);
+    const controller = createChatController({
+      onTurnUpdated: () => {
+        dom.renderSession(controller.session, controller.activeTurnIndex);
+      },
+    });
+
+    const index = controller.submitQuestion('Streaming now');
+    controller.markStreaming(index);
+    dom.renderSession(controller.session, controller.activeTurnIndex);
+
+    const liveAnswer = elements.messageThread.querySelector('.answer-text[aria-live="polite"]');
+    expect(liveAnswer).not.toBeNull();
   });
 });

@@ -11,11 +11,23 @@ import '../styles/chat.css';
     <title>Local AI Assistant</title>
   </head>
   <body>
-    <main class="layout">
+    <main class="chat-workspace">
       <header class="page-header">
         <h1>Local AI Assistant</h1>
-        <p>Ask one question at a time. Answers show grounded sources from the Assistant API.</p>
+        <p>
+          Questions and answers stay visible in this browser session. Each request sends only your
+          latest question to the Assistant API — not prior turns.
+        </p>
       </header>
+
+      <section
+        id="message-thread"
+        class="message-thread"
+        role="log"
+        aria-label="Chat Interface session display"
+      ></section>
+
+      <p id="status" class="status" hidden></p>
 
       <form id="chat-form" class="chat-form">
         <label for="question">Your question</label>
@@ -31,25 +43,6 @@ import '../styles/chat.css';
           <button type="button" id="stop-button" class="stop-button" hidden>Stop</button>
         </div>
       </form>
-
-      <p id="status" class="status" hidden></p>
-
-      <section id="answer-panel" class="answer-panel" hidden>
-        <section id="trace-section" class="trace-section" hidden>
-          <h2>Source-Usage Trace</h2>
-          <div id="trace-timeline" class="trace-timeline-host"></div>
-        </section>
-
-        <h2>Answer</h2>
-        <p id="forming-hint" class="forming-hint" hidden>Forming answer…</p>
-        <p id="answer-text" class="answer-text"></p>
-        <p id="trace-id" class="trace-id" hidden></p>
-
-        <section id="sources-section" class="sources-section">
-          <h2>Sources</h2>
-          <div id="sources" class="sources"></div>
-        </section>
-      </section>
     </main>
 
     <script>
@@ -63,29 +56,30 @@ import '../styles/chat.css';
         submitButton: document.getElementById('submit-button') as HTMLButtonElement,
         stopButton: document.getElementById('stop-button') as HTMLButtonElement,
         status: document.getElementById('status') as HTMLParagraphElement,
-        answerPanel: document.getElementById('answer-panel') as HTMLElement,
-        traceSection: document.getElementById('trace-section') as HTMLElement,
-        traceTimeline: document.getElementById('trace-timeline') as HTMLDivElement,
-        formingHint: document.getElementById('forming-hint') as HTMLParagraphElement,
-        answerText: document.getElementById('answer-text') as HTMLParagraphElement,
-        traceId: document.getElementById('trace-id') as HTMLParagraphElement,
-        sourcesSection: document.getElementById('sources-section') as HTMLElement,
-        sources: document.getElementById('sources') as HTMLDivElement,
+        messageThread: document.getElementById('message-thread') as HTMLElement,
       };
 
       const dom = createDomAdapter(elements);
+      dom.bindScrollBehavior();
 
       const controller = createChatController({
-        onTurnUpdated: (turn) => {
-          if (turn.status === 'error' && turn.errorKind === 'validation-error') {
+        onTurnUpdated: (_turn, index) => {
+          const turn = controller.session.turns[index];
+          if (turn?.status === 'error' && turn.errorKind === 'validation-error') {
             return;
           }
-          dom.renderTurn(turn);
+          dom.renderSession(controller.session, controller.activeTurnIndex);
         },
         onValidationError: (message) => {
           dom.showValidationStatus(message);
         },
       });
+
+      const submitQuestion = (): void => {
+        elements.form.requestSubmit();
+      };
+
+      dom.bindComposerKeys(submitQuestion);
 
       elements.stopButton.addEventListener('click', () => {
         controller.stopActiveTurn();
@@ -97,15 +91,14 @@ import '../styles/chat.css';
         const question = elements.questionInput.value.trim();
         if (!question) {
           dom.showValidationStatus('Enter a question before submitting.');
-          dom.hideAnswerPanel();
           return;
         }
 
         const turnIndex = controller.submitQuestion(question);
+        elements.questionInput.value = '';
         dom.setComposerEnabled(false);
         dom.setStopVisible(true);
         elements.status.hidden = true;
-        dom.hideAnswerPanel();
 
         controller.markStreaming(turnIndex);
 
