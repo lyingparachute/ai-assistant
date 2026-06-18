@@ -62,11 +62,11 @@ public final class AnswerQuestionUseCase {
     }
 
     public ConversationTurn answer(UserQuestion question, AssistantResponseSink sink) {
-        AssistantRequestTrace trace = AssistantRequestTrace.start(question);
-        RoutedQuestion routed = sourceRoutingPolicy.route(question);
+        final var trace = AssistantRequestTrace.start(question);
+        final var routed = sourceRoutingPolicy.route(question);
         trace.routeSelected(routed.route());
 
-        AssistantAnswer answer =
+        final var answer =
                 switch (routed) {
                     case RoutedQuestion.CountryCapital countryCapital ->
                             handleCountryCapital(countryCapital, trace, sink);
@@ -83,17 +83,17 @@ public final class AnswerQuestionUseCase {
                 };
 
         trace.completed(answer.sources().size());
-        ConversationTurn turn = new ConversationTurn(question, answer);
+        final var turn = new ConversationTurn(question, answer);
         sink.complete(turn);
         return turn;
     }
 
     private AssistantAnswer handleCountryCapital(
             RoutedQuestion.CountryCapital routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
-        ToolExecutionResult<CountryInfo> result = lookupCountry(routed.countryLookupKey(), trace, sink);
+        final var result = lookupCountry(routed.countryLookupKey(), trace, sink);
         return switch (result) {
-            case ToolExecutionResult.Success<CountryInfo> success ->
-                    responseComposer.composeCountryCapital(success.value(), trace.correlationId());
+            case ToolExecutionResult.Success<CountryInfo>(var countryInfo) ->
+                    responseComposer.composeCountryCapital(countryInfo, trace.correlationId());
             case ToolExecutionResult.SourceUnavailable<CountryInfo> failure ->
                     composeCountriesUnavailable(failure, trace);
             case ToolExecutionResult.ToolError<CountryInfo> failure ->
@@ -103,13 +103,13 @@ public final class AnswerQuestionUseCase {
 
     private AssistantAnswer handleWeatherLocation(
             RoutedQuestion.WeatherOnly routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
-        String location = routed.weatherLocation().city();
+        final var location = routed.weatherLocation().city();
         trace.portInvoked(WEATHER_PORT_NAME);
-        ToolExecutionResult<WeatherReport> result = weatherPort.currentWeather(location);
+        final var result = weatherPort.currentWeather(location);
         recordWeatherOutcome(sink, result);
         return switch (result) {
-            case ToolExecutionResult.Success<WeatherReport> success ->
-                    responseComposer.composeWeatherOnly(success.value(), trace.correlationId());
+            case ToolExecutionResult.Success<WeatherReport>(var weatherReport) ->
+                    responseComposer.composeWeatherOnly(weatherReport, trace.correlationId());
             case ToolExecutionResult.SourceUnavailable<WeatherReport> failure ->
                     composeWeatherUnavailable(failure, trace);
             case ToolExecutionResult.ToolError<WeatherReport> failure ->
@@ -119,28 +119,26 @@ public final class AnswerQuestionUseCase {
 
     private AssistantAnswer handleCountryThenWeather(
             RoutedQuestion.CountryThenWeather routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
-        ToolExecutionResult<CountryInfo> countryResult =
-                lookupCountry(routed.countryLookupKey(), trace, sink);
+        final var countryResult = lookupCountry(routed.countryLookupKey(), trace, sink);
         return switch (countryResult) {
             case ToolExecutionResult.SourceUnavailable<CountryInfo> failure ->
                     composeCountriesUnavailable(failure, trace);
             case ToolExecutionResult.ToolError<CountryInfo> failure ->
                     composeCountriesUnavailable(failure, trace);
-            case ToolExecutionResult.Success<CountryInfo> success ->
-                    continueWithWeather(success.value(), trace, sink);
+            case ToolExecutionResult.Success<CountryInfo>(var countryInfo) ->
+                    continueWithWeather(countryInfo, trace, sink);
         };
     }
 
     private AssistantAnswer continueWithWeather(
             CountryInfo countryInfo, AssistantRequestTrace trace, AssistantResponseSink sink) {
         trace.portInvoked(WEATHER_PORT_NAME);
-        ToolExecutionResult<WeatherReport> weatherResult =
-                weatherPort.currentWeather(countryInfo.capital());
+        final var weatherResult = weatherPort.currentWeather(countryInfo.capital());
         recordWeatherOutcome(sink, weatherResult);
         return switch (weatherResult) {
-            case ToolExecutionResult.Success<WeatherReport> success ->
+            case ToolExecutionResult.Success<WeatherReport>(var weatherReport) ->
                     responseComposer.composeCountryThenWeather(
-                            countryInfo, success.value(), trace.correlationId());
+                            countryInfo, weatherReport, trace.correlationId());
             case ToolExecutionResult.SourceUnavailable<WeatherReport> failure ->
                     responseComposer.composeCountryThenWeatherPartial(
                             countryInfo, weatherUnavailable(failure), trace.correlationId());
@@ -160,7 +158,7 @@ public final class AnswerQuestionUseCase {
 
     private AssistantAnswer handlePlaceSynthesis(
             RoutedQuestion.PlaceSynthesis routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
-        ToolExecutionResult<CountryInfo> countryResult = lookupCountry(routed.placeName(), trace, sink);
+        final var countryResult = lookupCountry(routed.placeName(), trace, sink);
         return switch (countryResult) {
             case ToolExecutionResult.SourceUnavailable<CountryInfo> failure ->
                     responseComposer.composeCountriesUnavailable(
@@ -168,8 +166,8 @@ public final class AnswerQuestionUseCase {
             case ToolExecutionResult.ToolError<CountryInfo> failure ->
                     responseComposer.composeCountriesUnavailable(
                             countriesUnavailable(failure), trace.correlationId());
-            case ToolExecutionResult.Success<CountryInfo> success ->
-                    synthesizePlace(routed, success.value(), trace, sink);
+            case ToolExecutionResult.Success<CountryInfo>(var countryInfo) ->
+                    synthesizePlace(routed, countryInfo, trace, sink);
         };
     }
 
@@ -178,7 +176,7 @@ public final class AnswerQuestionUseCase {
             CountryInfo countryInfo,
             AssistantRequestTrace trace,
             AssistantResponseSink sink) {
-        PromptContext prompt =
+        final var prompt =
                 new PromptContext(
                         routed.question().text(),
                         countryFactsForSynthesis(countryInfo),
@@ -201,20 +199,19 @@ public final class AnswerQuestionUseCase {
             BiFunction<LlmResult.Success, String, AssistantAnswer> onSuccess,
             BiFunction<SourceUnavailability, String, AssistantAnswer> onUnavailable) {
         trace.portInvoked(LLM_PORT_NAME);
-        LlmResult synthesis = llmPort.generate(prompt, sink::appendAnswerToken);
+        final var synthesis = llmPort.generate(prompt, sink::appendAnswerToken);
         sink.recordSourceOutcome(SourceType.MODEL_SYNTHESIS, statusFor(synthesis));
         return switch (synthesis) {
             case LlmResult.Success success -> onSuccess.apply(success, trace.correlationId());
-            case LlmResult.SourceUnavailable unavailable ->
-                    onUnavailable.apply(unavailable.asUnavailability(), trace.correlationId());
+            case LlmResult.SourceUnavailable(var unavailability) ->
+                    onUnavailable.apply(unavailability, trace.correlationId());
         };
     }
 
     private AssistantAnswer handleCdqProduct(
             RoutedQuestion.CdqProduct routed, AssistantRequestTrace trace, AssistantResponseSink sink) {
         trace.portInvoked(RAG_PORT_NAME);
-        RagRetrievalResult retrieval =
-                ragKnowledgePort.retrieve(routed.question().text(), ragRetrievalPolicy);
+        final var retrieval = ragKnowledgePort.retrieve(routed.question().text(), ragRetrievalPolicy);
         sink.recordSourceOutcome(SourceType.RAG_KNOWLEDGE, statusFor(retrieval));
 
         return switch (retrieval) {
@@ -222,28 +219,26 @@ public final class AnswerQuestionUseCase {
                 trace.ragRetrieval(0);
                 yield responseComposer.composeCdqInsufficientKnowledge(trace.correlationId());
             }
-            case RagRetrievalResult.SourceUnavailable unavailable -> {
+            case RagRetrievalResult.SourceUnavailable(var unavailability) -> {
                 trace.ragRetrieval(0);
                 yield responseComposer.composeCdqRagUnavailable(
-                        unavailable.asUnavailability(), trace.correlationId());
+                        unavailability, trace.correlationId());
             }
-            case RagRetrievalResult.Success success -> {
-                trace.ragRetrieval(success.snippets().size());
-                PromptContext prompt =
+            case RagRetrievalResult.Success(var snippets) -> {
+                trace.ragRetrieval(snippets.size());
+                final var prompt =
                         new PromptContext(
                                 routed.question().text(),
-                                compactSnippetFacts(success.snippets()),
+                                compactSnippetFacts(snippets),
                                 CDQ_SYNTHESIS_INSTRUCTIONS);
                 yield synthesize(
                         prompt,
                         trace,
                         sink,
                         (llmSuccess, traceId) ->
-                                responseComposer.composeCdqProduct(
-                                        success.snippets(), llmSuccess, traceId),
+                                responseComposer.composeCdqProduct(snippets, llmSuccess, traceId),
                         (failure, traceId) ->
-                                responseComposer.composeCdqLlmUnavailable(
-                                        success.snippets(), failure, traceId));
+                                responseComposer.composeCdqLlmUnavailable(snippets, failure, traceId));
             }
         };
     }
@@ -256,7 +251,7 @@ public final class AnswerQuestionUseCase {
     private ToolExecutionResult<CountryInfo> lookupCountry(
             String lookupKey, AssistantRequestTrace trace, AssistantResponseSink sink) {
         trace.portInvoked(COUNTRIES_PORT_NAME);
-        ToolExecutionResult<CountryInfo> result = countriesPort.lookupCountry(lookupKey);
+        final var result = countriesPort.lookupCountry(lookupKey);
         sink.recordSourceOutcome(SourceType.COUNTRIES_FACTS, statusFor(result));
         return result;
     }
@@ -303,7 +298,7 @@ public final class AnswerQuestionUseCase {
     }
 
     private static List<String> countryFactsForSynthesis(CountryInfo countryInfo) {
-        List<String> facts = new ArrayList<>();
+        final var facts = new ArrayList<String>();
         facts.add(
                 ResponseComposer.CAPITAL_FACT_TEMPLATE.formatted(
                         countryInfo.capital(), countryInfo.countryName()));

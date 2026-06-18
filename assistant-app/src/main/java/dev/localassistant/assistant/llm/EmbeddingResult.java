@@ -12,7 +12,7 @@ public sealed interface EmbeddingResult {
         return switch (this) {
             case Success ignored ->
                     throw new IllegalStateException("asUnavailability requires a failed result");
-            case SourceUnavailable unavailable -> unavailable.unavailability();
+            case SourceUnavailable(var unavailability) -> unavailability;
         };
     }
 

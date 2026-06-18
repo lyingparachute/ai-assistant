@@ -35,29 +35,27 @@ final class CountriesMcpResponseMapper {
             return sourceUnavailable("countries MCP returned empty tool content");
         }
 
-        JsonNode root;
         try {
-            root = objectMapper.readTree(payload);
+            final var root = objectMapper.readTree(payload);
+            if (!root.has(ENVELOPE_OK_FIELD)) {
+                return response.isError()
+                        ? sourceUnavailable(MCP_ERROR_FLAG_MESSAGE)
+                        : sourceUnavailable("countries MCP returned an unrecognized payload");
+            }
+
+            if (root.path(ENVELOPE_OK_FIELD).asBoolean(false)) {
+                return mapSuccess(root.path("data"));
+            }
+            return mapToolError(root);
         } catch (Exception exception) {
             return response.isError()
                     ? sourceUnavailable(MCP_ERROR_FLAG_MESSAGE)
                     : sourceUnavailable("countries MCP returned unparseable JSON");
         }
-
-        if (!root.has(ENVELOPE_OK_FIELD)) {
-            return response.isError()
-                    ? sourceUnavailable(MCP_ERROR_FLAG_MESSAGE)
-                    : sourceUnavailable("countries MCP returned an unrecognized payload");
-        }
-
-        if (root.path(ENVELOPE_OK_FIELD).asBoolean(false)) {
-            return mapSuccess(root.path("data"));
-        }
-        return mapToolError(root);
     }
 
     private ToolExecutionResult<CountryInfo> mapSuccess(JsonNode data) {
-        Optional<CountryInfo> countryInfo = readCountryInfo(data);
+        final var countryInfo = readCountryInfo(data);
         if (countryInfo.isEmpty()) {
             return new ToolExecutionResult.SourceUnavailable<>(
                     SOURCE_LABEL,
@@ -69,8 +67,8 @@ final class CountriesMcpResponseMapper {
     }
 
     private ToolExecutionResult<CountryInfo> mapToolError(JsonNode root) {
-        String error = textOrDefault(root.path("error"), "country lookup failed");
-        String hint = textOrDefault(root.path("hint"), "Retry with a valid English country or capital city name.");
+        final var error = textOrDefault(root.path("error"), "country lookup failed");
+        final var hint = textOrDefault(root.path("hint"), "Retry with a valid English country or capital city name.");
         return new ToolExecutionResult.ToolError<>(error, hint);
     }
 

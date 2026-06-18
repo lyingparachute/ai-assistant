@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.adapters.outbound.cdq;
 
-import dev.localassistant.assistant.rag.ProductKnowledgePort;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 import dev.localassistant.assistant.rag.ProductPageResult;
 
 import java.io.IOException;
@@ -28,8 +28,8 @@ public final class CdqProductKnowledgeAdapter implements ProductKnowledgePort {
         }
 
         try {
-            String html = productPageFetcher.fetchHtml(sourceUrl);
-            String extractedText = productPageTextExtractor.extractPlainText(html);
+            final var html = productPageFetcher.fetchHtml(sourceUrl);
+            final var extractedText = productPageTextExtractor.extractPlainText(html);
             return new ProductPageResult.Success(extractedText);
         } catch (ProductPageFetchException | ProductPageExtractionException exception) {
             return new ProductPageResult.SourceUnavailable(

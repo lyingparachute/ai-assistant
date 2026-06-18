@@ -49,22 +49,22 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
 
     @Override
     public McpToolResponse invoke(String toolName, Map<String, Object> arguments) {
-        McpSyncClient client = clientsByToolName.get(toolName);
+        final var client = clientsByToolName.get(toolName);
         if (client == null) {
             throw new McpToolInvocationException("no MCP client configured for tool " + toolName);
         }
 
         try {
-            McpSchema.CallToolResult result = client.callTool(
+            final var result = client.callTool(
                     new McpSchema.CallToolRequest(toolName, arguments)
             );
-            List<String> textContents = result.content().stream()
+            final var textContents = result.content().stream()
                     .filter(McpSchema.TextContent.class::isInstance)
                     .map(McpSchema.TextContent.class::cast)
                     .map(McpSchema.TextContent::text)
                     .toList();
             // MCP spec: an absent isError field means the call was not an error.
-            boolean isError = Boolean.TRUE.equals(result.isError());
+            final var isError = Boolean.TRUE.equals(result.isError());
             return new McpToolResponse(textContents, isError);
         } catch (RuntimeException exception) {
             log.warn("MCP tool call failed for {}", toolName, exception);
@@ -84,7 +84,7 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
     }
 
     private Set<McpSyncClient> distinctClients() {
-        Set<McpSyncClient> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<McpSyncClient> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
         distinct.addAll(clientsByToolName.values());
         return distinct;
     }
@@ -97,13 +97,13 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
             throw new McpToolInvocationException("MCP server command is not configured");
         }
 
-        ServerParameters parameters = ServerParameters.builder(server.command())
+        final var parameters = ServerParameters.builder(server.command())
                 .args(server.args().toArray(String[]::new))
                 .env(resolveProcessEnv(server, System::getenv))
                 .build();
-        McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(objectMapper);
-        StdioClientTransport transport = new StdioClientTransport(parameters, mcpJsonMapper);
-        McpSyncClient client = McpClient.sync(transport)
+        final var mcpJsonMapper = new JacksonMcpJsonMapper(objectMapper);
+        final var transport = new StdioClientTransport(parameters, mcpJsonMapper);
+        final var client = McpClient.sync(transport)
                 .requestTimeout(Duration.ofSeconds(server.timeoutSeconds()))
                 .initializationTimeout(Duration.ofSeconds(server.timeoutSeconds()))
                 .build();
@@ -112,7 +112,7 @@ final class StdioMcpToolInvoker implements McpToolInvoker, DisposableBean {
     }
 
     static Map<String, String> resolveProcessEnv(AssistantMcpProperties.McpServer server, Function<String, String> hostEnv) {
-        Map<String, String> env = new LinkedHashMap<>(server.env());
+        var env = new LinkedHashMap<>(server.env());
         for (String key : server.envPassthrough()) {
             final var configured = env.get(key);
             if (StringUtils.isNotBlank(configured)) {

@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.adapters.outbound.cdq;
 
 import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
-import dev.localassistant.assistant.rag.ProductKnowledgePort;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -15,8 +15,8 @@ class CdqOutboundConfiguration {
 
     @Bean
     ProductPageFetcher productPageFetcher(AssistantRagRetrievalProperties retrievalProperties) {
-        HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
-        Duration timeout = Duration.ofSeconds(retrievalProperties.fetchTimeoutSeconds());
+        final var httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
+        final var timeout = Duration.ofSeconds(retrievalProperties.fetchTimeoutSeconds());
         return new ProductPageFetcher(httpClient, timeout);
     }
 

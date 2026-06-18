@@ -31,7 +31,7 @@ public final class CountriesMcpClientAdapter implements CountriesPort {
         }
 
         try {
-            McpToolInvoker.McpToolResponse response = mcpToolInvoker.invoke(
+            final var response = mcpToolInvoker.invoke(
                     toolName,
                     Map.of("name", StringUtils.trim(name))
             );

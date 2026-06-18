@@ -12,7 +12,7 @@ public sealed interface RagRetrievalResult {
             Objects.requireNonNull(snippets, "snippets");
             if (snippets.isEmpty()) {
                 throw new IllegalArgumentException(
-                        "snippets must not be empty; use NoRelevantKnowledge instead");
+                    "snippets must not be empty; use NoRelevantKnowledge instead");
             }
             snippets = List.copyOf(snippets);
         }
@@ -26,7 +26,7 @@ public sealed interface RagRetrievalResult {
             Objects.requireNonNull(unavailability, "unavailability");
         }
 
-        public SourceUnavailable(String sourceLabel, String message, String hint) {
+        public SourceUnavailable(final String sourceLabel, final String message, final String hint) {
             this(new SourceUnavailability(sourceLabel, message, hint));
         }
 

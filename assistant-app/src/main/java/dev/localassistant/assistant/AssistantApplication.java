@@ -14,9 +14,9 @@ import org.springframework.context.annotation.Import;
 public class AssistantApplication {
 
     public static void main(String[] args) {
-        ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+        final var applicationArguments = new DefaultApplicationArguments(args);
         if (RagIngestionMode.enabled(applicationArguments)) {
-            SpringApplication application = new SpringApplication(AssistantApplication.class);
+            var application = new SpringApplication(AssistantApplication.class);
             application.setWebApplicationType(WebApplicationType.NONE);
             application.setAdditionalProfiles(RagIngestionMode.PROFILE);
             application.run(args);

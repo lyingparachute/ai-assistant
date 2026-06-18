@@ -3,6 +3,7 @@ package dev.localassistant.assistant.rag;
 import dev.localassistant.assistant.adapters.outbound.pgvector.support.DeterministicTestEmbeddingAdapter;
 import dev.localassistant.assistant.llm.EmbeddingPort;
 import dev.localassistant.assistant.llm.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

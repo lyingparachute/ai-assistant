@@ -5,6 +5,7 @@ import dev.localassistant.assistant.config.AssistantCorsProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -13,6 +14,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
+@Profile("!ingest-rag")
 @EnableConfigurationProperties({AssistantCorsProperties.class, AssistantChatProperties.class})
 class HttpInboundConfiguration implements WebMvcConfigurer {
 
@@ -24,7 +26,7 @@ class HttpInboundConfiguration implements WebMvcConfigurer {
 
     @Bean(name = "chatStreamExecutor")
     Executor chatStreamExecutor(AssistantChatProperties chatProperties) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        var executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(chatProperties.poolSize());
         executor.setMaxPoolSize(chatProperties.poolSize());
         executor.setQueueCapacity(chatProperties.queueCapacity());

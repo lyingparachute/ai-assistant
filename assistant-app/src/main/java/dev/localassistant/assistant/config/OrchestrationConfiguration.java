@@ -11,8 +11,10 @@ import dev.localassistant.assistant.tools.WeatherPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Profile("!ingest-rag")
 public class OrchestrationConfiguration {
 
     @Bean

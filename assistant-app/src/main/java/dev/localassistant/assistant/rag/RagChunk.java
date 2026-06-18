@@ -5,12 +5,12 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public record RagChunk(
-        String chunkText,
-        float[] embedding,
-        String sourceUrl,
-        String contentHash,
-        int chunkIndex,
-        Instant ingestionTimestamp) {
+    String chunkText,
+    float[] embedding,
+    String sourceUrl,
+    String contentHash,
+    int chunkIndex,
+    Instant ingestionTimestamp) {
 
     public RagChunk {
         Objects.requireNonNull(chunkText, "chunkText");

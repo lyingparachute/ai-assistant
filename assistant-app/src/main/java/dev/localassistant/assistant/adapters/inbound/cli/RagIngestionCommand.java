@@ -1,7 +1,6 @@
 package dev.localassistant.assistant.adapters.inbound.cli;
 
 import dev.localassistant.assistant.config.AssistantRagRetrievalProperties;
-import dev.localassistant.assistant.rag.RagIngestionReport;
 import dev.localassistant.assistant.rag.RagIngestionResult;
 import dev.localassistant.assistant.rag.RagIngestionUseCase;
 import org.springframework.boot.ApplicationArguments;
@@ -38,9 +37,9 @@ public class RagIngestionCommand implements ApplicationRunner {
             return;
         }
 
-        RagIngestionResult result = ragIngestionUseCase.ingest(retrievalProperties.sourceUrl());
+        final var result = ragIngestionUseCase.ingest(retrievalProperties.sourceUrl());
         printReport(result);
-        int exitCode = result instanceof RagIngestionResult.Success ? 0 : 1;
+        final var exitCode = result instanceof RagIngestionResult.Success ? 0 : 1;
         SpringApplication.exit(applicationContext, () -> exitCode);
     }
 
@@ -49,16 +48,20 @@ public class RagIngestionCommand implements ApplicationRunner {
     }
 
     private void printReport(RagIngestionResult result) {
-        if (result instanceof RagIngestionResult.SourceUnavailable unavailable) {
-            System.out.printf(
-                    "RAG ingestion failed%nsource: %s%nmessage: %s%nhint: %s%n",
-                    unavailable.sourceLabel(), unavailable.message(), unavailable.hint());
-            return;
+        switch (result) {
+            case RagIngestionResult.SourceUnavailable(var unavailability) ->
+                    System.out.printf(
+                            "RAG ingestion failed%nsource: %s%nmessage: %s%nhint: %s%n",
+                            unavailability.sourceLabel(),
+                            unavailability.message(),
+                            unavailability.hint());
+            case RagIngestionResult.Success(var report) ->
+                    System.out.printf(
+                            "RAG ingestion complete%nsource-url: %s%ncontent-hash: %s%nchunk-count: %d%noutcome: %s%n",
+                            report.sourceUrl(),
+                            report.contentHash(),
+                            report.chunkCount(),
+                            report.outcome());
         }
-
-        RagIngestionReport report = ((RagIngestionResult.Success) result).report();
-        System.out.printf(
-                "RAG ingestion complete%nsource-url: %s%ncontent-hash: %s%nchunk-count: %d%noutcome: %s%n",
-                report.sourceUrl(), report.contentHash(), report.chunkCount(), report.outcome());
     }
 }

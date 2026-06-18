@@ -8,9 +8,9 @@ public sealed interface ToolExecutionResult<T> {
         return switch (this) {
             case Success<T> ignored ->
                     throw new IllegalStateException("asUnavailability requires a failed result");
-            case ToolError<T> toolError ->
-                    new SourceUnavailability(fallbackLabel, toolError.error(), toolError.hint());
-            case SourceUnavailable<T> unavailable -> unavailable.unavailability();
+            case ToolError<T>(var error, var hint) ->
+                    new SourceUnavailability(fallbackLabel, error, hint);
+            case SourceUnavailable<T>(var unavailability) -> unavailability;
         };
     }
 

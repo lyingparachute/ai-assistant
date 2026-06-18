@@ -35,7 +35,7 @@ public class PgvectorSchemaInitializer {
 
     private String readSchemaSql() {
         try {
-            ClassPathResource resource = new ClassPathResource(SCHEMA_RESOURCE);
+            final var resource = new ClassPathResource(SCHEMA_RESOURCE);
             return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
         } catch (IOException exception) {
             throw new PgvectorStorageException("Failed to read pgvector schema resource", exception);

@@ -1,7 +1,7 @@
 package dev.localassistant.assistant.rag.support;
 
 import dev.localassistant.assistant.adapters.outbound.cdq.ProductPageTextExtractor;
-import dev.localassistant.assistant.rag.ProductKnowledgePort;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 import dev.localassistant.assistant.rag.ProductPageResult;
 import org.springframework.core.io.ClassPathResource;
 

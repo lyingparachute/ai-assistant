@@ -27,10 +27,10 @@ class PgvectorIngestionRepository {
             }
         }
 
-        Integer deletedRows =
+        final var deletedRows =
                 transactionTemplate.execute(
                         status -> {
-                            int deleted =
+                            final var deleted =
                                     jdbcTemplate.update(
                                             "DELETE FROM "
                                                     + PgvectorChunkColumns.RAG_CHUNKS_TABLE
@@ -45,7 +45,7 @@ class PgvectorIngestionRepository {
     }
 
     private void insertChunks(String sourceUrl, String contentHash, List<RagChunk> chunks) {
-        String insertSql =
+        final var insertSql =
                 "INSERT INTO "
                         + PgvectorChunkColumns.RAG_CHUNKS_TABLE
                         + " ("
@@ -75,7 +75,7 @@ class PgvectorIngestionRepository {
     }
 
     StoredSourceState findStoredSourceState(String sourceUrl) {
-        List<StoredSourceState.Stored> stored =
+        final var stored =
                 jdbcTemplate.query(
                         "SELECT "
                                 + PgvectorChunkColumns.CONTENT_HASH
@@ -104,8 +104,8 @@ class PgvectorIngestionRepository {
             PgvectorChunkColumns.EMBEDDING + " <=> ?::vector";
 
     List<PgvectorSimilarityMatch> findSimilarChunks(float[] queryEmbedding, int topK, double minSimilarity) {
-        String vectorLiteral = PgvectorEmbeddingCodec.toVectorLiteral(queryEmbedding);
-        String sql =
+        final var vectorLiteral = PgvectorEmbeddingCodec.toVectorLiteral(queryEmbedding);
+        final var sql =
                 "SELECT "
                         + PgvectorChunkColumns.CHUNK_TEXT
                         + ", "

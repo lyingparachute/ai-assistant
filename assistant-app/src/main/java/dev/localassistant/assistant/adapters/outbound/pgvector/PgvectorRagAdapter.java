@@ -38,38 +38,36 @@ public final class PgvectorRagAdapter implements RagKnowledgePort {
             throw new IllegalArgumentException("questionText must not be blank");
         }
 
-        EmbeddingResult embeddingResult = embeddingPort.embedQuery(questionText);
-        if (embeddingResult instanceof EmbeddingResult.SourceUnavailable unavailable) {
-            return new RagRetrievalResult.SourceUnavailable(unavailable.asUnavailability());
-        }
+        return switch (embeddingPort.embedQuery(questionText)) {
+            case EmbeddingResult.SourceUnavailable(var unavailability) ->
+                    new RagRetrievalResult.SourceUnavailable(unavailability);
+            case EmbeddingResult.Success(var queryEmbedding) -> {
+                try {
+                    final var matches =
+                            repository.findSimilarChunks(
+                                    queryEmbedding, policy.topK(), policy.relevanceThreshold());
+                    if (matches.isEmpty()) {
+                        yield new RagRetrievalResult.NoRelevantKnowledge();
+                    }
 
-        float[] queryEmbedding = ((EmbeddingResult.Success) embeddingResult).embedding();
-        List<PgvectorSimilarityMatch> matches;
-        try {
-            matches =
-                    repository.findSimilarChunks(
-                            queryEmbedding, policy.topK(), policy.relevanceThreshold());
-        } catch (RuntimeException exception) {
-            return new RagRetrievalResult.SourceUnavailable(
-                    SOURCE_LABEL, "pgvector similarity search failed", UNAVAILABLE_HINT);
-        }
-
-        if (matches.isEmpty()) {
-            return new RagRetrievalResult.NoRelevantKnowledge();
-        }
-
-        List<KnowledgeSnippet> snippets =
-                matches.stream()
-                        .map(
-                                match ->
-                                        KnowledgeSnippet.fromRetrieval(
-                                                match.chunkText(),
-                                                match.sourceUrl(),
-                                                match.contentHash(),
-                                                match.chunkIndex(),
-                                                match.similarityScore()))
-                        .toList();
-        return new RagRetrievalResult.Success(snippets);
+                    final var snippets =
+                            matches.stream()
+                                    .map(
+                                            match ->
+                                                    KnowledgeSnippet.fromRetrieval(
+                                                            match.chunkText(),
+                                                            match.sourceUrl(),
+                                                            match.contentHash(),
+                                                            match.chunkIndex(),
+                                                            match.similarityScore()))
+                                    .toList();
+                    yield new RagRetrievalResult.Success(snippets);
+                } catch (RuntimeException exception) {
+                    yield new RagRetrievalResult.SourceUnavailable(
+                            SOURCE_LABEL, "pgvector similarity search failed", UNAVAILABLE_HINT);
+                }
+            }
+        };
     }
 
     @Override
@@ -88,8 +86,8 @@ public final class PgvectorRagAdapter implements RagKnowledgePort {
         }
 
         try {
-            int replacedRows = repository.replaceChunksForSource(sourceUrl, contentHash, chunks);
-            RagIngestionReport.Outcome outcome =
+            final var replacedRows = repository.replaceChunksForSource(sourceUrl, contentHash, chunks);
+            final var outcome =
                     replacedRows > 0
                             ? RagIngestionReport.Outcome.REPLACED
                             : RagIngestionReport.Outcome.INGESTED;

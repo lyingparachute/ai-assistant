@@ -21,7 +21,7 @@ public class RagIngestionMode {
     }
 
     private static boolean envEnabled(Function<String, String> env) {
-        String envValue = env.apply(INGEST_RAG_ENV);
+        final var envValue = env.apply(INGEST_RAG_ENV);
         return envValue != null && Boolean.parseBoolean(envValue);
     }
 }

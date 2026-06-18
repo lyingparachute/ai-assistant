@@ -2,6 +2,7 @@ package dev.localassistant.assistant.rag;
 
 import dev.localassistant.assistant.llm.EmbeddingPort;
 import dev.localassistant.assistant.llm.EmbeddingResult;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 
 import java.time.Clock;
 import java.util.ArrayList;
@@ -18,11 +19,11 @@ public final class RagIngestionUseCase {
     private final Clock clock;
 
     public RagIngestionUseCase(
-        final EmbeddingPort embeddingPort,
-        final RagKnowledgePort ragKnowledgePort,
-        final ProductKnowledgePort productKnowledgePort,
-        final DeterministicTextChunker textChunker,
-        final Clock clock) {
+            EmbeddingPort embeddingPort,
+            RagKnowledgePort ragKnowledgePort,
+            ProductKnowledgePort productKnowledgePort,
+            DeterministicTextChunker textChunker,
+            Clock clock) {
         this.embeddingPort = Objects.requireNonNull(embeddingPort, "embeddingPort");
         this.ragKnowledgePort = Objects.requireNonNull(ragKnowledgePort, "ragKnowledgePort");
         this.productKnowledgePort = Objects.requireNonNull(productKnowledgePort, "productKnowledgePort");
@@ -30,16 +31,16 @@ public final class RagIngestionUseCase {
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
-    public RagIngestionResult ingest(final String sourceUrl) {
+    public RagIngestionResult ingest(String sourceUrl) {
         if (sourceUrl == null || sourceUrl.isBlank()) {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
 
         final var pageResult = productKnowledgePort.fetchAndExtract(sourceUrl);
         return switch (pageResult) {
-            case ProductPageResult.SourceUnavailable(final var unavailability) ->
+            case ProductPageResult.SourceUnavailable(var unavailability) ->
                     new RagIngestionResult.SourceUnavailable(unavailability);
-            case ProductPageResult.Success(final var extractedText) -> {
+            case ProductPageResult.Success(var extractedText) -> {
                 final var normalizedText = textChunker.normalizeWhitespace(extractedText);
                 final var contentHash = ContentHasher.sha256Hex(normalizedText);
                 yield decideFromStoredState(
@@ -52,11 +53,11 @@ public final class RagIngestionUseCase {
     }
 
     private Optional<RagIngestionResult> decideFromStoredState(
-        final StoredSourceState storedState, final String sourceUrl, final String contentHash) {
+            StoredSourceState storedState, String sourceUrl, String contentHash) {
         return switch (storedState) {
-            case StoredSourceState.Unavailable(final var unavailability) ->
+            case StoredSourceState.Unavailable(var unavailability) ->
                     Optional.of(new RagIngestionResult.SourceUnavailable(unavailability));
-            case StoredSourceState.Stored(final var storedHash, final var chunkCount) when storedHash.equals(contentHash) ->
+            case StoredSourceState.Stored(var storedHash, var chunkCount) when storedHash.equals(contentHash) ->
                     Optional.of(
                             new RagIngestionResult.Success(
                                     new RagIngestionReport(
@@ -64,25 +65,25 @@ public final class RagIngestionUseCase {
                                             contentHash,
                                             chunkCount,
                                             RagIngestionReport.Outcome.UNCHANGED)));
-            case final StoredSourceState.Stored ignored -> Optional.empty();
-            case final StoredSourceState.Absent ignored -> Optional.empty();
+            case StoredSourceState.Stored ignored -> Optional.empty();
+            case StoredSourceState.Absent ignored -> Optional.empty();
         };
     }
 
     private RagIngestionResult embedAndStore(
-        final String sourceUrl, final String contentHash, final String normalizedText) {
+            String sourceUrl, String contentHash, String normalizedText) {
         final var textChunks = textChunker.chunk(normalizedText);
         final var ingestionTimestamp = clock.instant();
         final var ragChunks = new ArrayList<RagChunk>(textChunks.size());
         for (final var textChunk : textChunks) {
             switch (textChunk) {
-                case TextChunk(final var chunkIndex, final var chunkText) -> {
+                case TextChunk(var chunkIndex, var chunkText) -> {
                     final var embeddingResult = embeddingPort.embedDocument(chunkText);
                     switch (embeddingResult) {
-                        case EmbeddingResult.SourceUnavailable(final var unavailability) -> {
+                        case EmbeddingResult.SourceUnavailable(var unavailability) -> {
                             return new RagIngestionResult.SourceUnavailable(unavailability);
                         }
-                        case EmbeddingResult.Success(final var embedding) ->
+                        case EmbeddingResult.Success(var embedding) ->
                                 ragChunks.add(
                                         new RagChunk(
                                                 chunkText,
@@ -100,9 +101,9 @@ public final class RagIngestionUseCase {
         final var storageOutcome =
                 ragKnowledgePort.storeChunks(sourceUrl, contentHash, storedChunks);
         return switch (storageOutcome) {
-            case ChunkStorageOutcome.Unavailable(final var unavailability) ->
+            case ChunkStorageOutcome.Unavailable(var unavailability) ->
                     new RagIngestionResult.SourceUnavailable(unavailability);
-            case ChunkStorageOutcome.Stored(final var outcome) ->
+            case ChunkStorageOutcome.Stored(var outcome) ->
                     new RagIngestionResult.Success(
                             new RagIngestionReport(
                                     sourceUrl, contentHash, storedChunks.size(), outcome));

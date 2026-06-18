@@ -39,7 +39,7 @@ public final class OllamaEmbeddingAdapter implements EmbeddingPort {
 
     private EmbeddingResult embedWithPrefix(String prefix, String text) {
         try {
-            float[] embedding = embeddingModel.embed(prefix + text);
+            final var embedding = embeddingModel.embed(prefix + text);
             if (!EmbeddingDimensions.matches(embedding)) {
                 return new EmbeddingResult.SourceUnavailable(
                         SOURCE_LABEL,

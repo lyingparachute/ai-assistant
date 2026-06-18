@@ -1,6 +1,6 @@
 package dev.localassistant.assistant.rag.support;
 
-import dev.localassistant.assistant.rag.ProductKnowledgePort;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;

@@ -4,7 +4,7 @@ import dev.localassistant.assistant.adapters.inbound.cli.RagIngestionCommand;
 import dev.localassistant.assistant.rag.DeterministicTextChunker;
 import dev.localassistant.assistant.rag.RagIngestionUseCase;
 import dev.localassistant.assistant.llm.EmbeddingPort;
-import dev.localassistant.assistant.rag.ProductKnowledgePort;
+import dev.localassistant.assistant.rag.domain.ports.outbound.ProductKnowledgePort;
 import dev.localassistant.assistant.rag.RagKnowledgePort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

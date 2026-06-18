@@ -3,11 +3,11 @@ package dev.localassistant.assistant.rag;
 import java.util.Objects;
 
 public record KnowledgeSnippet(
-        String chunkText,
-        String sourceUrl,
-        String contentHash,
-        int chunkIndex,
-        RetrievalScore retrievalScore) {
+    String chunkText,
+    String sourceUrl,
+    String contentHash,
+    int chunkIndex,
+    RetrievalScore retrievalScore) {
 
     public KnowledgeSnippet {
         Objects.requireNonNull(chunkText, "chunkText");
@@ -29,12 +29,12 @@ public record KnowledgeSnippet(
     }
 
     public static KnowledgeSnippet fromRetrieval(
-            String chunkText,
-            String sourceUrl,
-            String contentHash,
-            int chunkIndex,
-            double similarityScore) {
+        final String chunkText,
+        final String sourceUrl,
+        final String contentHash,
+        final int chunkIndex,
+        final double similarityScore) {
         return new KnowledgeSnippet(
-                chunkText, sourceUrl, contentHash, chunkIndex, new RetrievalScore(similarityScore));
+            chunkText, sourceUrl, contentHash, chunkIndex, new RetrievalScore(similarityScore));
     }
 }

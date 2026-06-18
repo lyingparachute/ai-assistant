@@ -17,7 +17,7 @@ class PgvectorOutboundConfiguration {
 
     @Bean(destroyMethod = "close")
     DataSource ragDataSource(AssistantRagStorageProperties storageProperties) {
-        HikariConfig config = new HikariConfig();
+        var config = new HikariConfig();
         config.setJdbcUrl(storageProperties.jdbcUrl());
         config.setUsername(storageProperties.username());
         config.setPassword(storageProperties.password());

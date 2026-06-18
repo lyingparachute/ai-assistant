@@ -24,7 +24,7 @@ class ProductPageFetcher {
             throw new IllegalArgumentException("sourceUrl must not be blank");
         }
 
-        HttpRequest request =
+        final var request =
                 HttpRequest.newBuilder()
                         .uri(URI.create(sourceUrl))
                         .timeout(requestTimeout)
@@ -32,7 +32,7 @@ class ProductPageFetcher {
                         .GET()
                         .build();
 
-        HttpResponse<String> response =
+        final var response =
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -40,7 +40,7 @@ class ProductPageFetcher {
                     "Product page request failed with HTTP status " + response.statusCode());
         }
 
-        String body = response.body();
+        final var body = response.body();
         if (StringUtils.isBlank(body)) {
             throw new ProductPageFetchException("Product page response body was empty");
         }

@@ -15,7 +15,7 @@ final class PgvectorEmbeddingCodec {
 
     static String toVectorLiteral(float[] embedding) {
         EmbeddingDimensions.requireValidLength(embedding);
-        StringJoiner joiner = new StringJoiner(",", "[", "]");
+        var joiner = new StringJoiner(",", "[", "]");
         for (float value : embedding) {
             joiner.add(String.format(Locale.ROOT, VECTOR_COMPONENT_FORMAT, value));
         }

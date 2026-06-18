@@ -30,10 +30,10 @@ class OllamaOutboundConfiguration {
 
     @Bean
     EmbeddingModel ollamaEmbeddingModel(AssistantEmbeddingProperties assistantEmbeddingProperties) {
-        OllamaApi ollamaApi = OllamaApi.builder()
+        final var ollamaApi = OllamaApi.builder()
                 .baseUrl(assistantEmbeddingProperties.ollamaBaseUrl())
                 .build();
-        OllamaEmbeddingOptions options = OllamaEmbeddingOptions.builder()
+        final var options = OllamaEmbeddingOptions.builder()
                 .model(assistantEmbeddingProperties.modelName())
                 .build();
         return OllamaEmbeddingModel.builder()
@@ -50,24 +50,24 @@ class OllamaOutboundConfiguration {
 
     @Bean
     LlmPort ollamaLlmPort(AssistantLlmProperties assistantLlmProperties) {
-        Duration chatTimeout = Duration.ofSeconds(assistantLlmProperties.timeoutSeconds());
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        final var chatTimeout = Duration.ofSeconds(assistantLlmProperties.timeoutSeconds());
+        var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(chatTimeout);
         requestFactory.setReadTimeout(chatTimeout);
-        HttpClient streamingHttpClient =
+        final var streamingHttpClient =
                 HttpClient.newBuilder().connectTimeout(chatTimeout).build();
-        WebClient.Builder webClientBuilder =
+        final var webClientBuilder =
                 WebClient.builder().clientConnector(new JdkClientHttpConnector(streamingHttpClient));
-        OllamaApi ollamaApi =
+        final var ollamaApi =
                 OllamaApi.builder()
                         .baseUrl(assistantLlmProperties.ollamaBaseUrl())
                         .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
                         .webClientBuilder(webClientBuilder)
                         .build();
-        OllamaChatOptions options = OllamaChatOptions.builder()
+        final var options = OllamaChatOptions.builder()
                 .model(assistantLlmProperties.modelName())
                 .build();
-        ChatModel chatModel =
+        final var chatModel =
                 OllamaChatModel.builder()
                         .ollamaApi(ollamaApi)
                         .defaultOptions(options)

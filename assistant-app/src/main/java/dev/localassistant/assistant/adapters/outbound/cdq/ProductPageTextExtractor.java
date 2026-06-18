@@ -18,10 +18,10 @@ public final class ProductPageTextExtractor {
             throw new IllegalArgumentException("html must not be blank");
         }
 
-        Document document = Jsoup.parse(html);
+        final var document = Jsoup.parse(html);
         document.select("script, style, noscript").remove();
-        String bodyText = document.body() == null ? document.text() : document.body().text();
-        String sanitized = Jsoup.clean(bodyText, Safelist.none());
+        final var bodyText = document.body() == null ? document.text() : document.body().text();
+        final var sanitized = Jsoup.clean(bodyText, Safelist.none());
         final var normalized = WHITESPACE.matcher(StringUtils.trim(sanitized)).replaceAll(" ");
         if (StringUtils.isBlank(normalized)) {
             throw new ProductPageExtractionException("No extractable text found in product page HTML");

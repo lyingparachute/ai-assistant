@@ -11,7 +11,7 @@ public sealed interface ChunkStorageOutcome {
             Objects.requireNonNull(outcome, "outcome");
             if (outcome == RagIngestionReport.Outcome.UNCHANGED) {
                 throw new IllegalArgumentException(
-                        "storeChunks never yields UNCHANGED; that outcome is decided before storing");
+                    "storeChunks never yields UNCHANGED; that outcome is decided before storing");
             }
         }
     }
