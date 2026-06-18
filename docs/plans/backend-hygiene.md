@@ -1,6 +1,6 @@
 # ExecPlan — backend hygiene (dependencies, Commons Lang, selective Lombok)
 
-Status: completed locally — uncommitted (M1–M5)
+Status: landed — c866bc2
 Owner: TBD
 Source: recruitment focus on backend quality; user-directed scope (Option A — hygiene only);
 `docs/reviews/2026-06-16-code-quality-audit.md` residual style tail; `implementation-notes.md`
