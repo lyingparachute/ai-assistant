@@ -2,9 +2,10 @@ package dev.localassistant.assistant.adapters.inbound.http;
 
 import dev.localassistant.assistant.config.AssistantChatProperties;
 import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
-import dev.localassistant.assistant.question.UserQuestion;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,6 +18,8 @@ import java.util.concurrent.RejectedExecutionException;
 
 @RestController
 @RequestMapping("/api")
+@Profile("!ingest-rag")
+@RequiredArgsConstructor
 public class ChatController {
 
     private static final String INTERNAL_ERROR_CODE = "internal_error";
@@ -27,26 +30,16 @@ public class ChatController {
     private final AnswerQuestionUseCase answerQuestionUseCase;
     private final ChatHttpMapper chatHttpMapper;
     private final AssistantChatProperties chatProperties;
+    @Qualifier("chatStreamExecutor")
     private final Executor chatStreamExecutor;
-
-    public ChatController(
-            AnswerQuestionUseCase answerQuestionUseCase,
-            ChatHttpMapper chatHttpMapper,
-            AssistantChatProperties chatProperties,
-            @Qualifier("chatStreamExecutor") Executor chatStreamExecutor) {
-        this.answerQuestionUseCase = answerQuestionUseCase;
-        this.chatHttpMapper = chatHttpMapper;
-        this.chatProperties = chatProperties;
-        this.chatStreamExecutor = chatStreamExecutor;
-    }
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     SseEmitter chat(@Valid @RequestBody ChatRequest request) {
-        long timeoutMillis = chatProperties.streamTimeoutSeconds() * 1000L;
-        SseEmitter emitter = new SseEmitter(timeoutMillis);
-        UserQuestion question = chatHttpMapper.toUserQuestion(request);
-        SseAssistantResponseSink sink = new SseAssistantResponseSink(emitter, chatHttpMapper);
-        ChatStreamTask work = new ChatStreamTask(answerQuestionUseCase, question, sink);
+        final var timeoutMillis = chatProperties.streamTimeoutSeconds() * 1000L;
+        final var emitter = new SseEmitter(timeoutMillis);
+        final var question = chatHttpMapper.toUserQuestion(request);
+        final var sink = new SseAssistantResponseSink(emitter, chatHttpMapper);
+        final var work = new ChatStreamTask(answerQuestionUseCase, question, sink);
         emitter.onTimeout(() -> {
             work.cancel();
             sink.failUnexpected(STREAM_TIMEOUT_CODE, STREAM_TIMEOUT_MESSAGE);

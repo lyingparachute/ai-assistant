@@ -3,7 +3,7 @@ package dev.localassistant.assistant.rag;
 import java.util.Objects;
 
 public record RagIngestionReport(
-        String sourceUrl, String contentHash, int chunkCount, Outcome outcome) {
+    String sourceUrl, String contentHash, int chunkCount, Outcome outcome) {
 
     public enum Outcome {
         INGESTED,
@@ -26,7 +26,7 @@ public record RagIngestionReport(
         }
         if (chunkCount == 0) {
             throw new IllegalArgumentException(
-                    "chunkCount must be positive when outcome is " + outcome);
+                "chunkCount must be positive when outcome is " + outcome);
         }
     }
 }

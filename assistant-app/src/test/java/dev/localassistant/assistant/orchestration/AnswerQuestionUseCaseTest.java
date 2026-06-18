@@ -13,7 +13,7 @@ import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
 import dev.localassistant.assistant.orchestration.support.RecordingAssistantResponseSink;
 import dev.localassistant.assistant.orchestration.support.StubCountriesPort;
-import dev.localassistant.assistant.orchestration.support.StubRagKnowledgePort;
+import dev.localassistant.assistant.orchestration.support.StubRetrieveRagKnowledge;
 import dev.localassistant.assistant.orchestration.support.StubWeatherPort;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.Location;
@@ -53,7 +53,7 @@ class AnswerQuestionUseCaseTest {
 
     private StubCountriesPort countriesPort;
     private StubWeatherPort weatherPort;
-    private StubRagKnowledgePort ragKnowledgePort;
+    private StubRetrieveRagKnowledge retrieveRagKnowledge;
     private StubLlmPort llmPort;
     private AnswerQuestionUseCase useCase;
 
@@ -61,13 +61,13 @@ class AnswerQuestionUseCaseTest {
     void setUp() {
         countriesPort = new StubCountriesPort();
         weatherPort = new StubWeatherPort();
-        ragKnowledgePort = new StubRagKnowledgePort();
+        retrieveRagKnowledge = new StubRetrieveRagKnowledge();
         llmPort = new StubLlmPort(new LlmResult.Success("synthesized answer"));
         useCase =
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),
@@ -83,7 +83,7 @@ class AnswerQuestionUseCaseTest {
 
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
         assertThat(weatherPort.invocationCount()).isZero();
-        assertThat(ragKnowledgePort.retrieveInvocationCount()).isZero();
+        assertThat(retrieveRagKnowledge.retrieveInvocationCount()).isZero();
         assertThat(llmPort.invocationCount()).isZero();
         assertThat(turn.answer().answerText()).contains("Berlin");
         assertThat(turn.answer().sources()).singleElement().isInstanceOf(AnswerSource.CountriesFacts.class);
@@ -126,22 +126,22 @@ class AnswerQuestionUseCaseTest {
 
     @Test
     void cdqRagUnavailableAtUseCaseLevel() {
-        ragKnowledgePort.onRetrieve(
-                (question, policy) ->
+        retrieveRagKnowledge.onRetrieve(
+                command ->
                         new RagRetrievalResult.SourceUnavailable(
                                 "pgvector RAG", "database down", "start postgres"));
 
         ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
-        assertThat(ragKnowledgePort.retrieveInvocationCount()).isEqualTo(1);
+        assertThat(retrieveRagKnowledge.retrieveInvocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isZero();
         assertThat(turn.answer().answerText()).contains("RAG knowledge is unavailable");
     }
 
     @Test
     void cdqLlmUnavailableKeepsRagFactsWithoutInventingProductText() {
-        ragKnowledgePort.onRetrieve(
-                (question, policy) -> new RagRetrievalResult.Success(List.of(CDQ_SNIPPET)));
+        retrieveRagKnowledge.onRetrieve(
+                command -> new RagRetrievalResult.Success(List.of(CDQ_SNIPPET)));
         llmPort =
                 new StubLlmPort(
                         new LlmResult.SourceUnavailable(
@@ -150,7 +150,7 @@ class AnswerQuestionUseCaseTest {
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),
@@ -174,7 +174,7 @@ class AnswerQuestionUseCaseTest {
 
         assertThat(countriesPort.invocationCount()).isZero();
         assertThat(weatherPort.invocationCount()).isZero();
-        assertThat(ragKnowledgePort.retrieveInvocationCount()).isZero();
+        assertThat(retrieveRagKnowledge.retrieveInvocationCount()).isZero();
         assertThat(llmPort.invocationCount()).isZero();
         assertThat(turn.answer().answerText()).contains("cannot answer");
     }
@@ -223,7 +223,7 @@ class AnswerQuestionUseCaseTest {
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),
@@ -234,7 +234,7 @@ class AnswerQuestionUseCaseTest {
         assertThat(countriesPort.invocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isEqualTo(1);
         assertThat(weatherPort.invocationCount()).isZero();
-        assertThat(ragKnowledgePort.retrieveInvocationCount()).isZero();
+        assertThat(retrieveRagKnowledge.retrieveInvocationCount()).isZero();
         assertThat(turn.answer().answerText()).contains("Berlin is the capital of Germany");
         assertThat(turn.answer().sources()).hasSize(2);
         assertThat(turn.answer().sources().get(0)).isInstanceOf(AnswerSource.CountriesFacts.class);
@@ -244,8 +244,8 @@ class AnswerQuestionUseCaseTest {
 
     @Test
     void cdqProductQuestionRetrievesRagAndCallsLlmWithCompactSnippets() {
-        ragKnowledgePort.onRetrieve(
-                (question, policy) -> new RagRetrievalResult.Success(List.of(CDQ_SNIPPET)));
+        retrieveRagKnowledge.onRetrieve(
+                command -> new RagRetrievalResult.Success(List.of(CDQ_SNIPPET)));
         llmPort =
                 new StubLlmPort(
                         context -> {
@@ -256,7 +256,7 @@ class AnswerQuestionUseCaseTest {
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),
@@ -264,7 +264,7 @@ class AnswerQuestionUseCaseTest {
 
         ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
-        assertThat(ragKnowledgePort.retrieveInvocationCount()).isEqualTo(1);
+        assertThat(retrieveRagKnowledge.retrieveInvocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isEqualTo(1);
         assertThat(countriesPort.invocationCount()).isZero();
         assertThat(weatherPort.invocationCount()).isZero();
@@ -275,11 +275,11 @@ class AnswerQuestionUseCaseTest {
 
     @Test
     void ragNoResultReportsInsufficientProductKnowledgeWithoutLlm() {
-        ragKnowledgePort.onRetrieve((question, policy) -> new RagRetrievalResult.NoRelevantKnowledge());
+        retrieveRagKnowledge.onRetrieve(command -> new RagRetrievalResult.NoRelevantKnowledge());
 
         ConversationTurn turn = answer(UserQuestion.of("What is CDQ Fraud Guard?"));
 
-        assertThat(ragKnowledgePort.retrieveInvocationCount()).isEqualTo(1);
+        assertThat(retrieveRagKnowledge.retrieveInvocationCount()).isEqualTo(1);
         assertThat(llmPort.invocationCount()).isZero();
         assertThat(turn.answer().answerText()).contains("insufficient product knowledge");
         assertThat(((AnswerSource.RagKnowledge) turn.answer().sources().getFirst()).status())
@@ -297,7 +297,7 @@ class AnswerQuestionUseCaseTest {
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),

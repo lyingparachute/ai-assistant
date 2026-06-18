@@ -1,13 +1,14 @@
 package dev.localassistant.assistant.adapters.inbound.http;
 
 import dev.localassistant.assistant.question.AnswerSource;
-import dev.localassistant.assistant.question.AssistantAnswer;
 import dev.localassistant.assistant.question.ConversationTurn;
+import dev.localassistant.assistant.question.SourceContributionStatus;
 import dev.localassistant.assistant.question.UserQuestion;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.tools.CountryInfo;
 import dev.localassistant.assistant.tools.WeatherReport;
 import dev.localassistant.assistant.tools.WeatherTimestamp;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
+@Profile("!ingest-rag")
 final class ChatHttpMapper {
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
@@ -25,10 +27,9 @@ final class ChatHttpMapper {
     }
 
     ChatResponse toChatResponse(ConversationTurn turn) {
-        AssistantAnswer answer = turn.answer();
-        String traceCorrelationId =
-                answer.traceCorrelationId().orElse(null);
-        List<SourceResponse> sources = answer.sources().stream().map(this::toSourceResponse).toList();
+        final var answer = turn.answer();
+        final var traceCorrelationId = answer.traceCorrelationId().orElse(null);
+        final var sources = answer.sources().stream().map(this::toSourceResponse).toList();
         return new ChatResponse(answer.answerText(), sources, traceCorrelationId);
     }
 
@@ -44,67 +45,69 @@ final class ChatHttpMapper {
 
     private SourceResponse.CountriesFacts toCountriesFacts(AnswerSource.CountriesFacts source) {
         return switch (source) {
-            case AnswerSource.CountriesFacts.Used used ->
+            case AnswerSource.CountriesFacts.Used(var resolvedCountryInfo) ->
                     new SourceResponse.CountriesFacts(
-                            used.status().name(),
-                            toCountryInfoResponse(used.resolvedCountryInfo()),
+                            SourceContributionStatus.USED.name(),
+                            toCountryInfoResponse(resolvedCountryInfo),
                             null,
                             null);
-            case AnswerSource.CountriesFacts.Unavailable unavailable ->
+            case AnswerSource.CountriesFacts.Unavailable(var unavailability) ->
                     new SourceResponse.CountriesFacts(
-                            unavailable.status().name(),
+                            SourceContributionStatus.UNAVAILABLE.name(),
                             null,
-                            unavailable.unavailability().message(),
-                            unavailable.unavailability().hint());
+                            unavailability.message(),
+                            unavailability.hint());
         };
     }
 
     private SourceResponse.WeatherObservation toWeatherObservation(
             AnswerSource.WeatherObservation source) {
         return switch (source) {
-            case AnswerSource.WeatherObservation.Used used ->
+            case AnswerSource.WeatherObservation.Used(var resolvedWeatherReport) ->
                     new SourceResponse.WeatherObservation(
-                            used.status().name(),
-                            toWeatherReportResponse(used.resolvedWeatherReport()),
+                            SourceContributionStatus.USED.name(),
+                            toWeatherReportResponse(resolvedWeatherReport),
                             null,
                             null);
-            case AnswerSource.WeatherObservation.Unavailable unavailable ->
+            case AnswerSource.WeatherObservation.Unavailable(var unavailability) ->
                     new SourceResponse.WeatherObservation(
-                            unavailable.status().name(),
+                            SourceContributionStatus.UNAVAILABLE.name(),
                             null,
-                            unavailable.unavailability().message(),
-                            unavailable.unavailability().hint());
+                            unavailability.message(),
+                            unavailability.hint());
         };
     }
 
     private SourceResponse.RagKnowledge toRagKnowledge(AnswerSource.RagKnowledge source) {
         return switch (source) {
-            case AnswerSource.RagKnowledge.Used used ->
+            case AnswerSource.RagKnowledge.Used(var resolvedSnippets) ->
                     new SourceResponse.RagKnowledge(
-                            used.status().name(),
-                            used.snippets().stream().map(this::toSnippetResponse).toList(),
+                            SourceContributionStatus.USED.name(),
+                            resolvedSnippets.stream().map(this::toSnippetResponse).toList(),
                             null,
                             null);
-            case AnswerSource.RagKnowledge.Insufficient insufficient ->
-                    new SourceResponse.RagKnowledge(insufficient.status().name(), null, null, null);
-            case AnswerSource.RagKnowledge.Unavailable unavailable ->
+            case AnswerSource.RagKnowledge.Insufficient ignored ->
                     new SourceResponse.RagKnowledge(
-                            unavailable.status().name(),
+                            SourceContributionStatus.INSUFFICIENT.name(), null, null, null);
+            case AnswerSource.RagKnowledge.Unavailable(var unavailability) ->
+                    new SourceResponse.RagKnowledge(
+                            SourceContributionStatus.UNAVAILABLE.name(),
                             null,
-                            unavailable.unavailability().message(),
-                            unavailable.unavailability().hint());
+                            unavailability.message(),
+                            unavailability.hint());
         };
     }
 
     private SourceResponse.ModelSynthesis toModelSynthesis(AnswerSource.ModelSynthesis source) {
         return switch (source) {
-            case AnswerSource.ModelSynthesis.Used used ->
-                    new SourceResponse.ModelSynthesis(used.status().name(), null, null);
-            case AnswerSource.ModelSynthesis.Unavailable unavailable ->
+            case AnswerSource.ModelSynthesis.Used ignored ->
                     new SourceResponse.ModelSynthesis(
-                            unavailable.status().name(),
-                            unavailable.unavailability().message(),
-                            unavailable.unavailability().hint());
+                            SourceContributionStatus.USED.name(), null, null);
+            case AnswerSource.ModelSynthesis.Unavailable(var unavailability) ->
+                    new SourceResponse.ModelSynthesis(
+                            SourceContributionStatus.UNAVAILABLE.name(),
+                            unavailability.message(),
+                            unavailability.hint());
         };
     }
 
@@ -117,8 +120,8 @@ final class ChatHttpMapper {
     }
 
     private WeatherReportResponse toWeatherReportResponse(WeatherReport report) {
-        WeatherTimestamp timestamp = report.timestamp();
-        String kind =
+        final var timestamp = report.timestamp();
+        final var kind =
                 switch (timestamp) {
                     case WeatherTimestamp.Observed ignored -> "observed";
                     case WeatherTimestamp.Retrieved ignored -> "retrieved";

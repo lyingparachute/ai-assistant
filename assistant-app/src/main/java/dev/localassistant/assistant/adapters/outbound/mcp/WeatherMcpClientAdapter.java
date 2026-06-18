@@ -32,7 +32,7 @@ public final class WeatherMcpClientAdapter implements WeatherPort {
 
         final var canonicalLocation = StringUtils.trim(location);
         try {
-            McpToolInvoker.McpToolResponse response = mcpToolInvoker.invoke(
+            final var response = mcpToolInvoker.invoke(
                     toolName,
                     Map.of("city", canonicalLocation)
             );

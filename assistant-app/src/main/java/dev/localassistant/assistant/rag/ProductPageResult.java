@@ -20,7 +20,7 @@ public sealed interface ProductPageResult {
             Objects.requireNonNull(unavailability, "unavailability");
         }
 
-        public SourceUnavailable(String sourceLabel, String message, String hint) {
+        public SourceUnavailable(final String sourceLabel, final String message, final String hint) {
             this(new SourceUnavailability(sourceLabel, message, hint));
         }
 

@@ -42,12 +42,12 @@ public final class OllamaLlmAdapter implements LlmPort {
 
     @Override
     public LlmResult generate(PromptContext context, TokenSink tokenSink) {
-        Disposable subscription = null;
+        var subscription = (Disposable) null;
         try {
-            Prompt prompt = new Prompt(List.of(new UserMessage(buildPromptText(context))));
-            CountDownLatch completionLatch = new CountDownLatch(1);
-            AtomicReference<Throwable> streamFailure = new AtomicReference<>();
-            StringBuilder assembledText = new StringBuilder();
+            final var prompt = new Prompt(List.of(new UserMessage(buildPromptText(context))));
+            final var completionLatch = new CountDownLatch(1);
+            final var streamFailure = new AtomicReference<Throwable>();
+            var assembledText = new StringBuilder();
             subscription =
                     chatModel
                             .stream(prompt)
@@ -59,7 +59,7 @@ public final class OllamaLlmAdapter implements LlmPort {
                                         completionLatch.countDown();
                                     },
                                     completionLatch::countDown);
-            boolean completed = awaitStreamCompletion(completionLatch, subscription);
+            final var completed = awaitStreamCompletion(completionLatch, subscription);
             if (!completed) {
                 return new LlmResult.SourceUnavailable(
                         SOURCE_LABEL, STREAM_TIMEOUT_MESSAGE, UNAVAILABLE_HINT);
@@ -67,7 +67,7 @@ public final class OllamaLlmAdapter implements LlmPort {
             if (streamFailure.get() != null) {
                 return sourceUnavailable(streamFailure.get());
             }
-            String finalText = assembledText.toString();
+            final var finalText = assembledText.toString();
             if (StringUtils.isBlank(finalText)) {
                 return new LlmResult.SourceUnavailable(
                         SOURCE_LABEL, EMPTY_COMPLETION_MESSAGE, UNAVAILABLE_HINT);
@@ -85,7 +85,7 @@ public final class OllamaLlmAdapter implements LlmPort {
     }
 
     static String buildPromptText(PromptContext context) {
-        List<String> sections = new ArrayList<>();
+        var sections = new ArrayList<String>();
         sections.add(context.synthesisInstructions());
         if (!context.groundedFacts().isEmpty()) {
             sections.add(GROUNDED_FACTS_HEADER);
@@ -99,7 +99,7 @@ public final class OllamaLlmAdapter implements LlmPort {
 
     private boolean awaitStreamCompletion(CountDownLatch completionLatch, Disposable subscription)
             throws InterruptedException {
-        long awaitMillis = streamTimeout.toMillis() + Duration.ofSeconds(LATCH_AWAIT_GRACE_SECONDS).toMillis();
+        final var awaitMillis = streamTimeout.toMillis() + Duration.ofSeconds(LATCH_AWAIT_GRACE_SECONDS).toMillis();
         if (!completionLatch.await(awaitMillis, TimeUnit.MILLISECONDS)) {
             subscription.dispose();
             completionLatch.countDown();
@@ -109,7 +109,7 @@ public final class OllamaLlmAdapter implements LlmPort {
     }
 
     private static void emitDelta(ChatResponse chunk, TokenSink tokenSink, StringBuilder assembledText) {
-        String delta = extractAssistantText(chunk);
+        final var delta = extractAssistantText(chunk);
         if (StringUtils.isNotBlank(delta)) {
             assembledText.append(delta);
             tokenSink.accept(delta);

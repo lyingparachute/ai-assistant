@@ -25,7 +25,7 @@ public final class AssistantRequestTrace {
     }
 
     public static AssistantRequestTrace start(UserQuestion question) {
-        AssistantRequestTrace trace = new AssistantRequestTrace(UUID.randomUUID().toString());
+        final var trace = new AssistantRequestTrace(UUID.randomUUID().toString());
         log.info(
                 "event=assistant_request_started correlationId={} questionLength={}",
                 trace.correlationId,

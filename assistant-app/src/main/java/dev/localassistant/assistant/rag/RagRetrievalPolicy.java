@@ -12,10 +12,10 @@ public record RagRetrievalPolicy(int topK, double relevanceThreshold) {
         }
         if (relevanceThreshold < MIN_RELEVANCE_THRESHOLD || relevanceThreshold > MAX_RELEVANCE_THRESHOLD) {
             throw new IllegalArgumentException(
-                    "relevanceThreshold must be between "
-                            + MIN_RELEVANCE_THRESHOLD
-                            + " and "
-                            + MAX_RELEVANCE_THRESHOLD);
+                "relevanceThreshold must be between "
+                    + MIN_RELEVANCE_THRESHOLD
+                    + " and "
+                    + MAX_RELEVANCE_THRESHOLD);
         }
     }
 }

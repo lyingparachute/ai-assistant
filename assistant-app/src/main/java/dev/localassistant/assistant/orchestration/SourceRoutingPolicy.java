@@ -21,7 +21,7 @@ public final class SourceRoutingPolicy {
     private static final String UNSUPPORTED_REASON = "No matching source route for this question";
 
     public RoutedQuestion route(UserQuestion question) {
-        String normalized = question.text().toLowerCase(Locale.ROOT);
+        final var normalized = question.text().toLowerCase(Locale.ROOT);
 
         if (containsCountryThenWeather(normalized)) {
             return new RoutedQuestion.CountryThenWeather(question, GERMANY_LOOKUP_KEY);
@@ -64,7 +64,7 @@ public final class SourceRoutingPolicy {
     }
 
     private static String extractPlaceName(String questionText) {
-        String normalized = questionText.toLowerCase(Locale.ROOT);
+        final var normalized = questionText.toLowerCase(Locale.ROOT);
         if (!normalized.startsWith(PLACE_SYNTHESIS_PREFIX)) {
             throw new IllegalStateException("place synthesis prefix expected");
         }

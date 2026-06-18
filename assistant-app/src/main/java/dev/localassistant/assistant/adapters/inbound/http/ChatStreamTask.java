@@ -31,7 +31,7 @@ final class ChatStreamTask implements Runnable {
         if (cancelled.get()) {
             return;
         }
-        Thread currentThread = Thread.currentThread();
+        final var currentThread = Thread.currentThread();
         workerThread.set(currentThread);
         try {
             if (!cancelled.get()) {
@@ -51,7 +51,7 @@ final class ChatStreamTask implements Runnable {
 
     void cancel() {
         cancelled.set(true);
-        Thread worker = workerThread.get();
+        final var worker = workerThread.get();
         if (worker != null) {
             worker.interrupt();
         }

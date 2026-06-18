@@ -1,19 +1,25 @@
 package dev.localassistant.assistant.adapters.outbound.pgvector;
 
 import dev.localassistant.assistant.adapters.outbound.mcp.support.McpTestConfiguration;
+import dev.localassistant.assistant.orchestration.AnswerQuestionUseCase;
+import dev.localassistant.assistant.support.LlmPortStub;
 import dev.localassistant.assistant.adapters.outbound.pgvector.support.DeterministicTestEmbeddingAdapter;
 import dev.localassistant.assistant.llm.EmbeddingPort;
 import dev.localassistant.assistant.rag.ChunkStorageOutcome;
 import dev.localassistant.assistant.rag.KnowledgeSnippet;
 import dev.localassistant.assistant.rag.RagChunk;
 import dev.localassistant.assistant.rag.RagIngestionReport;
-import dev.localassistant.assistant.rag.RagKnowledgePort;
+import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
+import dev.localassistant.assistant.rag.domain.port.inbound.RetrieveRagKnowledge;
+import dev.localassistant.assistant.rag.domain.port.outbound.KnowledgeChunkStore;
+import dev.localassistant.assistant.rag.infrastructure.PgvectorSchemaInitializer;
 import dev.localassistant.assistant.rag.RagRetrievalPolicy;
 import dev.localassistant.assistant.rag.RagRetrievalResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,10 +38,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({McpTestConfiguration.class, PgvectorTestConfiguration.class})
-@org.springframework.test.context.ContextConfiguration(
-        initializers = dev.localassistant.assistant.support.ChatPathPortStubs.class)
+@org.springframework.test.context.ContextConfiguration(initializers = LlmPortStub.class)
 @Testcontainers
 class PgvectorRagAdapterIntegrationTest {
+
+    @MockBean
+    AnswerQuestionUseCase answerQuestionUseCase;
 
     private static final DockerImageName PGVECTOR_IMAGE =
             DockerImageName.parse("pgvector/pgvector:pg17");
@@ -60,7 +68,10 @@ class PgvectorRagAdapterIntegrationTest {
     }
 
     @Autowired
-    private RagKnowledgePort ragKnowledgePort;
+    private KnowledgeChunkStore knowledgeChunkStore;
+
+    @Autowired
+    private RetrieveRagKnowledge retrieveRagKnowledge;
 
     @Autowired
     private PgvectorSchemaInitializer pgvectorSchemaInitializer;
@@ -120,9 +131,10 @@ class PgvectorRagAdapterIntegrationTest {
         ingestSingleChunk("Fraud Guard monitors suspicious transactions for payment fraud.");
 
         RagRetrievalResult retrievalResult =
-                ragKnowledgePort.retrieve(
-                        "How does Fraud Guard monitor suspicious payment fraud?",
-                        new RagRetrievalPolicy(3, 0.3));
+                retrieveRagKnowledge.execute(
+                        new RetrieveRagKnowledge.Command(
+                                "How does Fraud Guard monitor suspicious payment fraud?",
+                                new RagRetrievalPolicy(3, 0.3)));
 
         assertThat(retrievalResult).isInstanceOf(RagRetrievalResult.Success.class);
         RagRetrievalResult.Success success = (RagRetrievalResult.Success) retrievalResult;
@@ -142,9 +154,10 @@ class PgvectorRagAdapterIntegrationTest {
         assertThat(result).isInstanceOf(ChunkStorageOutcome.Stored.class);
 
         RagRetrievalResult retrievalResult =
-                ragKnowledgePort.retrieve(
-                        "How does Fraud Guard monitor suspicious payment fraud?",
-                        new RagRetrievalPolicy(3, 0.3));
+                retrieveRagKnowledge.execute(
+                        new RetrieveRagKnowledge.Command(
+                                "How does Fraud Guard monitor suspicious payment fraud?",
+                                new RagRetrievalPolicy(3, 0.3)));
 
         assertThat(retrievalResult).isInstanceOf(RagRetrievalResult.Success.class);
         KnowledgeSnippet snippet = ((RagRetrievalResult.Success) retrievalResult).snippets().getFirst();
@@ -212,7 +225,8 @@ class PgvectorRagAdapterIntegrationTest {
     }
 
     private ChunkStorageOutcome ingestChunks(String contentHash, List<RagChunk> chunks) {
-        return ragKnowledgePort.storeChunks(SOURCE_URL, contentHash, chunks);
+        return knowledgeChunkStore.storeChunks(
+                new KnowledgeChunkStore.StoreChunksCommand(SOURCE_URL, contentHash, chunks));
     }
 
     private RagChunk chunk(int chunkIndex, String chunkText, String embeddingText, String contentHash) {

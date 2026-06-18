@@ -41,7 +41,7 @@ public final class ResponseComposer {
             DateTimeFormatter.ISO_INSTANT.withLocale(Locale.ROOT);
 
     public AssistantAnswer composeCountryCapital(CountryInfo countryInfo, String traceCorrelationId) {
-        String answerText =
+        final var answerText =
                 CAPITAL_ANSWER_TEMPLATE.formatted(countryInfo.countryName(), countryInfo.capital());
         return withTrace(
                 answerText,
@@ -51,7 +51,7 @@ public final class ResponseComposer {
 
     public AssistantAnswer composeCountriesUnavailable(
             SourceUnavailability failure, String traceCorrelationId) {
-        String message = formatSourceUnavailableMessage(COUNTRIES_SOURCE_LABEL, failure.message());
+        final var message = formatSourceUnavailableMessage(COUNTRIES_SOURCE_LABEL, failure.message());
         return withTrace(
                 message,
                 List.of(AnswerSource.CountriesFacts.unavailable(failure)),
@@ -59,7 +59,7 @@ public final class ResponseComposer {
     }
 
     public AssistantAnswer composeWeatherOnly(WeatherReport weatherReport, String traceCorrelationId) {
-        String answerText = formatWeatherAnswer(weatherReport);
+        final var answerText = formatWeatherAnswer(weatherReport);
         return withTrace(
                 answerText,
                 List.of(AnswerSource.WeatherObservation.used(weatherReport)),
@@ -68,7 +68,7 @@ public final class ResponseComposer {
 
     public AssistantAnswer composeWeatherUnavailable(
             SourceUnavailability failure, String traceCorrelationId) {
-        String message = formatSourceUnavailableMessage(WEATHER_SOURCE_LABEL, failure.message());
+        final var message = formatSourceUnavailableMessage(WEATHER_SOURCE_LABEL, failure.message());
         return withTrace(
                 message,
                 List.of(AnswerSource.WeatherObservation.unavailable(failure)),
@@ -77,8 +77,8 @@ public final class ResponseComposer {
 
     public AssistantAnswer composeCountryThenWeather(
             CountryInfo countryInfo, WeatherReport weatherReport, String traceCorrelationId) {
-        String timestampLabel = timestampLabel(weatherReport.timestamp());
-        String answerText =
+        final var timestampLabel = timestampLabel(weatherReport.timestamp());
+        final var answerText =
                 COMBINED_WEATHER_TEMPLATE.formatted(
                         weatherReport.location().city(),
                         countryInfo.countryName(),
@@ -97,7 +97,7 @@ public final class ResponseComposer {
             CountryInfo countryInfo,
             SourceUnavailability weatherFailure,
             String traceCorrelationId) {
-        String answerText =
+        final var answerText =
                 WEATHER_UNAVAILABLE_AFTER_COUNTRY_TEMPLATE.formatted(
                         countryInfo.countryName(),
                         countryInfo.capital(),
@@ -113,9 +113,9 @@ public final class ResponseComposer {
 
     public AssistantAnswer composePlaceSynthesis(
             CountryInfo countryInfo, LlmResult.Success synthesis, String traceCorrelationId) {
-        String countryFact =
+        final var countryFact =
                 CAPITAL_FACT_TEMPLATE.formatted(countryInfo.capital(), countryInfo.countryName());
-        String answerText = countryFact + " " + synthesis.text();
+        final var answerText = countryFact + " " + synthesis.text();
         return withTrace(
                 answerText,
                 List.of(
@@ -126,11 +126,11 @@ public final class ResponseComposer {
 
     public AssistantAnswer composePlaceSynthesisLlmUnavailable(
             CountryInfo countryInfo, SourceUnavailability synthesisFailure, String traceCorrelationId) {
-        String countryFact =
+        final var countryFact =
                 CAPITAL_FACT_TEMPLATE.formatted(countryInfo.capital(), countryInfo.countryName());
-        String message =
+        final var message =
                 formatSourceUnavailableMessage(OLLAMA_SOURCE_LABEL, synthesisFailure.message());
-        String answerText = countryFact + " " + message;
+        final var answerText = countryFact + " " + message;
         return withTrace(
                 answerText,
                 List.of(
@@ -158,7 +158,7 @@ public final class ResponseComposer {
 
     public AssistantAnswer composeCdqRagUnavailable(
             SourceUnavailability failure, String traceCorrelationId) {
-        String message = formatSourceUnavailableMessage(RAG_SOURCE_LABEL, failure.message());
+        final var message = formatSourceUnavailableMessage(RAG_SOURCE_LABEL, failure.message());
         return withTrace(
                 message,
                 List.of(AnswerSource.RagKnowledge.unavailable(failure)),
@@ -169,7 +169,7 @@ public final class ResponseComposer {
             List<KnowledgeSnippet> snippets,
             SourceUnavailability synthesisFailure,
             String traceCorrelationId) {
-        String message = formatSourceUnavailableMessage(OLLAMA_SOURCE_LABEL, synthesisFailure.message());
+        final var message = formatSourceUnavailableMessage(OLLAMA_SOURCE_LABEL, synthesisFailure.message());
         return withTrace(
                 message,
                 List.of(
@@ -186,7 +186,7 @@ public final class ResponseComposer {
     }
 
     private static String formatWeatherAnswer(WeatherReport weatherReport) {
-        String timestampLabel = timestampLabel(weatherReport.timestamp());
+        final var timestampLabel = timestampLabel(weatherReport.timestamp());
         return WEATHER_ANSWER_TEMPLATE.formatted(
                 weatherReport.location().city(),
                 formatTemperature(weatherReport.temperature()),

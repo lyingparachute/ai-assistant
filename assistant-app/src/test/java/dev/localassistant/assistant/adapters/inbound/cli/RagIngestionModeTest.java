@@ -1,4 +1,4 @@
-package dev.localassistant.assistant.adapters.inbound.cli;
+package dev.localassistant.assistant.rag.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.DefaultApplicationArguments;

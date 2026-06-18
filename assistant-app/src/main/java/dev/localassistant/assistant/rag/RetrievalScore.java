@@ -8,7 +8,7 @@ public record RetrievalScore(double value) {
     public RetrievalScore {
         if (value < MIN_SCORE || value > MAX_SCORE) {
             throw new IllegalArgumentException(
-                    "retrieval score must be between " + MIN_SCORE + " and " + MAX_SCORE);
+                "retrieval score must be between " + MIN_SCORE + " and " + MAX_SCORE);
         }
     }
 }

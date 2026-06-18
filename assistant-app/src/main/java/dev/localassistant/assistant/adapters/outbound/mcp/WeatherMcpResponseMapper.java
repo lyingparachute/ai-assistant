@@ -49,7 +49,7 @@ final class WeatherMcpResponseMapper {
             return sourceUnavailable("weather provider returned an error");
         }
 
-        Matcher matcher = SUCCESS_PATTERN.matcher(trimmedPayload);
+        final var matcher = SUCCESS_PATTERN.matcher(trimmedPayload);
         if (!matcher.matches()) {
             if (response.isError()) {
                 return sourceUnavailable(MCP_ERROR_FLAG_MESSAGE);
@@ -61,10 +61,10 @@ final class WeatherMcpResponseMapper {
             );
         }
 
-        double temperatureCelsius = Double.parseDouble(matcher.group(2));
-        Location location = new Location(requestedLocation);
-        Instant retrievedAt = clock.instant();
-        WeatherReport report = new WeatherReport(
+        final var temperatureCelsius = Double.parseDouble(matcher.group(2));
+        final var location = new Location(requestedLocation);
+        final var retrievedAt = clock.instant();
+        final var report = new WeatherReport(
                 location,
                 Temperature.celsius(temperatureCelsius),
                 new WeatherTimestamp.Retrieved(retrievedAt)

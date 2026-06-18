@@ -4,7 +4,7 @@ import dev.localassistant.assistant.llm.LlmResult;
 import dev.localassistant.assistant.llm.support.StubLlmPort;
 import dev.localassistant.assistant.orchestration.support.RecordingAssistantResponseSink;
 import dev.localassistant.assistant.orchestration.support.StubCountriesPort;
-import dev.localassistant.assistant.orchestration.support.StubRagKnowledgePort;
+import dev.localassistant.assistant.orchestration.support.StubRetrieveRagKnowledge;
 import dev.localassistant.assistant.orchestration.support.StubWeatherPort;
 import dev.localassistant.assistant.question.ConversationTurn;
 import dev.localassistant.assistant.question.SourceContributionStatus;
@@ -54,7 +54,7 @@ class AnswerQuestionUseCaseSinkRouteMatrixTest {
 
     private StubCountriesPort countriesPort;
     private StubWeatherPort weatherPort;
-    private StubRagKnowledgePort ragKnowledgePort;
+    private StubRetrieveRagKnowledge retrieveRagKnowledge;
     private StubLlmPort llmPort;
     private AnswerQuestionUseCase useCase;
 
@@ -62,7 +62,7 @@ class AnswerQuestionUseCaseSinkRouteMatrixTest {
     void setUp() {
         countriesPort = new StubCountriesPort();
         weatherPort = new StubWeatherPort();
-        ragKnowledgePort = new StubRagKnowledgePort();
+        retrieveRagKnowledge = new StubRetrieveRagKnowledge();
         llmPort =
                 new StubLlmPort(
                         (context, tokenSink) -> {
@@ -74,7 +74,7 @@ class AnswerQuestionUseCaseSinkRouteMatrixTest {
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),
@@ -83,8 +83,8 @@ class AnswerQuestionUseCaseSinkRouteMatrixTest {
         countriesPort.register("Berlin", new ToolExecutionResult.Success<>(GERMANY));
         weatherPort.register("Berlin", new ToolExecutionResult.Success<>(BERLIN_WEATHER));
         weatherPort.register("Munich", new ToolExecutionResult.Success<>(MUNICH_WEATHER));
-        ragKnowledgePort.onRetrieve(
-                (question, policy) -> new RagRetrievalResult.Success(List.of(CDQ_SNIPPET)));
+        retrieveRagKnowledge.onRetrieve(
+                command -> new RagRetrievalResult.Success(List.of(CDQ_SNIPPET)));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -156,7 +156,7 @@ class AnswerQuestionUseCaseSinkRouteMatrixTest {
                 new AnswerQuestionUseCase(
                         countriesPort,
                         weatherPort,
-                        ragKnowledgePort,
+                        retrieveRagKnowledge,
                         llmPort,
                         new SourceRoutingPolicy(),
                         new ResponseComposer(),
