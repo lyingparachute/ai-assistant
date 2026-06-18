@@ -1,104 +1,89 @@
 # Final Demo Answers
 
-Captured from the running assistant on **2026-06-16T16:21:16Z** (UTC).
+Captured from the running assistant on **2026-06-17** (local stack). Raw responses:
+`docs/demo/capture/*.json`. Traces: `docs/demo/request-traces/`. Volatile values
+(temperatures) are real observations labelled with retrieval time.
+
+Every answer below was produced by the assistant exercising the named source path. No answer
+is hand-written; none is fabricated. Where a source path cannot produce a fact, the assistant
+returns a source-unavailable / no-route response rather than guessing.
+
+> The earlier 2026-06-16 capture was blocked (REST Countries v3.1 deprecated, weather key
+> unset, RAG not ingested). All three are now resolved — v3.1→v5 migration (ADR `0008`),
+> weather key configured, RAG ingested — and the run below is fully grounded.
 
 ## Local configuration summary
 
 | Setting | Value |
 | --- | --- |
 | Assistant API | `http://localhost:8080` |
-| Chat Interface | `http://localhost:4321` |
 | Ollama chat model | `qwen3:4b` |
 | Ollama embedding model | `nomic-embed-text` |
 | pgvector | Docker `pgvector/pgvector:pg17`, database `assistant_rag` |
-| Countries MCP | `java -jar countries-mcp-server-0.1.0-SNAPSHOT.jar` (stdio) |
-| Weather MCP | `scripts/mcp-weather` → semdin/mcp-weather |
-| REST Countries base URL | `https://restcountries.com/v3.1` (deprecated upstream) |
-| `WEATHER_API_KEY` | not configured in capture environment |
-| RAG ingestion | not completed (`rag_chunks` count 0 at capture time) |
+| Countries MCP | REST Countries **v5** (`https://api.restcountries.com/countries/v5`, Bearer key) |
+| Weather MCP | `scripts/mcp-weather` → semdin/mcp-weather → WeatherAPI.com |
+| RAG | CDQ Fraud Guard product page ingested into pgvector |
 
-## Required questions
+## 1. Country fact — `countries` (REST Countries v5 via MCP)
 
-### 1. What is the capital city of Germany?
+**Q:** What is the capital city of Germany?
+**A:** The capital of Germany is Berlin.
+**Source:** `countries_facts: USED` — `{ country: Germany, capital: Berlin, region: Europe,
+population: 83,497,147 }`.
+**Trace:** `request-traces/01-germany-capital.txt` (route `COUNTRY_CAPITAL`, `CountriesPort`).
 
-**Answer (from running assistant):**
+## 2. Weather observation — `weather` (WeatherAPI via MCP)
 
-> Countries MCP is unavailable: REST Countries source unavailable
+**Q:** What is the temperature currently in Munich?
+**A:** The current temperature in Munich is **23.2°C** (retrieved 2026-06-17T08:28:01Z).
+**Source:** `weather_observation: USED` — location Munich, retrieval time labelled.
+**Trace:** `request-traces/02-munich-weather.txt` (route `WEATHER_LOCATION`, `WeatherPort`).
 
-**Source path:** Chat Interface → Assistant API → `AnswerQuestionUseCase` → `CountriesPort` → countries MCP → REST Countries (v3.1 deprecated)
+## 3. Combined country + weather — `combined`
 
-**Trace:** `d48e4298-eff0-45df-bc3b-80b62d815c54` — see [request-traces/01-germany-capital.txt](request-traces/01-germany-capital.txt)
+**Q:** What is the temperature of the capital of Germany currently?
+**A:** The current temperature in Berlin, the capital of Germany, is **19.1°C**
+(retrieved 2026-06-17T08:28:02Z).
+**Source:** `countries_facts: USED` (Germany → Berlin) then `weather_observation: USED`
+(Berlin). Two sources, ordered.
+**Trace:** `request-traces/03-germany-capital-weather.txt` (route `COUNTRY_THEN_WEATHER`).
 
-**Note:** Live REST Countries v3.1 returns a deprecation payload (`success: false`). The assistant correctly reports source-unavailable instead of inventing Berlin.
+## 4. Place synthesis — `place-synthesis`
 
----
+**Q:** What do you know about Berlin?
+**A:** Berlin is the capital of Germany, located in Europe, with a population of 83,497,147.
+**Source:** `countries_facts: USED` (grounding fact) + `model_synthesis: USED` (phrasing).
+Synthesis is labelled as synthesis, never as a tool result.
+**Trace:** `request-traces/04-berlin-place.txt` (route `PLACE_SYNTHESIS`).
 
-### 2. What is the temperature currently in Munich?
+## 5. Product knowledge showcase — `cdq-product` (RAG over CDQ Fraud Guard)
 
-**Answer (from running assistant):**
+**Q:** What is CDQ Fraud Guard?
+**A:** CDQ Fraud Guard is a service that manages and verifies global payment data to combat
+payment fraud and inaccurate bank account information. It identifies bank accounts that do
+not belong to the declared business partner but to an attacker, by leveraging
+community-shared data on proven bank accounts and known fraud cases. Highlights include
+bank-account verification, customizable trust scores, real-time fraud alerts, fraud-case
+management, and API integration with existing financial systems.
+**Source:** `rag_knowledge: USED` — 5 retrieved snippets from
+`https://www.cdq.com/products/cdq-fraud-guard` (top similarity 0.87) + `model_synthesis: USED`.
+RAG is grounding-only; synthesis is labelled.
+**Trace:** `request-traces/05-cdq-product.txt` (`ragRetrievalCount` > 0).
 
-> Weather MCP is unavailable: MCP tool call failed for get-weather
+## 6. Source-unavailable / honesty — `source-unavailable`
 
-**Source path:** Chat Interface → Assistant API → `AnswerQuestionUseCase` → `WeatherPort` → weather MCP
+**Q:** What is the capital city of Atlantis?
+**A:** I cannot answer this question: No matching source route for this question.
+**Source:** none — the deterministic honesty guard refuses rather than answering a
+non-existent country from model memory.
+**Trace:** `request-traces/06-source-unavailable.txt` (no sources; no fabrication).
 
-**Trace:** `2758fef9-2b87-4144-8958-2f7b1e615c1e` — see [request-traces/02-munich-weather.txt](request-traces/02-munich-weather.txt)
+> This demonstrates the no-fabrication guarantee via the routing guard. A *source-tried-then-
+> unavailable* path (e.g. weather key unset → `weather_observation: UNAVAILABLE`) is also
+> covered by the source-unavailable tests in the suite.
 
-**Note:** `WEATHER_API_KEY` was not set during capture. No temperature was invented.
+## Verification
 
----
-
-### 3. What is the temperature of the capital of Germany currently?
-
-**Answer (from running assistant):**
-
-> Countries MCP is unavailable: REST Countries source unavailable
-
-**Source path:** Chat Interface → Assistant API → `AnswerQuestionUseCase` → `CountriesPort` (capital resolution) → would continue to `WeatherPort` when countries succeeds
-
-**Trace:** `7b30e13e-5ad7-49f0-b357-05c3b34e5269` — see [request-traces/03-germany-capital-weather.txt](request-traces/03-germany-capital-weather.txt)
-
----
-
-### 4. What do you know about Berlin?
-
-**Answer (from running assistant):**
-
-> Countries MCP is unavailable: REST Countries source unavailable
-
-**Source path:** Chat Interface → Assistant API → `AnswerQuestionUseCase` → `CountriesPort` → (intended) `LlmPort` synthesis after country facts
-
-**Trace:** `04e52a3e-a117-45cd-9ee8-117fef8b30c3` — see [request-traces/04-berlin-place.txt](request-traces/04-berlin-place.txt)
-
-**Note:** Weather and RAG ports did not fire (`ragRetrievalCount=0` in trace).
-
----
-
-## Showcase question (CDQ Fraud Guard)
-
-**Question:** What is CDQ Fraud Guard?
-
-**Answer (from running assistant):**
-
-> I have insufficient product knowledge to answer this CDQ Fraud Guard question.
-
-**Source path:** Chat Interface → Assistant API → `AnswerQuestionUseCase` → `RagKnowledgePort` (0 snippets) → insufficient-knowledge response
-
-**Trace:** `c2ac2fe9-561b-42d8-91a8-5daef28519cd` — see [request-traces/05-cdq-showcase.txt](request-traces/05-cdq-showcase.txt)
-
----
-
-## Source-unavailable scenario
-
-**Question:** What is the capital city of Atlantis?
-
-**Answer (from running assistant):**
-
-> I cannot answer this question: No matching source route for this question
-
-**Trace:** `743d56e0-4bcf-4972-a0df-3698914c7ac2` — see [request-traces/06-unsupported-route.txt](request-traces/06-unsupported-route.txt)
-
----
-
-## Capture artifacts
-
-Raw JSON responses: `docs/demo/capture/*.json`
+- E2E demo verification against the live stack: `./mvnw -pl e2e-tests verify -P e2e` →
+  `RequiredDemoQuestionsIT` Tests run: 5, Failures: 0, Errors: 0. BUILD SUCCESS.
+- Module suites green: countries-mcp-server 30, assistant-app 223.

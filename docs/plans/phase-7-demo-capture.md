@@ -1,4 +1,4 @@
-Status: pending — blocked on Phase 6
+Status: landed — 2026-06-17 (demo captured live from a fully grounded stack; see docs/demo/final-answers.md)
 
 # Phase 7: Tests and Demo Answers
 
@@ -21,14 +21,14 @@ Status: pending — blocked on Phase 6
 
 ## Definition of Done
 
-- [ ] Required demo answers captured only from running assistant.
-- [ ] CDQ showcase question captured with RAG + synthesis source path evidence.
-- [ ] One source-unavailable demo captured with matching trace.
-- [ ] `docs/demo/request-traces/` has one excerpt per required question.
-- [ ] E2E module tests pass against local stack or document explicit blockers.
+- [x] Required demo answers captured only from running assistant.
+- [x] CDQ showcase question captured with RAG + synthesis source path evidence.
+- [x] One source-unavailable demo captured with matching trace.
+- [x] `docs/demo/request-traces/` has one excerpt per required question.
+- [x] E2E module tests pass against local stack or document explicit blockers.
 
 ## Milestones
 
-- [ ] M1 — `e2e-tests` module scaffold + HTTP client checks
-- [ ] M2 — Live demo capture session + demo docs
-- [ ] M3 — Verification, README demo links, implementation-notes
+- [x] M1 — `e2e-tests` module scaffold + HTTP client checks
+- [x] M2 — Live demo capture session + demo docs
+- [x] M3 — Verification, README demo links, implementation-notes

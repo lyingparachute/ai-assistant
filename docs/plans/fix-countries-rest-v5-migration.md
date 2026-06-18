@@ -1,6 +1,6 @@
 # ExecPlan — countries-mcp-server REST Countries v5 migration
 
-Status: landed — 2026-06-17 (adapter + config only, population retained; live-verified end-to-end)
+Status: landed — 57fbd9b (2026-06-17, adapter + config only, population retained; live-verified end-to-end)
 Owner: TBD
 Source: ADR `0008`, demo blocker recorded in `docs/demo/demo-run-log.md`
 Scope module: `countries-mcp-server` only.
