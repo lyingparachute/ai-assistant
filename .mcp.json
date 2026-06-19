@@ -9,15 +9,16 @@
         "spring-boot:run"
       ],
       "env": {
-        "COUNTRIES_MCP_REST_COUNTRIES_BASE_URL": "https://restcountries.com/v3.1",
-        "COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS": "10"
+        "COUNTRIES_MCP_REST_COUNTRIES_BASE_URL": "https://api.restcountries.com/countries/v5",
+        "COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS": "10",
+        "REST_COUNTRIES_API_KEY": "${REST_COUNTRIES_API_KEY}"
       },
       "cwd": ".",
       "transport": "stdio",
       "timeout": 60000
     },
     "weather": {
-      "command": "mcp-weather",
+      "command": "./scripts/mcp-weather",
       "args": [],
       "env": {
         "WEATHER_API_KEY": "${WEATHER_API_KEY}",

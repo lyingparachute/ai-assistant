@@ -1,11 +1,10 @@
-event=assistant_request_started correlationId=ab2be3bb-a6ec-4c8f-88ff-c2a0146513ed questionLength=30
-event=assistant_route_selected correlationId=ab2be3bb-a6ec-4c8f-88ff-c2a0146513ed route=PLACE_SYNTHESIS
-event=assistant_port_invoked correlationId=ab2be3bb-a6ec-4c8f-88ff-c2a0146513ed port=CountriesPort invocationOrder=1
-event=assistant_port_invoked correlationId=ab2be3bb-a6ec-4c8f-88ff-c2a0146513ed port=LlmPort invocationOrder=2
-event=assistant_request_completed correlationId=ab2be3bb-a6ec-4c8f-88ff-c2a0146513ed route=PLACE_SYNTHESIS portsInvoked=[CountriesPort, LlmPort] ragRetrievalCount=0 outcome=place_synthesis_answered_sources=2
+event=assistant_request_started correlationId=8a37be2d-d30a-4f61-b4ff-e8b84bbb0574 questionLength=30
+event=assistant_route_selected correlationId=8a37be2d-d30a-4f61-b4ff-e8b84bbb0574 route=PLACE_SYNTHESIS
+event=assistant_port_invoked correlationId=8a37be2d-d30a-4f61-b4ff-e8b84bbb0574 port=CountriesPort invocationOrder=1
+event=assistant_port_invoked correlationId=8a37be2d-d30a-4f61-b4ff-e8b84bbb0574 port=LlmPort invocationOrder=2
+event=assistant_request_completed correlationId=8a37be2d-d30a-4f61-b4ff-e8b84bbb0574 route=PLACE_SYNTHESIS portsInvoked=[CountriesPort, LlmPort] ragRetrievalCount=0 outcome=place_synthesis_answered_sources=2
 
-Separate live SSE probe for the same question (synthesis route - trace, token stream,
-model_synthesis trace, final):
+SSE (synthesis route - trace, token stream, model_synthesis trace, final):
 event:trace
 data:{"type":"countries_facts","status":"USED"}
 
@@ -27,4 +26,4 @@ event:trace
 data:{"type":"model_synthesis","status":"USED"}
 
 event:final
-data:{"answerText":"Berlin is the capital of Germany. Berlin is the capital of Germany, a country in Europe with a population of83,497,147.","sources":[{"type":"countries_facts","status":"USED","countryInfo":{"countryName":"Germany","capital":"Berlin","region":"Europe","population":83497147}},{"type":"model_synthesis","status":"USED"}],"traceCorrelationId":"6fad7525-b0f1-4db6-b7db-67d7423a8ac2"}
+data:{"answerText":"Berlin is the capital of Germany. Berlin is the capital of Germany, a country in Europe with a population of83,497,147.","sources":[{"type":"countries_facts","status":"USED","countryInfo":{"countryName":"Germany","capital":"Berlin","region":"Europe","population":83497147}},{"type":"model_synthesis","status":"USED"}],"traceCorrelationId":"8a37be2d-d30a-4f61-b4ff-e8b84bbb0574"}

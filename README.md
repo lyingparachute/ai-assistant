@@ -183,7 +183,7 @@ The required and showcase demo questions are defined once in [e2e-tests/src/test
 | `germany-capital-weather` | What is the temperature of the capital of Germany currently? | Country Facts, then Weather Observation |
 | `berlin-place` | What do you know about Berlin? | Country Facts plus labelled model synthesis |
 
-Showcase questions cover CDQ Fraud Guard RAG knowledge and a no-route source-unavailable response (`Atlantis`). The live weather-key-unset unavailable path is test-covered only; it was not live-captured in the final demo evidence.
+Showcase questions cover CDQ Fraud Guard RAG knowledge and a no-route source-unavailable response (`Atlantis`). The latest capture also shows the weather MCP source-unavailable path because the local weather MCP call timed out; controlled tests still cover successful weather mapping.
 
 Captured demo evidence:
 
@@ -216,8 +216,8 @@ AI-assisted work is summarized in [docs/ai/summary.md](docs/ai/summary.md). The 
 - The application is local-only: no user accounts, no remote deployment, no cloud LLM providers.
 - RAG knowledge is limited to CDQ Fraud Guard product-page content.
 - External sources must be available for fully grounded live answers: REST Countries v5, WeatherAPI.com, Ollama, and local pgvector.
-- Weather values are volatile. Demo weather answers include location and retrieval time in captured evidence.
-- Historical upstream blockers from earlier demo attempts were resolved before the final captured answers.
+- Weather values are volatile. When weather succeeds, demo weather answers include location and retrieval time; when weather is unavailable, the answer names the failed weather source and omits a temperature.
+- Current demo evidence includes a weather MCP timeout in the live capture; rerun `./scripts/capture-demo-answers.sh` after restoring the local weather MCP path to refresh weather values.
 
 ## Documentation
 

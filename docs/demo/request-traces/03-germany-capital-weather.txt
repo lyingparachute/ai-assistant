@@ -1,15 +1,16 @@
-event=assistant_request_started correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 questionLength=60
-event=assistant_route_selected correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 route=COUNTRY_THEN_WEATHER
-event=assistant_port_invoked correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 port=CountriesPort invocationOrder=1
-event=assistant_port_invoked correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 port=WeatherPort invocationOrder=2
-event=assistant_request_completed correlationId=d29b1ee6-0b23-4ac3-a2de-37e6e497d681 route=COUNTRY_THEN_WEATHER portsInvoked=[CountriesPort, WeatherPort] ragRetrievalCount=0 outcome=country_then_weather_answered_sources=2
+event=assistant_request_started correlationId=6a6cdbf3-d248-4c92-969d-7b8c92e0ea73 questionLength=60
+event=assistant_route_selected correlationId=6a6cdbf3-d248-4c92-969d-7b8c92e0ea73 route=COUNTRY_THEN_WEATHER
+event=assistant_port_invoked correlationId=6a6cdbf3-d248-4c92-969d-7b8c92e0ea73 port=CountriesPort invocationOrder=1
+event=assistant_port_invoked correlationId=6a6cdbf3-d248-4c92-969d-7b8c92e0ea73 port=WeatherPort invocationOrder=2
+event=weather_mcp_warning correlationId=6a6cdbf3-d248-4c92-969d-7b8c92e0ea73 message="MCP tool call failed for get-weather" reason="60s timeout"
+event=assistant_request_completed correlationId=6a6cdbf3-d248-4c92-969d-7b8c92e0ea73 route=COUNTRY_THEN_WEATHER portsInvoked=[CountriesPort, WeatherPort] ragRetrievalCount=0 outcome=country_then_weather_answered_sources=2
 
-SSE (deterministic route - ordered trace events + final, no token events):
+SSE (ordered source trace + final, no token events):
 event:trace
 data:{"type":"countries_facts","status":"USED"}
 
 event:trace
-data:{"type":"weather_observation","status":"USED"}
+data:{"type":"weather_observation","status":"UNAVAILABLE"}
 
 event:final
-data:{"answerText":"The current temperature in Berlin, the capital of Germany, is 23.4°C. Retrieved: 2026-06-18T08:02:28.645675Z","traceCorrelationId":"d29b1ee6-0b23-4ac3-a2de-37e6e497d681"}
+data:{"answerText":"The capital of Germany is Berlin. Weather for Berlin is unavailable: MCP tool call failed for get-weather","sources":[{"type":"countries_facts","status":"USED","countryInfo":{"countryName":"Germany","capital":"Berlin","region":"Europe","population":83497147}},{"type":"weather_observation","status":"UNAVAILABLE","unavailableMessage":"MCP tool call failed for get-weather","unavailableHint":"The weather MCP server could not be reached. Retry later; do not invent temperatures."}],"traceCorrelationId":"6a6cdbf3-d248-4c92-969d-7b8c92e0ea73"}

@@ -67,31 +67,31 @@ Expected failures return `ok: false` with a recovery hint. They do not crash the
 
 ### API version and base URL
 
-- Version: v3.1
-- Base URL (configurable, default): `https://restcountries.com/v3.1`
-- Authentication: none (public API)
+- Version: v5
+- Base URL (configurable, default): `https://api.restcountries.com/countries/v5`
+- Authentication: `Authorization: Bearer ${REST_COUNTRIES_API_KEY}`. Missing or rejected keys return a source-unavailable tool error; the server still starts.
 
 ### Endpoints used
 
 | Purpose | Endpoint | Notes |
 | --- | --- | --- |
-| Country name lookup | `GET /name/{name}?fields=name,capital,region,population` | Case-insensitive fuzzy match. |
-| Capital city lookup | `GET /capital/{capital}?fields=name,capital,region,population` | Used when name lookup returns no result. |
+| Country name lookup | `GET /names.common/{name}?response_fields=names.common,capitals,region,population` | Empty `data.objects` means not found. |
+| Capital city lookup | `GET /capitals/{capital}?response_fields=names.common,capitals,region,population` | Used when name lookup returns no result. |
 
 ### Field mapping
 
-| REST Countries v3.1 field | Tool output field |
+| REST Countries v5 field | Tool output field |
 | --- | --- |
-| `name.common` | `countryName` |
-| `capital[0]` | `capital` |
+| `data.objects[].names.common` | `countryName` |
+| `data.objects[].capitals[].name` | `capital` (prefer `attributes.primary`, else first entry) |
 | `region` | `region` |
 | `population` | `population` |
 
 ### Lookup behavior
 
 1. Validate `name` is non-blank.
-2. Query `/name/{name}` with the configured field filter.
-3. If the name response is empty or HTTP 404, query `/capital/{name}`.
+2. Query `/names.common/{name}` with the configured field filter.
+3. If the name response has empty `data.objects`, query `/capitals/{name}`.
 4. If the capital response contains more than one country, return `capital city matches more than one country` with a hint listing the common country names.
 5. If the name response contains more than one country, prefer the entry whose `name.common` equals the input ignoring case; if still ambiguous, return a not-recognized error with a hint.
 6. Map the selected country JSON object into the success envelope. Raw upstream JSON is never returned through the tool.
@@ -100,16 +100,18 @@ Expected failures return `ok: false` with a recovery hint. They do not crash the
 
 | Upstream signal | Tool outcome |
 | --- | --- |
-| HTTP 404 on both name and capital paths | `country name is not recognized` |
+| Empty `data.objects` on both name and capital paths | `country name is not recognized` |
+| HTTP 401/403 | `REST Countries source unavailable` with a `REST_COUNTRIES_API_KEY` hint |
 | HTTP 5xx, connection failure, read timeout | `REST Countries source unavailable` |
-| Empty JSON array | `country name is not recognized` |
+| Missing `data.objects` array | `REST Countries source unavailable` |
 | Missing required mapped fields | `REST Countries source unavailable` |
 
 ## Configuration
 
 | Property | Environment variable | Default | Description |
 | --- | --- | --- | --- |
-| `countries.mcp.rest-countries-base-url` | `COUNTRIES_MCP_REST_COUNTRIES_BASE_URL` | `https://restcountries.com/v3.1` | REST Countries API base URL. |
+| `countries.mcp.rest-countries-base-url` | `COUNTRIES_MCP_REST_COUNTRIES_BASE_URL` | `https://api.restcountries.com/countries/v5` | REST Countries API base URL. |
+| `countries.mcp.rest-countries-api-key` | `REST_COUNTRIES_API_KEY` | unset | REST Countries v5 bearer token. Optional at startup; required for live country facts. |
 | `countries.mcp.rest-countries-timeout-seconds` | `COUNTRIES_MCP_REST_COUNTRIES_TIMEOUT_SECONDS` | `10` | HTTP read timeout for REST Countries calls. |
 | `countries.mcp.request-timeout-seconds` | `COUNTRIES_MCP_REQUEST_TIMEOUT_SECONDS` | `20` | MCP server-side request timeout for a single tool call. Distinct from the assistant client-side `ASSISTANT_MCP_COUNTRIES_TIMEOUT_SECONDS` (spec 12). |
 | `countries.mcp.server-name` | `COUNTRIES_MCP_SERVER_NAME` | `countries-mcp-server` | MCP server name announced to hosts. |
