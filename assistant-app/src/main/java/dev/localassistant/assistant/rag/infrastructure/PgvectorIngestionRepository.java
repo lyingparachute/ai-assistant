@@ -2,9 +2,12 @@ package dev.localassistant.assistant.rag.infrastructure;
 
 import dev.localassistant.assistant.rag.domain.RagChunk;
 import dev.localassistant.assistant.rag.domain.StoredSourceState;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
@@ -62,16 +65,25 @@ public final class PgvectorIngestionRepository {
                 + PgvectorChunkColumns.INGESTED_AT
                 + ") VALUES (?, ?::vector, ?, ?, ?, ?)";
 
-        for (final RagChunk chunk : chunks) {
-            jdbcTemplate.update(
-                insertSql,
-                chunk.chunkText(),
-                PgvectorEmbeddingCodec.toVectorLiteral(chunk.embedding()),
-                sourceUrl,
-                contentHash,
-                chunk.chunkIndex(),
-                Timestamp.from(chunk.ingestionTimestamp()));
-        }
+        jdbcTemplate.batchUpdate(
+            insertSql,
+            new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(final PreparedStatement statement, final int index) throws SQLException {
+                    final var chunk = chunks.get(index);
+                    statement.setString(1, chunk.chunkText());
+                    statement.setString(2, PgvectorEmbeddingCodec.toVectorLiteral(chunk.embedding()));
+                    statement.setString(3, sourceUrl);
+                    statement.setString(4, contentHash);
+                    statement.setInt(5, chunk.chunkIndex());
+                    statement.setTimestamp(6, Timestamp.from(chunk.ingestionTimestamp()));
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return chunks.size();
+                }
+            });
     }
 
     StoredSourceState findStoredSourceState(final String sourceUrl) {
