@@ -223,7 +223,7 @@ AI-assisted work is summarized in [docs/ai/summary.md](docs/ai/summary.md). The 
 
 | Topic | Location |
 | --- | --- |
-| Domain language | [CONTEXT.md](CONTEXT.md) |
+| Domain language | [GLOSSARY.md](GLOSSARY.md) |
 | Product specification | [docs/spec/01-product-specification.md](docs/spec/01-product-specification.md) |
 | Non-functional requirements | [docs/spec/02-non-functional-requirements.md](docs/spec/02-non-functional-requirements.md) |
 | Acceptance criteria | [docs/spec/03-acceptance-criteria.md](docs/spec/03-acceptance-criteria.md) |

@@ -20,7 +20,7 @@ Use whenever you write or review Java in `assistant-app`, `countries-mcp-server`
 - Keep classes and methods small and single-purpose. Prefer package-private helpers over a wide public surface.
 - No magic literals. Name every meaningful number or string as a constant in the owning module.
 - Comment only hidden invariants, framework or protocol constraints, and genuinely complex flow. No narration, no removal markers, no obvious docstrings.
-- Use the language from `CONTEXT.md` for type and method names.
+- Use the language from `GLOSSARY.md` for type and method names.
 
 ## Apache Commons Lang 3
 
@@ -56,4 +56,4 @@ Use whenever you write or review Java in `assistant-app`, `countries-mcp-server`
 - The narrowest meaningful unit test for the new behavior passes, and you observed the actual output.
 - No `null` returns, no swallowed exceptions, no objects that can exist in an invalid state.
 - No magic literals, no dead code, no orphan `TODO`/`FIXME`/`HACK`.
-- Names match `CONTEXT.md`.
+- Names match `GLOSSARY.md`.

@@ -10,14 +10,14 @@ Lock the project language, architecture direction, acceptance criteria, test str
 
 ### Tasks
 
-- Keep `CONTEXT.md`, `README.md`, `AGENTS.md`, and `docs/spec/` aligned.
+- Keep `GLOSSARY.md`, `README.md`, `AGENTS.md`, and `docs/spec/` aligned.
 - Add architecture, implementation, test, demo, and risk documents.
 - Add ADRs for framework, model, vector database, MCP, architecture style, and memory scope.
 - Confirm that final demo answers are not documented until captured from the running assistant.
 
 ### Expected Files and Modules
 
-- `CONTEXT.md`
+- `GLOSSARY.md`
 - `README.md`
 - `AGENTS.md`
 - `docs/spec/`
@@ -25,7 +25,7 @@ Lock the project language, architecture direction, acceptance criteria, test str
 
 ### Acceptance Criteria
 
-- `CONTEXT.md` and `AGENTS.md` exist and are consistent with the specs and ADRs.
+- `GLOSSARY.md` and `AGENTS.md` exist and are consistent with the specs and ADRs.
 - `docs/spec/01-product-specification.md`, `docs/spec/02-non-functional-requirements.md`, `docs/spec/03-acceptance-criteria.md`, and `docs/spec/04-glossary.md` exist.
 - `docs/spec/05-architecture.md` exists and explains the selected module boundaries and request flows.
 - `docs/spec/06-implementation-plan.md` exists and defines phases 0 through 8.

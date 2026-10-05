@@ -70,7 +70,7 @@ Verification: Contract tests check MCP schema shape, required fields, and invali
 
 Risk: AI-assisted implementation may introduce over-broad abstractions, hidden coupling, weak tests, or fabricated behavior.
 
-Mitigation: Keep docs and ADRs as the implementation contract. Review code against hexagonal boundaries, `CONTEXT.md` language, and acceptance criteria. Require focused tests for each behavior.
+Mitigation: Keep docs and ADRs as the implementation contract. Review code against hexagonal boundaries, `GLOSSARY.md` language, and acceptance criteria. Require focused tests for each behavior.
 
 Verification: AI usage report records files affected, human review, and verification evidence. Code review checks boundary violations and missing tests.
 

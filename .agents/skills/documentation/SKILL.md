@@ -14,9 +14,9 @@ Use whenever an implementation decision, interface, command, or limitation chang
 ## Rules
 
 - This repository is documentation-first. Production source code is not written ahead of current docs, ADRs, and acceptance criteria.
-- Keep `CONTEXT.md`, `docs/spec/`, `docs/adr/`, `README.md`, and `docs/ai/` consistent. Code and documentation must not drift.
+- Keep `GLOSSARY.md`, `docs/spec/`, `docs/adr/`, `README.md`, and `docs/ai/` consistent. Code and documentation must not drift.
 - When a decision changes architecture, dependencies, data model, testing strategy, or public behavior, add or update an ADR using the template in `docs/adr/README.md`.
-- Use the language from `CONTEXT.md` everywhere. Respect its `Avoid` lists.
+- Use the language from `GLOSSARY.md` everywhere. Respect its `Avoid` lists.
 - Document limitations honestly, including unavailable dependencies and unfulfilled tasks.
 - Record material AI-assisted work under `docs/ai/` with the task summary, agent role, files affected, human review, and verification evidence.
 - Final demo answers are captured only from the running assistant (`docs/spec/08-demo-plan.md`). Never pre-write them.
@@ -33,14 +33,14 @@ Use whenever an implementation decision, interface, command, or limitation chang
 - Documenting behavior that is not implemented as if it were verified.
 - Writing final demo answers, temperatures, or other volatile values before a real run captures them.
 - Leaving docs contradicting code or ADRs.
-- Using avoided terms (memory, context, bot, plugin) where `CONTEXT.md` requires precise language.
+- Using avoided terms (memory, context, bot, plugin) where `GLOSSARY.md` requires precise language.
 - Committing secrets, local paths, or machine-specific details into docs.
 
 ## Verification Checklist
 
 - Changed behavior is reflected in the matching spec or ADR; no drift remains.
 - New material decisions have an ADR following the template.
-- `CONTEXT.md` language is used; no avoided terms.
+- `GLOSSARY.md` language is used; no avoided terms.
 - README commands described as working were actually verified.
 - AI usage entries record task, files, human review, and verification evidence.
 - No fabricated demo answers or runtime values were added to documentation.

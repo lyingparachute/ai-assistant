@@ -16,9 +16,9 @@ Read the relevant skill before working on the matching area, and read the docume
 | `mcp` | The countries MCP server or weather MCP integration: semantic tools, JSON schemas, structured errors, lifecycle, `.mcp.json`. |
 | `rag-pgvector` | RAG ingestion and retrieval: extraction, chunking, embeddings, metadata, pgvector storage, retrieval thresholds. |
 | `testing` | Writing tests: unit, contract, integration, Testcontainers, controlled adapters, E2E demo verification. |
-| `documentation` | Keeping `CONTEXT.md`, `docs/spec/`, `docs/adr/`, `README.md`, and `docs/ai/` current and honest. |
+| `documentation` | Keeping `GLOSSARY.md`, `docs/spec/`, `docs/adr/`, `README.md`, and `docs/ai/` current and honest. |
 
-DDD-inspired language is not a separate skill. It runs through `clean-java`, `hexagonal-architecture`, and the language rules in `CONTEXT.md` and `AGENTS.md`.
+DDD-inspired language is not a separate skill. It runs through `clean-java`, `hexagonal-architecture`, and the language rules in `GLOSSARY.md` and `AGENTS.md`.
 
 ## Skill Expectations
 

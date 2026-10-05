@@ -1,14 +1,14 @@
 # Instructions for AI Coding Agents
 
-These rules are specific to the Local Java AI Assistant recruitment task. They apply to every coding agent that edits this repository. They extend, and must stay consistent with, `CONTEXT.md`, the requirement documents under `docs/spec/`, and the decisions under `docs/adr/`.
+These rules are specific to the Local Java AI Assistant recruitment task. They apply to every coding agent that edits this repository. They extend, and must stay consistent with, `GLOSSARY.md`, the requirement documents under `docs/spec/`, and the decisions under `docs/adr/`.
 
-Use the language from `CONTEXT.md` in code, tests, commits, and documentation. When a term in `CONTEXT.md` has an `Avoid` list, do not use the avoided words.
+Use the language from `GLOSSARY.md` in code, tests, commits, and documentation. When a term in `GLOSSARY.md` has an `Avoid` list, do not use the avoided words.
 
 ## 1. Read First
 
 Before implementing or changing any feature, read:
 
-- `CONTEXT.md` for the project language;
+- `GLOSSARY.md` for the project language;
 - `README.md` for scope and current state;
 - the relevant documents under `docs/spec/`, including `docs/spec/10-code-quality-guidelines.md`;
 - any ADRs under `docs/adr/` that apply to the planned change.
@@ -62,7 +62,7 @@ Detail lives in `.agents/skills/spring-boot/SKILL.md`.
 
 DDD is used pragmatically (ADR `0005`): explicit language and value objects, focused use-case services, no ceremonial aggregates or event buses.
 
-- Use the ubiquitous language from `CONTEXT.md`. If the code says one thing and `CONTEXT.md` says another, the code is wrong.
+- Use the ubiquitous language from `GLOSSARY.md`. If the code says one thing and `GLOSSARY.md` says another, the code is wrong.
 - Name domain concepts after the business: `UserQuestion`, `AssistantAnswer`, `AnswerSource`, `KnowledgeSnippet`, `CountryInfo`, `WeatherReport`, `ToolExecutionResult`, `ConversationTurn`.
 - Do not call RAG knowledge, tool results, or chat history "memory" or "context". Use the precise term.
 - `shared-kernel` is conditional: create it only when a concrete type must be shared between `assistant-app` and `countries-mcp-server`. Keep it small. A concept used by one module only stays in that module.
