@@ -9,6 +9,7 @@ Scope note: this is documentation. The short snippets below are illustrative pat
 ## 1. Java Style
 
 - Target idiomatic, modern Java. Use records for immutable value objects and DTOs. Use `final` for fields and locals that do not change.
+- Declare locals with `final var`. Never use empty string literals (`""`); use a named constant or a `StringUtils` helper instead. Prefer `Objects.isNull(...)` / `Objects.nonNull(...)` over `x == null` for null checks.
 - Construct objects completely from all required inputs. No empty construction followed by scattered mutation.
 - Validate invariants in the constructor or a static factory. A constructed object is always valid.
 - Do not return `null`. Use `Optional<T>` for optional return values, empty collections for "no elements", or an explicit no-result value object. `Optional` belongs on return types only, never on fields or parameters.

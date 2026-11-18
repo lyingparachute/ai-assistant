@@ -178,3 +178,5 @@ Before final submission:
 Do not claim a feature is complete because a mock returned the expected value. Completion requires the narrowest meaningful automated test plus any required local-runtime verification for the affected boundary.
 
 Skipped external verification is acceptable only when the reason is explicit, such as missing weather API configuration or unavailable local dependency. The assistant must document the skipped verification and must not replace it with invented final answers.
+
+When reporting a test count, quote the Maven reactor `Tests run: N` summary line from `./mvnw test`, not an aggregate over `target/surefire-reports/*.txt`. Orphan reports from renamed or removed test classes linger under `target/` and inflate a hand-rolled sum. Run `./mvnw -o clean test` for a clean count if in doubt.
